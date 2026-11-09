@@ -6,6 +6,9 @@ import { deserialize, serialize } from '../sim/state';
 import { PLAYABLE_FACTIONS } from '../data/factions';
 import type { NewGameSetup, UiSettings } from './store';
 
+// Storage keys and the save-format tag keep the game's first working title (Aether & Iron)
+// so saves and settings made before the rename to Gear & Magic still load.
+
 /** Manual save slot (menu "Save game" / Ctrl+S). Kept at the original key so older saves still load. */
 export const SAVE_KEY = 'aether-iron-save-v1';
 /** Autosave slot: start of every human turn, quitting, closing the tab. Never touches the manual save. */

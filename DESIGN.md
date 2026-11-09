@@ -1,4 +1,4 @@
-# Aether & Iron — Game Design & Technical Spec
+# Gear & Magic — Game Design & Technical Spec
 
 A small-scale, turn-based 4X with magic, built from `concept.md`. Inspirations: Battle for
 Wesnoth (hex tactics, terrain defense, retaliation, leaders), Millennia (economy of

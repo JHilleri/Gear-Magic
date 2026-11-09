@@ -1,4 +1,4 @@
-// Aether & Iron — shared type contracts. See /DESIGN.md.
+// Gear & Magic — shared type contracts. See /DESIGN.md.
 // Everything in GameState is plain JSON (no classes, no Maps) so it can be saved/cloned.
 
 // ───────────────────────────── identifiers ─────────────────────────────

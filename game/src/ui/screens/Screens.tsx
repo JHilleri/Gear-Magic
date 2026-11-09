@@ -65,7 +65,7 @@ function Logo({ small }: { small?: boolean }) {
   return (
     <div class={cls('logo', small && 'small')}>
       <div class="logo-ornament"><span /><Sym name="crystal" /><span /></div>
-      <h1 class="logo-text" data-text="Aether & Iron">Aether <em>&amp;</em> Iron</h1>
+      <h1 class="logo-text" data-text="Gear & Magic">Gear <em>&amp;</em> Magic</h1>
       <div class="logo-tag">A tale of steel, sorcery and stone</div>
     </div>
   );

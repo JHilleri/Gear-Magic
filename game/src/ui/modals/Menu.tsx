@@ -73,7 +73,7 @@ export function MenuModal() {
 
   const saveLabel = saved && ui.saves.manual ? `Saved (round ${ui.saves.manual.round})` : 'Save game';
   return (
-    <Modal size="sm" class="menu-modal" title="Aether & Iron" sub={inGame && store.state ? `Round ${store.state.round}` : undefined} onClose={() => store.closeModal()}>
+    <Modal size="sm" class="menu-modal" title="Gear & Magic" sub={inGame && store.state ? `Round ${store.state.round}` : undefined} onClose={() => store.closeModal()}>
       <div class="menu-list">
         <Btn primary onClick={() => store.closeModal()} hotkey="Esc">Resume</Btn>
         {inGame && store.state?.gameOver && <Btn icon="star" onClick={() => store.openModal('end')}>Results</Btn>}

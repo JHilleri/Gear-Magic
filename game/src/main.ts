@@ -95,7 +95,7 @@ function showFatal(message: string, err: unknown): void {
   const box = document.createElement('div');
   box.style.maxWidth = '560px';
   const h = document.createElement('h1');
-  h.textContent = 'Aether & Iron could not start';
+  h.textContent = 'Gear & Magic could not start';
   Object.assign(h.style, { font: '700 28px Cinzel, serif', color: '#e8c35a', margin: '0 0 12px' });
   const p = document.createElement('p');
   p.textContent = message;

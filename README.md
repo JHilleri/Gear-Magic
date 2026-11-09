@@ -1,4 +1,4 @@
-# Aether & Iron
+# Gear & Magic
 
 A 3D turn-based fantasy 4X on a regional hex map, built from [`concept.md`](concept.md).
 Units start as commoners and become what you equip them with — tools, swords, spears,
