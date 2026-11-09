@@ -1,0 +1,46 @@
+[
+ {
+  "id": "menu_bg",
+  "cat": "ui",
+  "alpha": false,
+  "seed": 4242,
+  "w": 1664,
+  "h": 928,
+  "steps": 28,
+  "prompt": "Epic painted fantasy key art of a sweeping region at golden hour seen from a hilltop: a river valley with a stone castle with blue roofs on the left, dark forests and misty hills, an orc war camp with crimson banners in the far right distance, a gothic violet-lit necropolis on a dark mountain on the horizon, glowing aether crystals in the foreground meadow, dramatic clouds and god rays, rich cinematic colors, detailed digital matte painting, no text",
+  "negative": "text, letters, watermark, logo, border"
+ },
+ {
+  "id": "victory",
+  "cat": "ui",
+  "alpha": false,
+  "seed": 5151,
+  "w": 1664,
+  "h": 928,
+  "steps": 28,
+  "prompt": "Painted fantasy illustration of a victorious army raising banners on a castle wall at sunrise, golden light, cheering soldiers silhouettes, triumphant mood, detailed digital painting, no text",
+  "negative": "text, letters, watermark, logo, border"
+ },
+ {
+  "id": "defeat",
+  "cat": "ui",
+  "alpha": false,
+  "seed": 6161,
+  "w": 1664,
+  "h": 928,
+  "steps": 28,
+  "prompt": "Painted fantasy illustration of a fallen crown lying on a muddy battlefield in the rain at dusk, broken banners and smoke, somber blue grey mood, detailed digital painting, no text",
+  "negative": "text, letters, watermark, logo, border"
+ },
+ {
+  "id": "parchment",
+  "cat": "ui",
+  "alpha": false,
+  "seed": 7171,
+  "w": 1024,
+  "h": 1024,
+  "steps": 22,
+  "prompt": "A seamless tileable texture of aged warm parchment paper with subtle fibers and faint stains, flat even lighting, viewed straight on, no text",
+  "negative": "text, letters, writing, objects, border, vignette"
+ }
+]

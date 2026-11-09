@@ -1,0 +1,82 @@
+[
+ {
+  "id": "undead_commoner",
+  "cat": "src_units",
+  "alpha": true,
+  "seed": 2311,
+  "w": 896,
+  "h": 1152,
+  "prompt": "Full body stylized fantasy strategy game 3D character model with slightly chunky heroic proportions, standing in a strict T-pose with both arms straight out horizontally, palms down, open empty hands, legs slightly apart, front view at eye level, symmetrical, hand-painted PBR textures of a skeletal undead laborer with a bone-white skull face, glowing violet eye sockets and visible ribs, wearing a dark violet hooded tattered robe over a brown leather work apron, a rope belt, rusty iron shackles on the wrists and wrapped dark cloth on the shins, centered with generous empty margins, on a plain flat light grey background, soft even studio lighting, clean 3D render",
+  "negative": "text, watermark, logo, cropped, cut off, multiple objects, scenery, landscape, ground plane, shadow, frame, border, weapon, holding objects, shield, sword, staff, bow, cape covering arms, extra limbs, sitting"
+ },
+ {
+  "id": "house_thorn",
+  "cat": "src_buildings",
+  "alpha": true,
+  "seed": 2321,
+  "w": 1024,
+  "h": 1024,
+  "prompt": "A single isolated stylized high-fantasy strategy game 3D asset, hand-painted PBR textures, chunky readable silhouette, rich but grounded colors of a rugged orc longhouse of rough dark timber logs with a hide-and-fur covered roof, bone and tusk ornaments on the gable, a crude stone chimney and a red war-cloth banner over the door, front three-quarter view at a low eye-level angle, the whole building visible, isolated with no surrounding ground, centered with generous empty margins, on a plain flat light grey background, soft even studio lighting, clean 3D render",
+  "negative": "text, watermark, logo, cropped, cut off, multiple objects, scenery, landscape, ground plane, shadow, frame, border, people, characters"
+ },
+ {
+  "id": "house_ashen",
+  "cat": "src_buildings",
+  "alpha": true,
+  "seed": 2322,
+  "w": 1024,
+  "h": 1024,
+  "prompt": "A single isolated stylized high-fantasy strategy game 3D asset, hand-painted PBR textures, chunky readable silhouette, rich but grounded colors of a gloomy undead dwelling of dark grey stone with a steep black slate roof, a crooked chimney, narrow gothic windows glowing faint violet and a small bone lantern by the door, front three-quarter view at a low eye-level angle, the whole building visible, isolated with no surrounding ground, centered with generous empty margins, on a plain flat light grey background, soft even studio lighting, clean 3D render",
+  "negative": "text, watermark, logo, cropped, cut off, multiple objects, scenery, landscape, ground plane, shadow, frame, border, people, characters"
+ },
+ {
+  "id": "farm_thorn",
+  "cat": "src_buildings",
+  "alpha": true,
+  "seed": 2323,
+  "w": 1024,
+  "h": 1024,
+  "prompt": "A single isolated stylized high-fantasy strategy game 3D asset, hand-painted PBR textures, chunky readable silhouette, rich but grounded colors of an orc farmstead with a low barn of rough logs and stretched hides, a bone-and-stake fence around a patch of dark crops, a boar-skull totem and red cloth strips, front three-quarter view at a low eye-level angle, the whole building visible, isolated with no surrounding ground, centered with generous empty margins, on a plain flat light grey background, soft even studio lighting, clean 3D render",
+  "negative": "text, watermark, logo, cropped, cut off, multiple objects, scenery, landscape, ground plane, shadow, frame, border, people, characters"
+ },
+ {
+  "id": "farm_ashen",
+  "cat": "src_buildings",
+  "alpha": true,
+  "seed": 2324,
+  "w": 1024,
+  "h": 1024,
+  "prompt": "A single isolated stylized high-fantasy strategy game 3D asset, hand-painted PBR textures, chunky readable silhouette, rich but grounded colors of an undead farmstead with a tall black timber barn and grey slate roof, a patch of pale withered crops behind an iron graveyard fence, a scarecrow of bones and faint violet lanterns, front three-quarter view at a low eye-level angle, the whole building visible, isolated with no surrounding ground, centered with generous empty margins, on a plain flat light grey background, soft even studio lighting, clean 3D render",
+  "negative": "text, watermark, logo, cropped, cut off, multiple objects, scenery, landscape, ground plane, shadow, frame, border, people, characters"
+ },
+ {
+  "id": "human_padded",
+  "cat": "src_units",
+  "alpha": true,
+  "seed": 2331,
+  "w": 896,
+  "h": 1152,
+  "prompt": "Full body stylized fantasy strategy game 3D character model with slightly chunky heroic proportions, standing in a strict T-pose with both arms straight out horizontally, palms down, open empty hands, legs slightly apart, front view at eye level, symmetrical, hand-painted PBR textures of a young human militia soldier with short brown hair wearing a thick quilted padded gambeson in faded royal blue and cream with stitched diamond quilting, a brown leather belt, linen trousers and leather boots, no helmet, centered with generous empty margins, on a plain flat light grey background, soft even studio lighting, clean 3D render",
+  "negative": "text, watermark, logo, cropped, cut off, multiple objects, scenery, landscape, ground plane, shadow, frame, border, weapon, holding objects, shield, sword, staff, bow, cape covering arms, extra limbs, sitting"
+ },
+ {
+  "id": "orc_padded",
+  "cat": "src_units",
+  "alpha": true,
+  "seed": 2332,
+  "w": 896,
+  "h": 1152,
+  "prompt": "Full body stylized fantasy strategy game 3D character model with slightly chunky heroic proportions, standing in a strict T-pose with both arms straight out horizontally, palms down, open empty hands, legs slightly apart, front view at eye level, symmetrical, hand-painted PBR textures of a muscular green-skinned orc warrior with small tusks and a black topknot wearing a thick quilted padded jerkin of dark red cloth with stitched quilting, leather straps across the chest, dark trousers and wrapped leather boots, centered with generous empty margins, on a plain flat light grey background, soft even studio lighting, clean 3D render",
+  "negative": "text, watermark, logo, cropped, cut off, multiple objects, scenery, landscape, ground plane, shadow, frame, border, weapon, holding objects, shield, sword, staff, bow, cape covering arms, extra limbs, sitting"
+ },
+ {
+  "id": "undead_padded",
+  "cat": "src_units",
+  "alpha": true,
+  "seed": 2333,
+  "w": 896,
+  "h": 1152,
+  "prompt": "Full body stylized fantasy strategy game 3D character model with slightly chunky heroic proportions, standing in a strict T-pose with both arms straight out horizontally, palms down, open empty hands, legs slightly apart, front view at eye level, symmetrical, hand-painted PBR textures of a gaunt undead soldier with a bone-white skull face and glowing violet eyes wearing a thick quilted padded gambeson of faded dark violet cloth with stitched quilting, a black leather belt, torn grey trousers and dark boots, centered with generous empty margins, on a plain flat light grey background, soft even studio lighting, clean 3D render",
+  "negative": "text, watermark, logo, cropped, cut off, multiple objects, scenery, landscape, ground plane, shadow, frame, border, weapon, holding objects, shield, sword, staff, bow, cape covering arms, extra limbs, sitting"
+ }
+]

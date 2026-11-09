@@ -1,0 +1,11 @@
+[
+ {"id":"castle_t1","cat":"test","alpha":true,"seed":11,
+  "prompt":"A single isolated stylized high-fantasy 3D game asset of a small medieval stone castle keep with two round towers, blue cloth banners, slate blue roofs and a wooden gate, built on a compact hexagonal stone foundation, hand-painted PBR textures, chunky readable silhouette, viewed from a three-quarter elevated angle, centered with empty margins, on a plain flat light grey background, soft even studio lighting, clean 3D render",
+  "negative":"text, watermark, people, ground scenery, landscape, cropped, multiple objects"},
+ {"id":"peasant_t1","cat":"test","alpha":true,"seed":12,"w":896,"h":1152,
+  "prompt":"Full body stylized 3D game character model of a young medieval peasant man wearing a simple brown linen tunic with a rope belt, grey trousers and leather boots, short brown hair, standing in a strict T-pose with both arms straight out horizontally and open empty hands, legs slightly apart, front view, symmetrical, slightly heroic stylized proportions, hand-painted PBR textures, centered with empty margins, on a plain flat light grey background, soft even studio lighting, clean 3D render",
+  "negative":"text, watermark, weapon, holding objects, cropped, multiple characters, scenery"},
+ {"id":"sword_t1","cat":"test","alpha":true,"seed":13,
+  "prompt":"A single isolated stylized fantasy steel longsword with a leather wrapped grip and a bronze crossguard, standing vertically with the blade pointing up, full length visible, hand-painted PBR textures, chunky readable silhouette, front view, centered with empty margins, on a plain flat light grey background, soft even studio lighting, clean 3D render",
+  "negative":"text, watermark, hands, cropped, multiple objects"}
+]

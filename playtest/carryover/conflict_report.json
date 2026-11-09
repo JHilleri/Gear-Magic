@@ -1,0 +1,280 @@
+{
+ "findings": [
+  {
+   "title": "Build modal disabled every building (all cards 'Unavailable', '0 buildings possible here')",
+   "severity": "critical",
+   "area": "ui",
+   "description": "When I tested at about 17:55, the Construct modal marked every card 'Unavailable'. This included buildings the sim accepts: buildOptions() returned error:null for house, lumber, magetower and wall on Petra's forest hex. Clicking the Mage Tower card did nothing, so the player could not build anything through the UI. Cause: `opts.find(...)?.error ?? 'Unavailable'` turns a null (allowed) error into 'Unavailable'. Build.tsx was changed at 18:22, apparently by another agent, to use optionError() in src/ui/util.ts. My re-check at 19:15 on a fresh game shows '2 buildings possible here' with Lumber Camp enabled, so it looks fixed. The same pattern could come back in Recruit, Forge or Equip; a regression test is worth adding.",
+   "evidence": [
+    "/home/jeanh/projects/magic-4x/playtest/conflict/16_build_modal.png",
+    "/home/jeanh/projects/magic-4x/playtest/conflict/32_build_modal_recheck.png"
+   ],
+   "repro": "Select a builder (Petra) on a valid hex and press B. On the 15:20 version of Build.tsx every card read 'Unavailable' and clicks did nothing. The sim's buildOptions(state, unit) returned null errors for several buildings at the same time.",
+   "suspected_files": [
+    "game/src/ui/modals/Build.tsx",
+    "game/src/ui/util.ts"
+   ]
+  },
+  {
+   "title": "AI never builds a Mage Tower, casts spells or uses active skills within 30 rounds",
+   "severity": "major",
+   "area": "ai",
+   "description": "I ran a headless AI-vs-AI simulation (applyAction plus aiNextAction, with the human ending turns) on seeds 7 (small map), 11 and 23 (normal map) for 25\u201334 rounds. Every run had spellsCast = 0, no 'cast' or 'skill' actions and no magetower built. Each AI had only 3\u20135 techs by round 30. Ashen, the magic faction, reaches Arcana around round 25\u201330 and still builds no tower; crystal sits at 0\u201313. DESIGN \u00a79 describes casting Fireball/Storm/Heal/Blessing as an AI layer, but in a normal-length game that layer never runs. No errors and no failed actions occurred, which is good.",
+   "evidence": [],
+   "repro": "In page context, import /src/sim/state.ts, actions.ts, ai/index.ts and turn.ts. Run createGame({mapSize:'normal',seed:11,...}) and loop aiNextAction/applyAction per faction for 30 rounds. Check factions.*.stats.spellsCast and look for magetower buildings.",
+   "suspected_files": [
+    "game/src/sim/ai/research-ai.ts",
+    "game/src/sim/ai/economy-ai.ts",
+    "game/src/sim/ai/magic.ts"
+   ]
+  },
+  {
+   "title": "AI economy deadlock: Ashen loses its only builder and can never get tools again",
+   "severity": "major",
+   "area": "ai",
+   "description": "On seed 7 (small map) Ashen's starting builder Grimwald died early. Ashen then spent its 12 starting iron on two Swordsmen (6 iron each), never built an iron mine although it had Mining, and could no longer afford a Builder (tools cost 2 iron). Result after 34 rounds: 5 buildings total (none built after the first few rounds), no forge, no training ground, iron 0, and 5 of its 10 units are unequipped Commoners. Stone (97), wood (99) and food (185) pile up unspent. DESIGN \u00a79 wants 1 builder per ~4 buildings (minimum 1). The AI should keep a builder alive, recruit one first, or reserve iron for tools.",
+   "evidence": [],
+   "repro": "Run the headless AI sim on seed 7, small map, with a passive human for 30+ rounds. Then inspect state.units of faction 'ashen': no unit has 'tools', iron is 0, and buildings stay at 'castle,farm,farm,house,library,library,lumber,quarry'.",
+   "suspected_files": [
+    "game/src/sim/ai/economy-ai.ts",
+    "game/src/sim/ai/loadout.ts"
+   ]
+  },
+  {
+   "title": "AI puts no pressure on the human player (0 attacks in 30 rounds on normal maps)",
+   "severity": "major",
+   "area": "ai",
+   "description": "In the headless runs the human stayed completely passive with 2\u20133 units and 3 buildings. On normal maps (seeds 11 and 23) neither AI attacked the human in 30 rounds. On the small map (seed 7) Thorn's first attack on the human came around round 30 and it then killed the leader by round 34. DESIGN \u00a79 says units without a good attack move toward the nearest enemy with a bias toward the human player. The AIs fight monsters (thorn 26 attacks, ashen 12) but leave a defenceless player alone, so the early and mid game has no threat.",
+   "evidence": [],
+   "repro": "Headless AI sim (passive human), seeds 11/23 normal map, 30 rounds. Count combat events that involve a valen unit: 0.",
+   "suspected_files": [
+    "game/src/sim/ai/strategy.ts",
+    "game/src/sim/ai/tactics.ts",
+    "game/src/sim/ai/movement.ts"
+   ]
+  },
+  {
+   "title": "Units standing on castle/house/farm are hidden inside or clip through the building model",
+   "severity": "major",
+   "area": "render",
+   "description": "The leader on her castle cannot be seen at all, so her full attack on the wolf played with only the wolf's hit flash and the floating numbers visible. Talia inside the house is invisible apart from her HP bar. A mounted knight that moved onto the farm (the auto-chosen approach hex) is drawn intersecting the red barn while attacking and dying. units.ts moves units only ON_BUILDING_OFFSET = 0.42 toward +Z. That is not enough for castle/house footprints, and once the camera is rotated with Q/E, +Z is no longer the camera side. DESIGN \u00a710 says what a unit carries is what you see; units in garrison are effectively invisible.",
+   "evidence": [
+    "/home/jeanh/projects/magic-4x/playtest/conflict/11_leader_wolf_2.png",
+    "/home/jeanh/projects/magic-4x/playtest/conflict/26_knight_golem_1.png",
+    "/home/jeanh/projects/magic-4x/playtest/conflict/21_elemental_fullres.png"
+   ],
+   "repro": "Keep the leader on the castle and attack an adjacent enemy, or have a knight attack a monster next to the farm (it picks the farm hex as its approach). Watch the attacker during the exchange.",
+   "suspected_files": [
+    "game/src/render/units.ts"
+   ]
+  },
+  {
+   "title": "HP bars of mounted units float far above the rider and read as belonging to the unit behind",
+   "severity": "major",
+   "area": "render",
+   "description": "At closer zoom, the bars of mounted units sit about one hex above them on screen. In the three-faction mount shot, the Ashen nightmare rider has no bar over it. Its purple '1 22/22' bar sits on the Thorn wolf-rider, whose own red '1 26/26' bar floats over empty grass further up. The Valen knight's blue bar is far above his head. Non-mounted units and the golem have bars right above them. topY for mounted units is max(riderTop, mountTop)*UNIT_HEIGHT and roughly doubles the bar height.",
+   "evidence": [
+    "/home/jeanh/projects/magic-4x/playtest/conflict/27_mounts_three_factions_high.png",
+    "/home/jeanh/projects/magic-4x/playtest/conflict/28_archer_golem_shift.png"
+   ],
+   "repro": "Put a knight preset for valen, thorn and ashen on adjacent grass hexes and zoom in with the default camera angle. Compare each bar's faction colour with the base ring under each unit.",
+   "suspected_files": [
+    "game/src/render/units.ts"
+   ]
+  },
+  {
+   "title": "Fireball targeting gives no friendly-fire warning and uses the same green 'valid' area as Healing Light",
+   "severity": "major",
+   "area": "ui",
+   "description": "Fireball hits every unit in radius 1, friend or foe. While targeting, the area preview is the same green 'valid' tint as Healing Light. The hover chip only says 'Fireball / Mountains / In range', with no count or list of affected units and no warning about own units. I cast it on the spider; it also hit my archer, my knight and my summoned elemental for 8 each ('4 affected'). Only the Spellbook card says 'Friend or foe'. A damaging AoE should use a hostile colour and preview its targets, flagging allies.",
+   "evidence": [
+    "/home/jeanh/projects/magic-4x/playtest/conflict/22_fireball_target.png",
+    "/home/jeanh/projects/magic-4x/playtest/conflict/22_fireball_after.png"
+   ],
+   "repro": "Research Fireball and finish a Mage Tower. Press M, choose Fireball, and hover an enemy that has your own units next to it.",
+   "suspected_files": [
+    "game/src/game/controller.ts",
+    "game/src/render/overlays.ts",
+    "game/src/ui/hud/Overlays.tsx"
+   ]
+  },
+  {
+   "title": "Neutral monster phase plays under the last AI's banner, with the round counter already advanced",
+   "severity": "minor",
+   "area": "ui",
+   "description": "Monster turns run inside the last faction's endTurn events. While the wolf and spider attacked my units, the banner said 'Ashen Covenant is making their move'. The top bar already showed 'Round 2' and 'House Valen \u2014 Resolving\u2026', and state.currentTurn was already 0 (Valen). The player cannot tell that the Wilds are acting, and the top bar never names the AI faction that is actually playing. DESIGN \u00a78 treats the neutral phase as its own step.",
+   "evidence": [
+    "/home/jeanh/projects/magic-4x/playtest/conflict/10_aiturn1_1.png"
+   ],
+   "repro": "Leave a unit within a monster's leash and end the turn at animSpeed 4. Watch the banner and the top bar while the monster attacks.",
+   "suspected_files": [
+    "game/src/game/controller.ts",
+    "game/src/sim/turn.ts",
+    "game/src/ui/hud/TopBar.tsx"
+   ]
+  },
+  {
+   "title": "Monsters raid the starting base in the first rounds",
+   "severity": "minor",
+   "area": "sim",
+   "description": "Monsters only respect START_SAFE_RADIUS=5 when they spawn. Their attack leash (4 from home) still reaches units inside the player's starting territory. In the headless seed-7 run, the spider from the (-2,18) ruin attacked the commoner Talia in her house three times and killed her by about round 4, before the player could have an army. In live play monsters likewise struck units next to the castle on round 1. Raids like this can wreck a new player's opening.",
+   "evidence": [
+    "/home/jeanh/projects/magic-4x/playtest/conflict/10_aiturn1_back.png"
+   ],
+   "repro": "Headless sim on seed 7 (small map) with a passive human. Log: 'Giant Spider attacks Talia (Venom Bite)\u2026' \u00d73, then 'Talia is slain by Giant Spider' around rounds 2\u20134.",
+   "suspected_files": [
+    "game/src/sim/neutral.ts"
+   ]
+  },
+  {
+   "title": "Level-up offers do not guarantee different kinds (e.g. 2 active skills + 1 stat, an off-trade Firebolt for a pure-fight knight)",
+   "severity": "minor",
+   "area": "sim",
+   "description": "The concept says that on level-up the player picks between a stats improvement, an efficiency multiplier, a passive skill and an active skill. drawOptions() makes a weighted draw over the whole pool with no stratification by kind. Tobin (41 fight XP, 0 magic) was offered +6 Armor, Firebolt (magic-only tag) and Power Strike: two actives, no efficiency and no passive. The XP weighting works (2 of 3 matched his fight XP), but kind variety is left to chance. Consider one option per kind, or at least two different kinds. The modal itself looks good, and the XP-this-level bar and '+4 max HP' text are clear.",
+   "evidence": [
+    "/home/jeanh/projects/magic-4x/playtest/conflict/13_levelup_modal.png"
+   ],
+   "repro": "Give the knight 39 fight XP (I edited state directly), then attack with it. Read levelUpOptions[0] \u2192 ['stat_armor','active_firebolt','active_powerstrike'].",
+   "suspected_files": [
+    "game/src/sim/progression.ts"
+   ]
+  },
+  {
+   "title": "Combat forecast hides key modifiers (poison on hit, charge, Power Strike) and the approach hex",
+   "severity": "minor",
+   "area": "ui",
+   "description": "The forecast showed Venom Bite 5\u00d72 against my knight but did not say that a hit poisons (4 dmg per turn until cured), and the knight was poisoned. It shows final damage (12\u00d73 = 9 \u00d7 1.5 Power Strike \u00d7 1.25 charge \u00d7 0.7 armor) without saying which bonuses apply. For move-then-attack it does not name the hex the unit will attack from: the knight auto-picked the farm hex and died there. Only firststrike gets a row. I checked the numbers against DESIGN \u00a74.4\u20134.5 in every case (sword 9\u00d73 at 50% vs wolf on forest, spider 5\u00d72 at 55% vs knight on hills with shield and mount penalty, golem 9\u00d72) and they matched.",
+   "evidence": [
+    "/home/jeanh/projects/magic-4x/playtest/conflict/12_knight_forecast_spider.png",
+    "/home/jeanh/projects/magic-4x/playtest/conflict/26_knight_golem_forecast.png"
+   ],
+   "repro": "Select a melee unit and hover a Giant Spider, or use Power Strike and hover an enemy reachable from flat ground.",
+   "suspected_files": [
+    "game/src/ui/hud/Overlays.tsx",
+    "game/src/sim/combat.ts"
+   ]
+  },
+  {
+   "title": "Stone Elemental is a flat orange tinted golem placeholder",
+   "severity": "minor",
+   "area": "assets",
+   "description": "There is no 'monsters/elemental' model, so units.ts falls back to the golem GLB tinted #ffb060. The summoned elemental reads as a glossy orange gummy figure, not a stone spirit, and next to the real dark-stone Ruin Golem it looks unfinished. The summon VFX (golden rune circle) is nice.",
+   "evidence": [
+    "/home/jeanh/projects/magic-4x/playtest/conflict/21_elemental_fullres.png",
+    "/home/jeanh/projects/magic-4x/playtest/conflict/20_summon_1.png"
+   ],
+   "repro": "Cast Summon Elemental from a Mage Tower and look at the spawned unit.",
+   "suspected_files": [
+    "game/src/render/units.ts",
+    "game/public/assets"
+   ]
+  },
+  {
+   "title": "Map hover tooltip shows on top of open modals",
+   "severity": "minor",
+   "area": "ui",
+   "description": "With the Construct modal open, the map hover chip ('Forest / Defense 50% / Moves left 0') stayed drawn above the modal and covered the Forge card. updateHover clears overlays under a modal, but the DOM chip does not hide.",
+   "evidence": [
+    "/home/jeanh/projects/magic-4x/playtest/conflict/16_build_modal.png"
+   ],
+   "repro": "With a unit selected, rest the mouse over the map and press B (or M). The tile chip stays visible over the modal.",
+   "suspected_files": [
+    "game/src/ui/hud/Overlays.tsx"
+   ]
+  },
+  {
+   "title": "Healing Light VFX also shows on enemies and empty hexes in the area",
+   "severity": "polish",
+   "area": "render",
+   "description": "Healing Light only heals allies (Cael, Tobin and Talia healed, poison cured, -20 mana, cd 2, +6 magic XP to the channeler: all correct). The green light pillars, however, also rise on the enemy spider's hex and on empty hexes, which suggests the spider was healed. Use spellCast.affected to place the pillars.",
+   "evidence": [
+    "/home/jeanh/projects/magic-4x/playtest/conflict/19_heal_cast_1.png"
+   ],
+   "repro": "Cast Healing Light on a hex where allies and an enemy are both within radius 1.",
+   "suspected_files": [
+    "game/src/render/fx.ts",
+    "game/src/game/controller.ts"
+   ]
+  },
+  {
+   "title": "Hover/target hex highlight is drawn as a tall white wall",
+   "severity": "polish",
+   "area": "render",
+   "description": "The hovered or targeted hex outline renders as a thick white extruded rim that looks like a stone fence or glass wall around the hex, most visibly on hills and mountain hexes. It is heavy compared with the thin grid lines and the coloured attack rings.",
+   "evidence": [
+    "/home/jeanh/projects/magic-4x/playtest/conflict/09_archer_spider_seq_0.png",
+    "/home/jeanh/projects/magic-4x/playtest/conflict/10_aiturn1_back.png"
+   ],
+   "repro": "Hover any hex, especially hills or mountain, with a unit selected.",
+   "suspected_files": [
+    "game/src/render/overlays.ts"
+   ]
+  },
+  {
+   "title": "Orc and undead riders are near-black silhouettes on their mounts",
+   "severity": "polish",
+   "area": "render",
+   "description": "Seating is correct for all three races: the Valen knight sits properly on a brown warhorse, the orc on a grey dire wolf and the undead on a nightmare, with no floating or sinking seen at idle. But the orc rider and the Ashen rider on its black nightmare are almost pure black, so race, armour and weapon are unreadable at normal zoom. The faction ring is the only cue.",
+   "evidence": [
+    "/home/jeanh/projects/magic-4x/playtest/conflict/27_mounts_three_factions_high.png"
+   ],
+   "repro": "Spawn the knight preset for thorn and ashen and zoom in with high quality.",
+   "suspected_files": [
+    "game/src/render/units.ts"
+   ]
+  },
+  {
+   "title": "Small UI inconsistencies: recruit cards, spellbook ranges, AI elimination notice, grammar",
+   "severity": "polish",
+   "area": "ui",
+   "description": "(1) Recruit cards show base weapon damage ('Longbow 6\u00d73', 'Sword 7\u00d73') while the unit panel shows effective damage (8\u00d73, 9\u00d73). (2) The Spellbook lists base ranges (Healing Light 'Range 6') while the tower with a channeler actually reaches 7; the overlay is correct. (3) Killing an AI leader produced only a chronicle line ('Thornwild Clans has been destroyed by House Valen!') plus a short toast that I never caught in a frame. An event this big deserves a banner. (4) Defeat screen: 'Ashen Covenant prevail after 3 rounds' vs the log's 'prevails'. (5) The forecast footer always says 'hold Shift for the other attack', even when there is no other attack.",
+   "evidence": [
+    "/home/jeanh/projects/magic-4x/playtest/conflict/04_recruit_modal.png",
+    "/home/jeanh/projects/magic-4x/playtest/conflict/17_spellbook.png",
+    "/home/jeanh/projects/magic-4x/playtest/conflict/29_thorn_eliminated.png",
+    "/home/jeanh/projects/magic-4x/playtest/conflict/31_defeat_screen.png"
+   ],
+   "repro": "Open Recruit at the castle, open the Spellbook with a manned tower, kill an AI leader, and lose your leader.",
+   "suspected_files": [
+    "game/src/ui/modals/Recruit.tsx",
+    "game/src/ui/modals/Spellbook.tsx",
+    "game/src/ui/modals/Menu.tsx",
+    "game/src/game/controller.ts"
+   ]
+  },
+  {
+   "title": "Spell and skill damage ignores armour and Intellect; Mend can target the caster",
+   "severity": "polish",
+   "area": "sim",
+   "description": "Fireball (18/8), Storm (14 per bolt) and Firebolt (14) apply flat damage through applyDamage, with no armour reduction and no INT scaling. Storm of Ruin killed a 42%-armour Thorn knight outright (4\u00d714). INT only extends tower range. DESIGN does not spell this out, but it devalues armour and Intellect against magic. Mend's target check is distance \u2264 1, so a hurt unit can heal itself, while DESIGN says 'adjacent ally'. Everything else I checked headlessly matched DESIGN: Bless +20%/+10 armour for 2 turns, Haste +3 mp, Rally free action (+2 mp to allies), Fortify and Mend keep movement, Power Strike free with cd 3, ZOC stops on hexes next to enemies, mana costs and cooldowns.",
+   "evidence": [],
+   "repro": "Headless: cast storm on a plated enemy, or useSkill heal targeting the user's own hex while hurt.",
+   "suspected_files": [
+    "game/src/sim/spells.ts",
+    "game/src/sim/skills.ts"
+   ]
+  },
+  {
+   "title": "Test harness: cdp.mjs viewport override flips between 1600x900 and 1600x763 on every run",
+   "severity": "polish",
+   "area": "ui",
+   "description": "Tooling note for other testers, not a game bug. Each 'run' sets Emulation.setDeviceMetricsOverride(1600x900). When the session closes, the page falls back to the real headless window (1600x763) and the canvas resizes. A screenshot or hexToScreen/pickHex call made right after attaching can therefore use a stale 763-px canvas stretched to 900. I saw an 18% vertical stretch and click coordinates off by up to 80 px until the ResizeObserver re-ran, which takes seconds at SwiftShader frame rates. Workaround: wait for canvas.height===900 at the start of every run, or launch with a window size whose viewport is 1600x900.",
+   "evidence": [
+    "/home/jeanh/projects/magic-4x/playtest/conflict/06_knight_forecast_wolf.png"
+   ],
+   "repro": "Run a cdp.mjs step list that calls hexToScreen immediately. Compare document.querySelector('canvas').height (763) with clientHeight (900).",
+   "suspected_files": [
+    "game/tools/cdp.mjs"
+   ]
+  }
+ ],
+ "coverage": "Rendering was extremely slow under machine load (load average about 33, another SwiftShader browser and ComfyUI running): 0.1\u20130.5 fps and up to 60 s per screenshot. To cope I rendered the canvas at half resolution with a CSS transform for interaction runs, and switched to full resolution and high quality only for detail shots.\n\nExercised with real clicks and keys:\n- Melee: knight vs wolf (all missed), leader vs wolf (kill and corpse removal), knight vs spider (poisoned, level-up), Power-Strike knight charging a golem (knight died, so death from the saddle was seen at low frame sampling).\n- Ranged: archer vs spider, no retaliation.\n- Forecast numbers checked against DESIGN \u00a74.4\u20134.5 for wolf, spider and golem, including terrain, shield, mount penalty, charge and armour.\n- ZOC stop on move, Shift for the alternate attack (Longbow \u2194 Bow Bash, with retaliation shown), right-click cancel.\n- Level-up modal opening automatically and choosing Power Strike; Power Strike used from the unit panel (free action, cd 3).\n- Spellbook (M) and cast mode with the tower range overlay; casts of Healing Light (poison cured, mana and cd correct, channeler XP), Summon Elemental and Fireball (friendly fire, kill credited to the channeler).\n- Two AI rounds at animSpeed 4, AI leader elimination (chronicle line), and my own leader's death leading to the Defeat screen.\n- Mounts: horse, dire wolf and nightmare idle close-up at high quality.\n\nDone via controller or state edits (noted in findings): granting resources and techs, creating the archer, golem and mount test units, relocating the spider and the Thorn leader, setting XP and HP, completing the Mage Tower with buildLeft=0, and dispatching the build action. The Build modal was broken at the time, and its later fix was re-verified on a fresh game.\n\nAI over 25+ rounds was evaluated with a headless in-page sim (sim + AI modules, no renderer) on seeds 7, 11 and 23 for 25\u201334 rounds with a passive human. Bless, Haste, Storm, Rally, Mend, Fortify and ZOC were checked headlessly on a cloned game.\n\nNot covered:\n- Watching 25 animated AI rounds live (impossible at these frame rates).\n- Bless, Haste and Storm VFX visually.\n- Targeted active skills (Firebolt, Volley, Blink) via the UI.\n- Mounted ride and walk clips while moving.\n- Projectile flight; frame sampling was too sparse to catch the arrow mid-air.\n- Low fps was not judged, as instructed.\n\nNo console errors or exceptions were logged during the session.",
+ "highlights": [
+  "/home/jeanh/projects/magic-4x/playtest/conflict/13_levelup_modal.png",
+  "/home/jeanh/projects/magic-4x/playtest/conflict/17_spellbook.png",
+  "/home/jeanh/projects/magic-4x/playtest/conflict/22_fireball_after.png",
+  "/home/jeanh/projects/magic-4x/playtest/conflict/27_mounts_three_factions_high.png",
+  "/home/jeanh/projects/magic-4x/playtest/conflict/31_defeat_screen.png",
+  "/home/jeanh/projects/magic-4x/playtest/conflict/18_heal_targeting.png"
+ ]
+}

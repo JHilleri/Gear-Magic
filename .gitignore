@@ -1,0 +1,52 @@
+# --- Dependencies & build output ---
+node_modules/
+dist/
+*.tsbuildinfo
+.vite/
+.vitest-cache/
+coverage/
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# --- Art pipeline (art/) ---
+# Raw ComfyUI / TRELLIS output (~1 GB of PNG + GLB). The shipped, processed
+# assets live in game/public/assets and ARE committed; regenerate the raw
+# ones with the scripts in art/tools (see README "Regenerating art").
+art/outputs/
+# Per-job workflow files written by art/tools/i2m.py on every run.
+art/blueprints/i2m_jobs/
+# comfy CLI's machine-owned run journal.
+art/.comfy/runs.jsonl
+
+# --- Playtesting ---
+# Screenshots from headless playtests (~950 MB). Notes and reports are kept.
+playtest/**/*.png
+playtest/**/*.jpg
+playtest/**/*.webm
+playtest/**/*.mp4
+
+# --- Local snapshots made before git existed ---
+backups/
+
+# --- Blender ---
+*.blend1
+*.blend2
+
+# --- Logs ---
+*.log
+npm-debug.log*
+
+# --- Local tool / editor state ---
+.t3d
+.claude/settings.local.json
+.env
+.env.*
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db

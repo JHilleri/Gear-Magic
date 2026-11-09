@@ -1,0 +1,552 @@
+[
+ {
+  "id": "human_commoner",
+  "cat": "src_units",
+  "alpha": true,
+  "seed": 101,
+  "w": 896,
+  "h": 1152,
+  "prompt": "Full body stylized fantasy strategy game 3D character model with slightly chunky heroic proportions, standing in a strict T-pose with both arms straight out horizontally, palms down, open empty hands, legs slightly apart, front view at eye level, symmetrical, hand-painted PBR textures of a young human peasant man with short brown hair, wearing a simple tan linen tunic with a rope belt, grey wool trousers and brown leather boots, centered with generous empty margins, on a plain flat light grey background, soft even studio lighting, clean 3D render",
+  "negative": "text, watermark, logo, cropped, cut off, multiple objects, scenery, landscape, ground plane, shadow, frame, border, weapon, holding objects, shield, sword, staff, bow, cape covering arms, extra limbs, sitting"
+ },
+ {
+  "id": "human_light",
+  "cat": "src_units",
+  "alpha": true,
+  "seed": 102,
+  "w": 896,
+  "h": 1152,
+  "prompt": "Full body stylized fantasy strategy game 3D character model with slightly chunky heroic proportions, standing in a strict T-pose with both arms straight out horizontally, palms down, open empty hands, legs slightly apart, front view at eye level, symmetrical, hand-painted PBR textures of a human ranger woman with a braided ponytail, wearing fitted brown leather armor with a forest green hooded mantle down on the shoulders, leather bracers and tall boots, centered with generous empty margins, on a plain flat light grey background, soft even studio lighting, clean 3D render",
+  "negative": "text, watermark, logo, cropped, cut off, multiple objects, scenery, landscape, ground plane, shadow, frame, border, weapon, holding objects, shield, sword, staff, bow, cape covering arms, extra limbs, sitting"
+ },
+ {
+  "id": "human_heavy",
+  "cat": "src_units",
+  "alpha": true,
+  "seed": 103,
+  "w": 896,
+  "h": 1152,
+  "prompt": "Full body stylized fantasy strategy game 3D character model with slightly chunky heroic proportions, standing in a strict T-pose with both arms straight out horizontally, palms down, open empty hands, legs slightly apart, front view at eye level, symmetrical, hand-painted PBR textures of a human knight in polished full steel plate armor with a royal blue tabard trimmed with gold, an open-faced steel helmet showing a stern bearded face, centered with generous empty margins, on a plain flat light grey background, soft even studio lighting, clean 3D render",
+  "negative": "text, watermark, logo, cropped, cut off, multiple objects, scenery, landscape, ground plane, shadow, frame, border, weapon, holding objects, shield, sword, staff, bow, cape covering arms, extra limbs, sitting"
+ },
+ {
+  "id": "human_robe",
+  "cat": "src_units",
+  "alpha": true,
+  "seed": 104,
+  "w": 896,
+  "h": 1152,
+  "prompt": "Full body stylized fantasy strategy game 3D character model with slightly chunky heroic proportions, standing in a strict T-pose with both arms straight out horizontally, palms down, open empty hands, legs slightly apart, front view at eye level, symmetrical, hand-painted PBR textures of a human battle mage man in flowing royal blue robes with gold embroidery and a wide leather belt with pouches, hood down, short silver beard, centered with generous empty margins, on a plain flat light grey background, soft even studio lighting, clean 3D render",
+  "negative": "text, watermark, logo, cropped, cut off, multiple objects, scenery, landscape, ground plane, shadow, frame, border, weapon, holding objects, shield, sword, staff, bow, cape covering arms, extra limbs, sitting"
+ },
+ {
+  "id": "human_leader",
+  "cat": "src_units",
+  "alpha": true,
+  "seed": 105,
+  "w": 896,
+  "h": 1152,
+  "prompt": "Full body stylized fantasy strategy game 3D character model with slightly chunky heroic proportions, standing in a strict T-pose with both arms straight out horizontally, palms down, open empty hands, legs slightly apart, front view at eye level, symmetrical, hand-painted PBR textures of a regal human queen commander in gilded silver plate armor with a short royal blue cape on her back, a slim golden crown on long auburn hair, centered with generous empty margins, on a plain flat light grey background, soft even studio lighting, clean 3D render",
+  "negative": "text, watermark, logo, cropped, cut off, multiple objects, scenery, landscape, ground plane, shadow, frame, border, weapon, holding objects, shield, sword, staff, bow, cape covering arms, extra limbs, sitting"
+ },
+ {
+  "id": "orc_commoner",
+  "cat": "src_units",
+  "alpha": true,
+  "seed": 106,
+  "w": 896,
+  "h": 1152,
+  "prompt": "Full body stylized fantasy strategy game 3D character model with slightly chunky heroic proportions, standing in a strict T-pose with both arms straight out horizontally, palms down, open empty hands, legs slightly apart, front view at eye level, symmetrical, hand-painted PBR textures of a muscular green-skinned orc laborer with small tusks and a black topknot, wearing a ragged brown hide tunic with a rope belt, bare arms, wrapped feet, centered with generous empty margins, on a plain flat light grey background, soft even studio lighting, clean 3D render",
+  "negative": "text, watermark, logo, cropped, cut off, multiple objects, scenery, landscape, ground plane, shadow, frame, border, weapon, holding objects, shield, sword, staff, bow, cape covering arms, extra limbs, sitting"
+ },
+ {
+  "id": "orc_light",
+  "cat": "src_units",
+  "alpha": true,
+  "seed": 107,
+  "w": 896,
+  "h": 1152,
+  "prompt": "Full body stylized fantasy strategy game 3D character model with slightly chunky heroic proportions, standing in a strict T-pose with both arms straight out horizontally, palms down, open empty hands, legs slightly apart, front view at eye level, symmetrical, hand-painted PBR textures of a lean green-skinned orc hunter with tusks and red war paint, wearing dark leather armor with fur shoulder pads and bone trinkets, centered with generous empty margins, on a plain flat light grey background, soft even studio lighting, clean 3D render",
+  "negative": "text, watermark, logo, cropped, cut off, multiple objects, scenery, landscape, ground plane, shadow, frame, border, weapon, holding objects, shield, sword, staff, bow, cape covering arms, extra limbs, sitting"
+ },
+ {
+  "id": "orc_heavy",
+  "cat": "src_units",
+  "alpha": true,
+  "seed": 108,
+  "w": 896,
+  "h": 1152,
+  "prompt": "Full body stylized fantasy strategy game 3D character model with slightly chunky heroic proportions, standing in a strict T-pose with both arms straight out horizontally, palms down, open empty hands, legs slightly apart, front view at eye level, symmetrical, hand-painted PBR textures of a hulking green-skinned orc warrior with tusks in heavy spiked dark iron plate armor with crimson cloth and a horned iron helmet, centered with generous empty margins, on a plain flat light grey background, soft even studio lighting, clean 3D render",
+  "negative": "text, watermark, logo, cropped, cut off, multiple objects, scenery, landscape, ground plane, shadow, frame, border, weapon, holding objects, shield, sword, staff, bow, cape covering arms, extra limbs, sitting"
+ },
+ {
+  "id": "orc_robe",
+  "cat": "src_units",
+  "alpha": true,
+  "seed": 109,
+  "w": 896,
+  "h": 1152,
+  "prompt": "Full body stylized fantasy strategy game 3D character model with slightly chunky heroic proportions, standing in a strict T-pose with both arms straight out horizontally, palms down, open empty hands, legs slightly apart, front view at eye level, symmetrical, hand-painted PBR textures of an old green-skinned orc shaman with tusks and white braided hair, wearing a tattered crimson hide robe with bone necklaces and feathers, centered with generous empty margins, on a plain flat light grey background, soft even studio lighting, clean 3D render",
+  "negative": "text, watermark, logo, cropped, cut off, multiple objects, scenery, landscape, ground plane, shadow, frame, border, weapon, holding objects, shield, sword, staff, bow, cape covering arms, extra limbs, sitting"
+ },
+ {
+  "id": "orc_leader",
+  "cat": "src_units",
+  "alpha": true,
+  "seed": 110,
+  "w": 896,
+  "h": 1152,
+  "prompt": "Full body stylized fantasy strategy game 3D character model with slightly chunky heroic proportions, standing in a strict T-pose with both arms straight out horizontally, palms down, open empty hands, legs slightly apart, front view at eye level, symmetrical, hand-painted PBR textures of a massive green-skinned orc warchief with big tusks in blackened iron armor with crimson fur mantle, skull shoulder guards and a horned iron crown, centered with generous empty margins, on a plain flat light grey background, soft even studio lighting, clean 3D render",
+  "negative": "text, watermark, logo, cropped, cut off, multiple objects, scenery, landscape, ground plane, shadow, frame, border, weapon, holding objects, shield, sword, staff, bow, cape covering arms, extra limbs, sitting"
+ },
+ {
+  "id": "undead_commoner",
+  "cat": "src_units",
+  "alpha": true,
+  "seed": 111,
+  "w": 896,
+  "h": 1152,
+  "prompt": "Full body stylized fantasy strategy game 3D character model with slightly chunky heroic proportions, standing in a strict T-pose with both arms straight out horizontally, palms down, open empty hands, legs slightly apart, front view at eye level, symmetrical, hand-painted PBR textures of a gaunt undead revenant laborer with pale grey-blue skin, sunken cheeks and faintly glowing violet eyes, wearing a tattered grey sackcloth tunic and rags, centered with generous empty margins, on a plain flat light grey background, soft even studio lighting, clean 3D render",
+  "negative": "text, watermark, logo, cropped, cut off, multiple objects, scenery, landscape, ground plane, shadow, frame, border, weapon, holding objects, shield, sword, staff, bow, cape covering arms, extra limbs, sitting"
+ },
+ {
+  "id": "undead_light",
+  "cat": "src_units",
+  "alpha": true,
+  "seed": 112,
+  "w": 896,
+  "h": 1152,
+  "prompt": "Full body stylized fantasy strategy game 3D character model with slightly chunky heroic proportions, standing in a strict T-pose with both arms straight out horizontally, palms down, open empty hands, legs slightly apart, front view at eye level, symmetrical, hand-painted PBR textures of a gaunt undead revenant scout with pale grey-blue skin and glowing violet eyes, wearing tattered dark leather armor and a ragged violet hood down on the shoulders, centered with generous empty margins, on a plain flat light grey background, soft even studio lighting, clean 3D render",
+  "negative": "text, watermark, logo, cropped, cut off, multiple objects, scenery, landscape, ground plane, shadow, frame, border, weapon, holding objects, shield, sword, staff, bow, cape covering arms, extra limbs, sitting"
+ },
+ {
+  "id": "undead_heavy",
+  "cat": "src_units",
+  "alpha": true,
+  "seed": 113,
+  "w": 896,
+  "h": 1152,
+  "prompt": "Full body stylized fantasy strategy game 3D character model with slightly chunky heroic proportions, standing in a strict T-pose with both arms straight out horizontally, palms down, open empty hands, legs slightly apart, front view at eye level, symmetrical, hand-painted PBR textures of an undead death knight in corroded black plate armor etched with glowing violet runes and a skull-faced black helmet, centered with generous empty margins, on a plain flat light grey background, soft even studio lighting, clean 3D render",
+  "negative": "text, watermark, logo, cropped, cut off, multiple objects, scenery, landscape, ground plane, shadow, frame, border, weapon, holding objects, shield, sword, staff, bow, cape covering arms, extra limbs, sitting"
+ },
+ {
+  "id": "undead_robe",
+  "cat": "src_units",
+  "alpha": true,
+  "seed": 114,
+  "w": 896,
+  "h": 1152,
+  "prompt": "Full body stylized fantasy strategy game 3D character model with slightly chunky heroic proportions, standing in a strict T-pose with both arms straight out horizontally, palms down, open empty hands, legs slightly apart, front view at eye level, symmetrical, hand-painted PBR textures of an undead necromancer with a pale skull-like face and glowing violet eyes, wearing a tattered violet and black robe decorated with small bones, centered with generous empty margins, on a plain flat light grey background, soft even studio lighting, clean 3D render",
+  "negative": "text, watermark, logo, cropped, cut off, multiple objects, scenery, landscape, ground plane, shadow, frame, border, weapon, holding objects, shield, sword, staff, bow, cape covering arms, extra limbs, sitting"
+ },
+ {
+  "id": "undead_leader",
+  "cat": "src_units",
+  "alpha": true,
+  "seed": 115,
+  "w": 896,
+  "h": 1152,
+  "prompt": "Full body stylized fantasy strategy game 3D character model with slightly chunky heroic proportions, standing in a strict T-pose with both arms straight out horizontally, palms down, open empty hands, legs slightly apart, front view at eye level, symmetrical, hand-painted PBR textures of a towering lich lord with a skeletal face and glowing violet eyes in ornate black and violet robes with gold trim and a tall jagged bone crown, centered with generous empty margins, on a plain flat light grey background, soft even studio lighting, clean 3D render",
+  "negative": "text, watermark, logo, cropped, cut off, multiple objects, scenery, landscape, ground plane, shadow, frame, border, weapon, holding objects, shield, sword, staff, bow, cape covering arms, extra limbs, sitting"
+ },
+ {
+  "id": "tools",
+  "cat": "src_items",
+  "alpha": true,
+  "seed": 116,
+  "w": 1024,
+  "h": 1024,
+  "prompt": "A single isolated stylized high-fantasy strategy game 3D asset, hand-painted PBR textures, chunky readable silhouette, rich but grounded colors of a stylized builder's hammer with a wooden handle and a heavy iron head, standing vertically with the head at the top, full length visible, centered with generous empty margins, on a plain flat light grey background, soft even studio lighting, clean 3D render",
+  "negative": "text, watermark, logo, cropped, cut off, multiple objects, scenery, landscape, ground plane, shadow, frame, border, hands, person"
+ },
+ {
+  "id": "sword",
+  "cat": "src_items",
+  "alpha": true,
+  "seed": 117,
+  "w": 768,
+  "h": 1344,
+  "prompt": "A single isolated stylized high-fantasy strategy game 3D asset, hand-painted PBR textures, chunky readable silhouette, rich but grounded colors of a stylized fantasy iron longsword with a leather wrapped grip and a bronze crossguard, standing vertically with the blade pointing up, full length visible, centered with generous empty margins, on a plain flat light grey background, soft even studio lighting, clean 3D render",
+  "negative": "text, watermark, logo, cropped, cut off, multiple objects, scenery, landscape, ground plane, shadow, frame, border, hands, person"
+ },
+ {
+  "id": "spear",
+  "cat": "src_items",
+  "alpha": true,
+  "seed": 118,
+  "w": 768,
+  "h": 1344,
+  "prompt": "A single isolated stylized high-fantasy strategy game 3D asset, hand-painted PBR textures, chunky readable silhouette, rich but grounded colors of a stylized fantasy spear with a long ash wood shaft, a leaf-shaped steel spearhead and a blue cloth tassel, standing vertically with the tip pointing up, full length visible, centered with generous empty margins, on a plain flat light grey background, soft even studio lighting, clean 3D render",
+  "negative": "text, watermark, logo, cropped, cut off, multiple objects, scenery, landscape, ground plane, shadow, frame, border, hands, person"
+ },
+ {
+  "id": "axe",
+  "cat": "src_items",
+  "alpha": true,
+  "seed": 119,
+  "w": 768,
+  "h": 1344,
+  "prompt": "A single isolated stylized high-fantasy strategy game 3D asset, hand-painted PBR textures, chunky readable silhouette, rich but grounded colors of a stylized fantasy single-bladed war axe with a thick wooden haft wrapped in leather and a large crescent iron blade, standing vertically with the blade at the top, full length visible, centered with generous empty margins, on a plain flat light grey background, soft even studio lighting, clean 3D render",
+  "negative": "text, watermark, logo, cropped, cut off, multiple objects, scenery, landscape, ground plane, shadow, frame, border, hands, person"
+ },
+ {
+  "id": "bow",
+  "cat": "src_items",
+  "alpha": true,
+  "seed": 120,
+  "w": 768,
+  "h": 1344,
+  "prompt": "A single isolated stylized high-fantasy strategy game 3D asset, hand-painted PBR textures, chunky readable silhouette, rich but grounded colors of a stylized fantasy wooden recurve longbow with a leather grip and taut string, standing vertically, seen from the side so the curve of the limbs is visible, full length visible, centered with generous empty margins, on a plain flat light grey background, soft even studio lighting, clean 3D render",
+  "negative": "text, watermark, logo, cropped, cut off, multiple objects, scenery, landscape, ground plane, shadow, frame, border, hands, person"
+ },
+ {
+  "id": "staff",
+  "cat": "src_items",
+  "alpha": true,
+  "seed": 121,
+  "w": 768,
+  "h": 1344,
+  "prompt": "A single isolated stylized high-fantasy strategy game 3D asset, hand-painted PBR textures, chunky readable silhouette, rich but grounded colors of a stylized fantasy wizard staff of twisted dark wood topped with a large glowing blue aether crystal held by wooden roots, standing vertically, full length visible, centered with generous empty margins, on a plain flat light grey background, soft even studio lighting, clean 3D render",
+  "negative": "text, watermark, logo, cropped, cut off, multiple objects, scenery, landscape, ground plane, shadow, frame, border, hands, person"
+ },
+ {
+  "id": "wand",
+  "cat": "src_items",
+  "alpha": true,
+  "seed": 122,
+  "w": 1024,
+  "h": 1024,
+  "prompt": "A single isolated stylized high-fantasy strategy game 3D asset, hand-painted PBR textures, chunky readable silhouette, rich but grounded colors of a short stylized fantasy magic wand of carved white wood with a gold band and a small violet crystal at the tip, standing vertically tip up, full length visible, centered with generous empty margins, on a plain flat light grey background, soft even studio lighting, clean 3D render",
+  "negative": "text, watermark, logo, cropped, cut off, multiple objects, scenery, landscape, ground plane, shadow, frame, border, hands, person"
+ },
+ {
+  "id": "shield_human",
+  "cat": "src_items",
+  "alpha": true,
+  "seed": 123,
+  "w": 1024,
+  "h": 1024,
+  "prompt": "A single isolated stylized high-fantasy strategy game 3D asset, hand-painted PBR textures, chunky readable silhouette, rich but grounded colors of a stylized fantasy kite shield painted royal blue with a gold border and a gold crown emblem, front view, standing upright, full length visible, centered with generous empty margins, on a plain flat light grey background, soft even studio lighting, clean 3D render",
+  "negative": "text, watermark, logo, cropped, cut off, multiple objects, scenery, landscape, ground plane, shadow, frame, border, hands, person"
+ },
+ {
+  "id": "shield_orc",
+  "cat": "src_items",
+  "alpha": true,
+  "seed": 124,
+  "w": 1024,
+  "h": 1024,
+  "prompt": "A single isolated stylized high-fantasy strategy game 3D asset, hand-painted PBR textures, chunky readable silhouette, rich but grounded colors of a stylized fantasy round wooden orc shield with crimson tribal paint, an iron rim and a central iron boss, front view, standing upright, full length visible, centered with generous empty margins, on a plain flat light grey background, soft even studio lighting, clean 3D render",
+  "negative": "text, watermark, logo, cropped, cut off, multiple objects, scenery, landscape, ground plane, shadow, frame, border, hands, person"
+ },
+ {
+  "id": "shield_undead",
+  "cat": "src_items",
+  "alpha": true,
+  "seed": 125,
+  "w": 1024,
+  "h": 1024,
+  "prompt": "A single isolated stylized high-fantasy strategy game 3D asset, hand-painted PBR textures, chunky readable silhouette, rich but grounded colors of a stylized fantasy black iron heater shield with jagged spikes on the rim and glowing violet runes, front view, standing upright, full length visible, centered with generous empty margins, on a plain flat light grey background, soft even studio lighting, clean 3D render",
+  "negative": "text, watermark, logo, cropped, cut off, multiple objects, scenery, landscape, ground plane, shadow, frame, border, hands, person"
+ },
+ {
+  "id": "horse",
+  "cat": "src_mounts",
+  "alpha": true,
+  "seed": 126,
+  "w": 1152,
+  "h": 896,
+  "prompt": "A single isolated stylized high-fantasy strategy game 3D asset, hand-painted PBR textures, chunky readable silhouette, rich but grounded colors of a sturdy brown warhorse wearing a royal blue caparison with gold trim and a leather saddle, standing on four legs, three-quarter front view at eye level, full body, no rider, centered with generous empty margins, on a plain flat light grey background, soft even studio lighting, clean 3D render",
+  "negative": "text, watermark, logo, cropped, cut off, multiple objects, scenery, landscape, ground plane, shadow, frame, border, rider, person"
+ },
+ {
+  "id": "wolf",
+  "cat": "src_mounts",
+  "alpha": true,
+  "seed": 127,
+  "w": 1152,
+  "h": 896,
+  "prompt": "A single isolated stylized high-fantasy strategy game 3D asset, hand-painted PBR textures, chunky readable silhouette, rich but grounded colors of a huge grey dire wolf with a crimson leather saddle and bone decorations, standing on four legs, three-quarter front view at eye level, full body, no rider, centered with generous empty margins, on a plain flat light grey background, soft even studio lighting, clean 3D render",
+  "negative": "text, watermark, logo, cropped, cut off, multiple objects, scenery, landscape, ground plane, shadow, frame, border, rider, person"
+ },
+ {
+  "id": "nightmare",
+  "cat": "src_mounts",
+  "alpha": true,
+  "seed": 128,
+  "w": 1152,
+  "h": 896,
+  "prompt": "A single isolated stylized high-fantasy strategy game 3D asset, hand-painted PBR textures, chunky readable silhouette, rich but grounded colors of a skeletal undead black horse with tattered violet barding, glowing violet eyes and a dark leather saddle, standing on four legs, three-quarter front view at eye level, full body, no rider, centered with generous empty margins, on a plain flat light grey background, soft even studio lighting, clean 3D render",
+  "negative": "text, watermark, logo, cropped, cut off, multiple objects, scenery, landscape, ground plane, shadow, frame, border, rider, person"
+ },
+ {
+  "id": "wolf",
+  "cat": "src_monsters",
+  "alpha": true,
+  "seed": 129,
+  "w": 1024,
+  "h": 1024,
+  "prompt": "A single isolated stylized high-fantasy strategy game 3D asset, hand-painted PBR textures, chunky readable silhouette, rich but grounded colors of a lean grey wild wolf with shaggy fur, snarling, standing on four legs, three-quarter front view at eye level, full body, centered with generous empty margins, on a plain flat light grey background, soft even studio lighting, clean 3D render",
+  "negative": "text, watermark, logo, cropped, cut off, multiple objects, scenery, landscape, ground plane, shadow, frame, border"
+ },
+ {
+  "id": "spider",
+  "cat": "src_monsters",
+  "alpha": true,
+  "seed": 130,
+  "w": 1024,
+  "h": 1024,
+  "prompt": "A single isolated stylized high-fantasy strategy game 3D asset, hand-painted PBR textures, chunky readable silhouette, rich but grounded colors of a giant dark brown forest spider with hairy legs and a bulbous abdomen with orange markings, standing, three-quarter front view at eye level, full body, centered with generous empty margins, on a plain flat light grey background, soft even studio lighting, clean 3D render",
+  "negative": "text, watermark, logo, cropped, cut off, multiple objects, scenery, landscape, ground plane, shadow, frame, border"
+ },
+ {
+  "id": "golem",
+  "cat": "src_monsters",
+  "alpha": true,
+  "seed": 131,
+  "w": 1024,
+  "h": 1024,
+  "prompt": "A single isolated stylized high-fantasy strategy game 3D asset, hand-painted PBR textures, chunky readable silhouette, rich but grounded colors of a hulking ancient stone golem made of mossy carved blocks with glowing cyan rune cracks, standing upright with heavy arms down, front view at eye level, full body, centered with generous empty margins, on a plain flat light grey background, soft even studio lighting, clean 3D render",
+  "negative": "text, watermark, logo, cropped, cut off, multiple objects, scenery, landscape, ground plane, shadow, frame, border"
+ },
+ {
+  "id": "castle_valen",
+  "cat": "src_buildings",
+  "alpha": true,
+  "seed": 132,
+  "w": 1024,
+  "h": 1024,
+  "prompt": "A single isolated stylized high-fantasy strategy game 3D asset, hand-painted PBR textures, chunky readable silhouette, rich but grounded colors of a compact medieval fantasy human castle with grey stone walls, two round towers with royal blue conical roofs, blue and gold banners and a wooden gate, front three-quarter view at a low eye-level angle, the whole building visible, isolated with no surrounding ground, centered with generous empty margins, on a plain flat light grey background, soft even studio lighting, clean 3D render",
+  "negative": "text, watermark, logo, cropped, cut off, multiple objects, scenery, landscape, ground plane, shadow, frame, border, people, characters"
+ },
+ {
+  "id": "castle_thorn",
+  "cat": "src_buildings",
+  "alpha": true,
+  "seed": 133,
+  "w": 1024,
+  "h": 1024,
+  "prompt": "A single isolated stylized high-fantasy strategy game 3D asset, hand-painted PBR textures, chunky readable silhouette, rich but grounded colors of a compact orc stronghold fortress built of dark logs and rough stone, spiked palisade walls, crimson war banners, a central wooden tower with skulls and horns, front three-quarter view at a low eye-level angle, the whole building visible, isolated with no surrounding ground, centered with generous empty margins, on a plain flat light grey background, soft even studio lighting, clean 3D render",
+  "negative": "text, watermark, logo, cropped, cut off, multiple objects, scenery, landscape, ground plane, shadow, frame, border, people, characters"
+ },
+ {
+  "id": "castle_ashen",
+  "cat": "src_buildings",
+  "alpha": true,
+  "seed": 134,
+  "w": 1024,
+  "h": 1024,
+  "prompt": "A single isolated stylized high-fantasy strategy game 3D asset, hand-painted PBR textures, chunky readable silhouette, rich but grounded colors of a compact gothic undead necropolis fortress of black stone with pointed spires, violet glowing windows, bone decorations and tattered violet banners, front three-quarter view at a low eye-level angle, the whole building visible, isolated with no surrounding ground, centered with generous empty margins, on a plain flat light grey background, soft even studio lighting, clean 3D render",
+  "negative": "text, watermark, logo, cropped, cut off, multiple objects, scenery, landscape, ground plane, shadow, frame, border, people, characters"
+ },
+ {
+  "id": "house",
+  "cat": "src_buildings",
+  "alpha": true,
+  "seed": 135,
+  "w": 1024,
+  "h": 1024,
+  "prompt": "A single isolated stylized high-fantasy strategy game 3D asset, hand-painted PBR textures, chunky readable silhouette, rich but grounded colors of a cosy medieval fantasy cottage with whitewashed timber-framed walls, a thatched straw roof, a small chimney and a wooden door, front three-quarter view at a low eye-level angle, the whole building visible, isolated with no surrounding ground, centered with generous empty margins, on a plain flat light grey background, soft even studio lighting, clean 3D render",
+  "negative": "text, watermark, logo, cropped, cut off, multiple objects, scenery, landscape, ground plane, shadow, frame, border, people, characters"
+ },
+ {
+  "id": "farm",
+  "cat": "src_buildings",
+  "alpha": true,
+  "seed": 136,
+  "w": 1024,
+  "h": 1024,
+  "prompt": "A single isolated stylized high-fantasy strategy game 3D asset, hand-painted PBR textures, chunky readable silhouette, rich but grounded colors of a small medieval fantasy farmstead with a red wooden barn, a hay stack, a fenced patch of golden wheat and a few crops, front three-quarter view at a low eye-level angle, the whole building visible, isolated with no surrounding ground, centered with generous empty margins, on a plain flat light grey background, soft even studio lighting, clean 3D render",
+  "negative": "text, watermark, logo, cropped, cut off, multiple objects, scenery, landscape, ground plane, shadow, frame, border, people, characters"
+ },
+ {
+  "id": "lumber",
+  "cat": "src_buildings",
+  "alpha": true,
+  "seed": 137,
+  "w": 1024,
+  "h": 1024,
+  "prompt": "A single isolated stylized high-fantasy strategy game 3D asset, hand-painted PBR textures, chunky readable silhouette, rich but grounded colors of a medieval fantasy lumber camp with a small log cabin, a pile of stacked logs, a large tree stump with an axe and a sawhorse, front three-quarter view at a low eye-level angle, the whole building visible, isolated with no surrounding ground, centered with generous empty margins, on a plain flat light grey background, soft even studio lighting, clean 3D render",
+  "negative": "text, watermark, logo, cropped, cut off, multiple objects, scenery, landscape, ground plane, shadow, frame, border, people, characters"
+ },
+ {
+  "id": "quarry",
+  "cat": "src_buildings",
+  "alpha": true,
+  "seed": 138,
+  "w": 1024,
+  "h": 1024,
+  "prompt": "A single isolated stylized high-fantasy strategy game 3D asset, hand-painted PBR textures, chunky readable silhouette, rich but grounded colors of a medieval fantasy stone quarry with cut grey stone blocks, a wooden crane with rope and pulley and a pile of rubble, front three-quarter view at a low eye-level angle, the whole building visible, isolated with no surrounding ground, centered with generous empty margins, on a plain flat light grey background, soft even studio lighting, clean 3D render",
+  "negative": "text, watermark, logo, cropped, cut off, multiple objects, scenery, landscape, ground plane, shadow, frame, border, people, characters"
+ },
+ {
+  "id": "forge",
+  "cat": "src_buildings",
+  "alpha": true,
+  "seed": 139,
+  "w": 1024,
+  "h": 1024,
+  "prompt": "A single isolated stylized high-fantasy strategy game 3D asset, hand-painted PBR textures, chunky readable silhouette, rich but grounded colors of a medieval fantasy blacksmith forge with a stone chimney, a glowing furnace, an anvil under a wooden awning and weapon racks, front three-quarter view at a low eye-level angle, the whole building visible, isolated with no surrounding ground, centered with generous empty margins, on a plain flat light grey background, soft even studio lighting, clean 3D render",
+  "negative": "text, watermark, logo, cropped, cut off, multiple objects, scenery, landscape, ground plane, shadow, frame, border, people, characters"
+ },
+ {
+  "id": "training",
+  "cat": "src_buildings",
+  "alpha": true,
+  "seed": 140,
+  "w": 1024,
+  "h": 1024,
+  "prompt": "A single isolated stylized high-fantasy strategy game 3D asset, hand-painted PBR textures, chunky readable silhouette, rich but grounded colors of a medieval fantasy training ground with straw practice dummies, a wooden weapon rack with spears and a circular wooden fence, front three-quarter view at a low eye-level angle, the whole building visible, isolated with no surrounding ground, centered with generous empty margins, on a plain flat light grey background, soft even studio lighting, clean 3D render",
+  "negative": "text, watermark, logo, cropped, cut off, multiple objects, scenery, landscape, ground plane, shadow, frame, border, people, characters"
+ },
+ {
+  "id": "mine",
+  "cat": "src_buildings",
+  "alpha": true,
+  "seed": 141,
+  "w": 1024,
+  "h": 1024,
+  "prompt": "A single isolated stylized high-fantasy strategy game 3D asset, hand-painted PBR textures, chunky readable silhouette, rich but grounded colors of a medieval fantasy iron mine entrance carved into a rocky outcrop with a wooden support frame, a mine cart on rails full of iron ore, front three-quarter view at a low eye-level angle, the whole building visible, isolated with no surrounding ground, centered with generous empty margins, on a plain flat light grey background, soft even studio lighting, clean 3D render",
+  "negative": "text, watermark, logo, cropped, cut off, multiple objects, scenery, landscape, ground plane, shadow, frame, border, people, characters"
+ },
+ {
+  "id": "crystalmine",
+  "cat": "src_buildings",
+  "alpha": true,
+  "seed": 142,
+  "w": 1024,
+  "h": 1024,
+  "prompt": "A single isolated stylized high-fantasy strategy game 3D asset, hand-painted PBR textures, chunky readable silhouette, rich but grounded colors of a fantasy crystal mine with a wooden scaffold and mine cart beside large glowing violet and blue aether crystals growing from rock, front three-quarter view at a low eye-level angle, the whole building visible, isolated with no surrounding ground, centered with generous empty margins, on a plain flat light grey background, soft even studio lighting, clean 3D render",
+  "negative": "text, watermark, logo, cropped, cut off, multiple objects, scenery, landscape, ground plane, shadow, frame, border, people, characters"
+ },
+ {
+  "id": "library",
+  "cat": "src_buildings",
+  "alpha": true,
+  "seed": 143,
+  "w": 1024,
+  "h": 1024,
+  "prompt": "A single isolated stylized high-fantasy strategy game 3D asset, hand-painted PBR textures, chunky readable silhouette, rich but grounded colors of a medieval fantasy stone library hall with tall arched windows, a dark blue tiled roof, a small dome and stacks of books by the door, front three-quarter view at a low eye-level angle, the whole building visible, isolated with no surrounding ground, centered with generous empty margins, on a plain flat light grey background, soft even studio lighting, clean 3D render",
+  "negative": "text, watermark, logo, cropped, cut off, multiple objects, scenery, landscape, ground plane, shadow, frame, border, people, characters"
+ },
+ {
+  "id": "magetower",
+  "cat": "src_buildings",
+  "alpha": true,
+  "seed": 144,
+  "w": 1024,
+  "h": 1024,
+  "prompt": "A single isolated stylized high-fantasy strategy game 3D asset, hand-painted PBR textures, chunky readable silhouette, rich but grounded colors of a slender fantasy wizard tower of pale stone with a spiral of blue tiles, a pointed roof and a large glowing blue crystal floating above the top, front three-quarter view at a low eye-level angle, the whole building visible, isolated with no surrounding ground, centered with generous empty margins, on a plain flat light grey background, soft even studio lighting, clean 3D render",
+  "negative": "text, watermark, logo, cropped, cut off, multiple objects, scenery, landscape, ground plane, shadow, frame, border, people, characters"
+ },
+ {
+  "id": "wall",
+  "cat": "src_buildings",
+  "alpha": true,
+  "seed": 145,
+  "w": 1024,
+  "h": 1024,
+  "prompt": "A single isolated stylized high-fantasy strategy game 3D asset, hand-painted PBR textures, chunky readable silhouette, rich but grounded colors of a short straight segment of fortified medieval stone wall with crenellations and a small square tower in the middle, front three-quarter view at a low eye-level angle, the whole building visible, isolated with no surrounding ground, centered with generous empty margins, on a plain flat light grey background, soft even studio lighting, clean 3D render",
+  "negative": "text, watermark, logo, cropped, cut off, multiple objects, scenery, landscape, ground plane, shadow, frame, border, people, characters"
+ },
+ {
+  "id": "watchtower",
+  "cat": "src_buildings",
+  "alpha": true,
+  "seed": 146,
+  "w": 1024,
+  "h": 1024,
+  "prompt": "A single isolated stylized high-fantasy strategy game 3D asset, hand-painted PBR textures, chunky readable silhouette, rich but grounded colors of a tall wooden medieval watchtower on stilts with a stone base, a lookout platform with a small roof and a signal brazier, front three-quarter view at a low eye-level angle, the whole building visible, isolated with no surrounding ground, centered with generous empty margins, on a plain flat light grey background, soft even studio lighting, clean 3D render",
+  "negative": "text, watermark, logo, cropped, cut off, multiple objects, scenery, landscape, ground plane, shadow, frame, border, people, characters"
+ },
+ {
+  "id": "shrine",
+  "cat": "src_buildings",
+  "alpha": true,
+  "seed": 147,
+  "w": 1024,
+  "h": 1024,
+  "prompt": "A single isolated stylized high-fantasy strategy game 3D asset, hand-painted PBR textures, chunky readable silhouette, rich but grounded colors of a small fantasy stone shrine with four white pillars, a domed roof and a glowing golden crystal on an altar in the center, front three-quarter view at a low eye-level angle, the whole building visible, isolated with no surrounding ground, centered with generous empty margins, on a plain flat light grey background, soft even studio lighting, clean 3D render",
+  "negative": "text, watermark, logo, cropped, cut off, multiple objects, scenery, landscape, ground plane, shadow, frame, border, people, characters"
+ },
+ {
+  "id": "pine",
+  "cat": "src_props",
+  "alpha": true,
+  "seed": 148,
+  "w": 1024,
+  "h": 1024,
+  "prompt": "A single isolated stylized high-fantasy strategy game 3D asset, hand-painted PBR textures, chunky readable silhouette, rich but grounded colors of a single stylized tall pine tree with layered dark green foliage and a brown trunk, front view at eye level, centered with generous empty margins, on a plain flat light grey background, soft even studio lighting, clean 3D render",
+  "negative": "text, watermark, logo, cropped, cut off, multiple objects, scenery, landscape, ground plane, shadow, frame, border"
+ },
+ {
+  "id": "oak",
+  "cat": "src_props",
+  "alpha": true,
+  "seed": 149,
+  "w": 1024,
+  "h": 1024,
+  "prompt": "A single isolated stylized high-fantasy strategy game 3D asset, hand-painted PBR textures, chunky readable silhouette, rich but grounded colors of a single stylized round oak tree with a lush green rounded canopy and a thick brown trunk, front view at eye level, centered with generous empty margins, on a plain flat light grey background, soft even studio lighting, clean 3D render",
+  "negative": "text, watermark, logo, cropped, cut off, multiple objects, scenery, landscape, ground plane, shadow, frame, border"
+ },
+ {
+  "id": "deadtree",
+  "cat": "src_props",
+  "alpha": true,
+  "seed": 150,
+  "w": 1024,
+  "h": 1024,
+  "prompt": "A single isolated stylized high-fantasy strategy game 3D asset, hand-painted PBR textures, chunky readable silhouette, rich but grounded colors of a single stylized dead swamp tree with a twisted bare grey trunk and drooping moss, front view at eye level, centered with generous empty margins, on a plain flat light grey background, soft even studio lighting, clean 3D render",
+  "negative": "text, watermark, logo, cropped, cut off, multiple objects, scenery, landscape, ground plane, shadow, frame, border"
+ },
+ {
+  "id": "rock",
+  "cat": "src_props",
+  "alpha": true,
+  "seed": 151,
+  "w": 1024,
+  "h": 1024,
+  "prompt": "A single isolated stylized high-fantasy strategy game 3D asset, hand-painted PBR textures, chunky readable silhouette, rich but grounded colors of a cluster of three stylized grey boulders with a little moss, front view at eye level, centered with generous empty margins, on a plain flat light grey background, soft even studio lighting, clean 3D render",
+  "negative": "text, watermark, logo, cropped, cut off, multiple objects, scenery, landscape, ground plane, shadow, frame, border"
+ },
+ {
+  "id": "peak",
+  "cat": "src_props",
+  "alpha": true,
+  "seed": 152,
+  "w": 1024,
+  "h": 1024,
+  "prompt": "A single isolated stylized high-fantasy strategy game 3D asset, hand-painted PBR textures, chunky readable silhouette, rich but grounded colors of a single stylized jagged grey mountain peak rock formation with a white snow cap, front view at eye level, centered with generous empty margins, on a plain flat light grey background, soft even studio lighting, clean 3D render",
+  "negative": "text, watermark, logo, cropped, cut off, multiple objects, scenery, landscape, ground plane, shadow, frame, border"
+ },
+ {
+  "id": "crystal",
+  "cat": "src_props",
+  "alpha": true,
+  "seed": 153,
+  "w": 1024,
+  "h": 1024,
+  "prompt": "A single isolated stylized high-fantasy strategy game 3D asset, hand-painted PBR textures, chunky readable silhouette, rich but grounded colors of a cluster of stylized glowing violet and blue aether crystals growing out of a small rock, front view at eye level, centered with generous empty margins, on a plain flat light grey background, soft even studio lighting, clean 3D render",
+  "negative": "text, watermark, logo, cropped, cut off, multiple objects, scenery, landscape, ground plane, shadow, frame, border"
+ },
+ {
+  "id": "bush",
+  "cat": "src_props",
+  "alpha": true,
+  "seed": 154,
+  "w": 1024,
+  "h": 1024,
+  "prompt": "A single isolated stylized high-fantasy strategy game 3D asset, hand-painted PBR textures, chunky readable silhouette, rich but grounded colors of a single stylized round green shrub with a few small flowers, front view at eye level, centered with generous empty margins, on a plain flat light grey background, soft even studio lighting, clean 3D render",
+  "negative": "text, watermark, logo, cropped, cut off, multiple objects, scenery, landscape, ground plane, shadow, frame, border"
+ },
+ {
+  "id": "ruin",
+  "cat": "src_props",
+  "alpha": true,
+  "seed": 155,
+  "w": 1024,
+  "h": 1024,
+  "prompt": "A single isolated stylized high-fantasy strategy game 3D asset, hand-painted PBR textures, chunky readable silhouette, rich but grounded colors of stylized ancient ruins: two broken marble pillars, a fallen arch and scattered carved stones with ivy, front view at eye level, centered with generous empty margins, on a plain flat light grey background, soft even studio lighting, clean 3D render",
+  "negative": "text, watermark, logo, cropped, cut off, multiple objects, scenery, landscape, ground plane, shadow, frame, border"
+ }
+]

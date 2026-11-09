@@ -1,0 +1,46 @@
+[
+ {
+  "id": "undead_commoner",
+  "cat": "portraits",
+  "alpha": false,
+  "seed": 4101,
+  "w": 832,
+  "h": 1024,
+  "steps": 25,
+  "prompt": "A painted fantasy strategy game character portrait, close-up bust from the chest up, of a skeletal undead laborer with a bone-white skull face and glowing violet eye sockets, wearing a dark violet tattered hood and a brown leather work apron over a ragged robe, rusty iron shackle on one wrist, face fills the upper half of the frame, three-quarter view, dramatic warm key light, misty violet and grey painterly background, detailed digital painting, rich colors, no text, no border",
+  "negative": "full body, legs, boots, feet, small figure, distant, text, letters, watermark, frame, border, multiple people, photo, blurry"
+ },
+ {
+  "id": "human_padded",
+  "cat": "portraits",
+  "alpha": false,
+  "seed": 4102,
+  "w": 832,
+  "h": 1024,
+  "steps": 25,
+  "prompt": "A painted fantasy strategy game character portrait, close-up bust from the chest up, of a young human militia soldier with short brown hair and a determined look, wearing a thick quilted padded gambeson in faded royal blue and cream with stitched diamond quilting and a brown leather strap, face fills the upper half of the frame, three-quarter view, dramatic warm key light, soft blue and gold painterly background, detailed digital painting, rich colors, no text, no border",
+  "negative": "full body, legs, boots, feet, small figure, distant, text, letters, watermark, frame, border, multiple people, photo, blurry"
+ },
+ {
+  "id": "orc_padded",
+  "cat": "portraits",
+  "alpha": false,
+  "seed": 4103,
+  "w": 832,
+  "h": 1024,
+  "steps": 25,
+  "prompt": "A painted fantasy strategy game character portrait, close-up bust from the chest up, of a muscular green-skinned orc warrior with small tusks and a black topknot, wearing a thick quilted padded jerkin of dark red cloth with stitched quilting and leather straps across the chest, face fills the upper half of the frame, three-quarter view, dramatic warm key light, smoky crimson and brown painterly background, detailed digital painting, rich colors, no text, no border",
+  "negative": "full body, legs, boots, feet, small figure, distant, text, letters, watermark, frame, border, multiple people, photo, blurry"
+ },
+ {
+  "id": "undead_padded",
+  "cat": "portraits",
+  "alpha": false,
+  "seed": 4104,
+  "w": 832,
+  "h": 1024,
+  "steps": 25,
+  "prompt": "A painted fantasy strategy game character portrait, close-up bust from the chest up, of a gaunt undead soldier with a bone-white skull face and glowing violet eyes, wearing a thick quilted padded gambeson of faded dark violet cloth with stitched quilting and a black leather belt, face fills the upper half of the frame, three-quarter view, dramatic warm key light, misty violet and grey painterly background, detailed digital painting, rich colors, no text, no border",
+  "negative": "full body, legs, boots, feet, small figure, distant, text, letters, watermark, frame, border, multiple people, photo, blurry"
+ }
+]

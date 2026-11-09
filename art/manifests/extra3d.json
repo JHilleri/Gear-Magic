@@ -1,0 +1,22 @@
+[
+ {
+  "id": "elemental",
+  "cat": "src_monsters",
+  "alpha": true,
+  "seed": 1777,
+  "w": 1024,
+  "h": 1024,
+  "prompt": "A single isolated stylized high-fantasy strategy game 3D asset, hand-painted PBR textures, chunky readable silhouette, rich but grounded colors of a hulking stone elemental spirit, a humanoid body of rough natural brown and grey boulders held together by swirling glowing amber magma light in the joints, huge rocky fists, small glowing amber eyes, standing upright with arms down, front view at eye level, full body, centered with generous empty margins, on a plain flat light grey background, soft even studio lighting, clean 3D render",
+  "negative": "text, watermark, logo, cropped, cut off, multiple objects, scenery, landscape, ground plane, shadow, frame, border"
+ },
+ {
+  "id": "reeds",
+  "cat": "src_props",
+  "alpha": true,
+  "seed": 1781,
+  "w": 1024,
+  "h": 1024,
+  "prompt": "A single isolated stylized high-fantasy strategy game 3D asset, hand-painted PBR textures, chunky readable silhouette, rich but grounded colors of a single clump of tall green marsh reeds and three brown cattails growing from a small muddy base, front view at eye level, centered with generous empty margins, on a plain flat light grey background, soft even studio lighting, clean 3D render",
+  "negative": "text, watermark, logo, cropped, cut off, multiple objects, scenery, landscape, ground plane, shadow, frame, border"
+ }
+]

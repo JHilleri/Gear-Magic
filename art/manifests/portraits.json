@@ -1,0 +1,211 @@
+[
+ {
+  "id": "human_commoner",
+  "cat": "portraits",
+  "alpha": false,
+  "seed": 20824,
+  "w": 832,
+  "h": 1024,
+  "steps": 25,
+  "prompt": "A painted fantasy strategy game character portrait of a young human peasant man with short brown hair, wearing a simple tan linen tunic with a rope belt, grey wool trousers and brown leather boots, head and shoulders, three-quarter view, dramatic warm key light, soft blue and gold painterly background, detailed digital painting, rich colors, no text, no border",
+  "negative": "text, letters, watermark, frame, border, multiple objects, photo, blurry"
+ },
+ {
+  "id": "human_light",
+  "cat": "portraits",
+  "alpha": false,
+  "seed": 84444,
+  "w": 832,
+  "h": 1024,
+  "steps": 25,
+  "prompt": "A painted fantasy strategy game character portrait of a human ranger woman with a braided ponytail, wearing fitted brown leather armor with a forest green hooded mantle down on the shoulders, leather bracers and tall boots, head and shoulders, three-quarter view, dramatic warm key light, soft blue and gold painterly background, detailed digital painting, rich colors, no text, no border",
+  "negative": "text, letters, watermark, frame, border, multiple objects, photo, blurry"
+ },
+ {
+  "id": "human_heavy",
+  "cat": "portraits",
+  "alpha": false,
+  "seed": 53492,
+  "w": 832,
+  "h": 1024,
+  "steps": 25,
+  "prompt": "A painted fantasy strategy game character portrait of a human knight in polished full steel plate armor with a royal blue tabard trimmed with gold, an open-faced steel helmet showing a stern bearded face, head and shoulders, three-quarter view, dramatic warm key light, soft blue and gold painterly background, detailed digital painting, rich colors, no text, no border",
+  "negative": "text, letters, watermark, frame, border, multiple objects, photo, blurry"
+ },
+ {
+  "id": "human_robe",
+  "cat": "portraits",
+  "alpha": false,
+  "seed": 75346,
+  "w": 832,
+  "h": 1024,
+  "steps": 25,
+  "prompt": "A painted fantasy strategy game character portrait of a human battle mage man in flowing royal blue robes with gold embroidery and a wide leather belt with pouches, hood down, short silver beard, head and shoulders, three-quarter view, dramatic warm key light, soft blue and gold painterly background, detailed digital painting, rich colors, no text, no border",
+  "negative": "text, letters, watermark, frame, border, multiple objects, photo, blurry"
+ },
+ {
+  "id": "human_leader",
+  "cat": "portraits",
+  "alpha": false,
+  "seed": 70117,
+  "w": 832,
+  "h": 1024,
+  "steps": 25,
+  "prompt": "A painted fantasy strategy game character portrait of a regal human queen commander in gilded silver plate armor with a short royal blue cape on her back, a slim golden crown on long auburn hair, head and shoulders, three-quarter view, dramatic warm key light, soft blue and gold painterly background, detailed digital painting, rich colors, no text, no border",
+  "negative": "text, letters, watermark, frame, border, multiple objects, photo, blurry"
+ },
+ {
+  "id": "orc_commoner",
+  "cat": "portraits",
+  "alpha": false,
+  "seed": 22616,
+  "w": 832,
+  "h": 1024,
+  "steps": 25,
+  "prompt": "A painted fantasy strategy game character portrait of a muscular green-skinned orc laborer with small tusks and a black topknot, wearing a ragged brown hide tunic with a rope belt, bare arms, wrapped feet, head and shoulders, three-quarter view, dramatic warm key light, smoky crimson and brown painterly background, detailed digital painting, rich colors, no text, no border",
+  "negative": "text, letters, watermark, frame, border, multiple objects, photo, blurry"
+ },
+ {
+  "id": "orc_light",
+  "cat": "portraits",
+  "alpha": false,
+  "seed": 65478,
+  "w": 832,
+  "h": 1024,
+  "steps": 25,
+  "prompt": "A painted fantasy strategy game character portrait of a lean green-skinned orc hunter with tusks and red war paint, wearing dark leather armor with fur shoulder pads and bone trinkets, head and shoulders, three-quarter view, dramatic warm key light, smoky crimson and brown painterly background, detailed digital painting, rich colors, no text, no border",
+  "negative": "text, letters, watermark, frame, border, multiple objects, photo, blurry"
+ },
+ {
+  "id": "orc_heavy",
+  "cat": "portraits",
+  "alpha": false,
+  "seed": 55374,
+  "w": 832,
+  "h": 1024,
+  "steps": 25,
+  "prompt": "A painted fantasy strategy game character portrait of a hulking green-skinned orc warrior with tusks in heavy spiked dark iron plate armor with crimson cloth and a horned iron helmet, head and shoulders, three-quarter view, dramatic warm key light, smoky crimson and brown painterly background, detailed digital painting, rich colors, no text, no border",
+  "negative": "text, letters, watermark, frame, border, multiple objects, photo, blurry"
+ },
+ {
+  "id": "orc_robe",
+  "cat": "portraits",
+  "alpha": false,
+  "seed": 41080,
+  "w": 832,
+  "h": 1024,
+  "steps": 25,
+  "prompt": "A painted fantasy strategy game character portrait of an old green-skinned orc shaman with tusks and white braided hair, wearing a tattered crimson hide robe with bone necklaces and feathers, head and shoulders, three-quarter view, dramatic warm key light, smoky crimson and brown painterly background, detailed digital painting, rich colors, no text, no border",
+  "negative": "text, letters, watermark, frame, border, multiple objects, photo, blurry"
+ },
+ {
+  "id": "orc_leader",
+  "cat": "portraits",
+  "alpha": false,
+  "seed": 17379,
+  "w": 832,
+  "h": 1024,
+  "steps": 25,
+  "prompt": "A painted fantasy strategy game character portrait of a massive green-skinned orc warchief with big tusks in blackened iron armor with crimson fur mantle, skull shoulder guards and a horned iron crown, head and shoulders, three-quarter view, dramatic warm key light, smoky crimson and brown painterly background, detailed digital painting, rich colors, no text, no border",
+  "negative": "text, letters, watermark, frame, border, multiple objects, photo, blurry"
+ },
+ {
+  "id": "undead_commoner",
+  "cat": "portraits",
+  "alpha": false,
+  "seed": 67270,
+  "w": 832,
+  "h": 1024,
+  "steps": 25,
+  "prompt": "A painted fantasy strategy game character portrait of a gaunt undead revenant laborer with pale grey-blue skin, sunken cheeks and faintly glowing violet eyes, wearing a tattered grey sackcloth tunic and rags, head and shoulders, three-quarter view, dramatic warm key light, misty violet and grey painterly background, detailed digital painting, rich colors, no text, no border",
+  "negative": "text, letters, watermark, frame, border, multiple objects, photo, blurry"
+ },
+ {
+  "id": "undead_light",
+  "cat": "portraits",
+  "alpha": false,
+  "seed": 58726,
+  "w": 832,
+  "h": 1024,
+  "steps": 25,
+  "prompt": "A painted fantasy strategy game character portrait of a gaunt undead revenant scout with pale grey-blue skin and glowing violet eyes, wearing tattered dark leather armor and a ragged violet hood down on the shoulders, head and shoulders, three-quarter view, dramatic warm key light, misty violet and grey painterly background, detailed digital painting, rich colors, no text, no border",
+  "negative": "text, letters, watermark, frame, border, multiple objects, photo, blurry"
+ },
+ {
+  "id": "undead_heavy",
+  "cat": "portraits",
+  "alpha": false,
+  "seed": 92270,
+  "w": 832,
+  "h": 1024,
+  "steps": 25,
+  "prompt": "A painted fantasy strategy game character portrait of an undead death knight in corroded black plate armor etched with glowing violet runes and a skull-faced black helmet, head and shoulders, three-quarter view, dramatic warm key light, misty violet and grey painterly background, detailed digital painting, rich colors, no text, no border",
+  "negative": "text, letters, watermark, frame, border, multiple objects, photo, blurry"
+ },
+ {
+  "id": "undead_robe",
+  "cat": "portraits",
+  "alpha": false,
+  "seed": 30369,
+  "w": 832,
+  "h": 1024,
+  "steps": 25,
+  "prompt": "A painted fantasy strategy game character portrait of an undead necromancer with a pale skull-like face and glowing violet eyes, wearing a tattered violet and black robe decorated with small bones, head and shoulders, three-quarter view, dramatic warm key light, misty violet and grey painterly background, detailed digital painting, rich colors, no text, no border",
+  "negative": "text, letters, watermark, frame, border, multiple objects, photo, blurry"
+ },
+ {
+  "id": "undead_leader",
+  "cat": "portraits",
+  "alpha": false,
+  "seed": 80961,
+  "w": 832,
+  "h": 1024,
+  "steps": 25,
+  "prompt": "A painted fantasy strategy game character portrait of a towering lich lord with a skeletal face and glowing violet eyes in ornate black and violet robes with gold trim and a tall jagged bone crown, head and shoulders, three-quarter view, dramatic warm key light, misty violet and grey painterly background, detailed digital painting, rich colors, no text, no border",
+  "negative": "text, letters, watermark, frame, border, multiple objects, photo, blurry"
+ },
+ {
+  "id": "monster_wolf",
+  "cat": "portraits",
+  "alpha": false,
+  "seed": 46911,
+  "w": 832,
+  "h": 1024,
+  "steps": 25,
+  "prompt": "A painted fantasy strategy game character portrait of a lean grey wild wolf with shaggy fur, head and shoulders, three-quarter view, dramatic warm key light, dark forest green painterly background, detailed digital painting, rich colors, no text, no border",
+  "negative": "text, letters, watermark, frame, border, multiple objects, photo, blurry"
+ },
+ {
+  "id": "monster_spider",
+  "cat": "portraits",
+  "alpha": false,
+  "seed": 68732,
+  "w": 832,
+  "h": 1024,
+  "steps": 25,
+  "prompt": "A painted fantasy strategy game character portrait of a giant dark brown forest spider with hairy legs and a bulbous abdomen with orange markings, head and shoulders, three-quarter view, dramatic warm key light, dark forest green painterly background, detailed digital painting, rich colors, no text, no border",
+  "negative": "text, letters, watermark, frame, border, multiple objects, photo, blurry"
+ },
+ {
+  "id": "monster_golem",
+  "cat": "portraits",
+  "alpha": false,
+  "seed": 83404,
+  "w": 832,
+  "h": 1024,
+  "steps": 25,
+  "prompt": "A painted fantasy strategy game character portrait of a hulking ancient stone golem made of mossy carved blocks with glowing cyan rune cracks, head and shoulders, three-quarter view, dramatic warm key light, dark forest green painterly background, detailed digital painting, rich colors, no text, no border",
+  "negative": "text, letters, watermark, frame, border, multiple objects, photo, blurry"
+ },
+ {
+  "id": "monster_elemental",
+  "cat": "portraits",
+  "alpha": false,
+  "seed": 777,
+  "w": 832,
+  "h": 1024,
+  "steps": 25,
+  "prompt": "A painted fantasy strategy game character portrait of a stone earth elemental with glowing amber cracks, head and shoulders, three-quarter view, dramatic warm key light, dusty amber painterly background, detailed digital painting, rich colors, no text, no border",
+  "negative": "text, letters, watermark, frame, border, multiple objects, photo, blurry"
+ }
+]

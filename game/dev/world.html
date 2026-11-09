@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>World Dev</title>
+    <style>
+      html, body { margin: 0; height: 100%; overflow: hidden; background: #0b0e14; font: 13px/1.4 system-ui, sans-serif; color: #e6dcc4; }
+      #scene { position: fixed; inset: 0; width: 100vw; height: 100vh; display: block; }
+      #hud { position: fixed; top: 10px; left: 10px; padding: 8px 10px; background: rgba(12,14,20,0.72); border: 1px solid #5a4a30; border-radius: 6px; max-width: 420px; }
+      #hud button { margin: 2px; background: #2a2418; color: #e6dcc4; border: 1px solid #6b5a3a; border-radius: 4px; padding: 3px 8px; cursor: pointer; }
+      #info { margin-top: 6px; white-space: pre; font-family: ui-monospace, monospace; font-size: 12px; }
+      #load { position: fixed; inset: 0; display: grid; place-items: center; font-size: 18px; pointer-events: none; }
+    </style>
+  </head>
+  <body>
+    <canvas id="scene"></canvas>
+    <div id="load">Loading…</div>
+    <div id="hud">
+      <div>
+        <button id="grid">Grid (G)</button>
+        <button id="reveal">Reveal all</button>
+        <button id="fog">Fog demo</button>
+        <button id="quality">Quality</button>
+        <button id="events">Event demo</button>
+        <button id="reseed">New map</button>
+      </div>
+      <div id="info"></div>
+    </div>
+    <script type="module" src="/src/dev/world-dev.ts"></script>
+  </body>
+</html>

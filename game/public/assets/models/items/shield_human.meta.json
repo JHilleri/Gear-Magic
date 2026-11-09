@@ -1,0 +1,20 @@
+{
+ "kind": "item",
+ "id": "shield_human",
+ "grip": null,
+ "length": 0.4,
+ "bbox_gltf": {
+  "min": [
+   -0.1294,
+   -0.2,
+   -0.0347
+  ],
+  "max": [
+   0.1295,
+   0.1995,
+   0.0692
+  ]
+ },
+ "tris": 2500,
+ "bytes": 211240
+}

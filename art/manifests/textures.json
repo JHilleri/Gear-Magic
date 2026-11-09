@@ -1,0 +1,112 @@
+[
+ {
+  "id": "grass",
+  "cat": "textures",
+  "alpha": false,
+  "seed": 94906,
+  "w": 1024,
+  "h": 1024,
+  "steps": 25,
+  "prompt": "A seamless tileable top-down texture of lush green meadow grass with tiny clover and a few small flowers, viewed straight from above, flat even diffuse lighting without shadows, uniform density across the whole image, stylized hand-painted fantasy game ground texture, high detail",
+  "negative": "objects, perspective, horizon, text, watermark, vignette, shadows, border"
+ },
+ {
+  "id": "plains",
+  "cat": "textures",
+  "alpha": false,
+  "seed": 49549,
+  "w": 1024,
+  "h": 1024,
+  "steps": 25,
+  "prompt": "A seamless tileable top-down texture of dry golden yellow grass and patches of dirt, viewed straight from above, flat even diffuse lighting without shadows, uniform density across the whole image, stylized hand-painted fantasy game ground texture, high detail",
+  "negative": "objects, perspective, horizon, text, watermark, vignette, shadows, border"
+ },
+ {
+  "id": "forest",
+  "cat": "textures",
+  "alpha": false,
+  "seed": 94961,
+  "w": 1024,
+  "h": 1024,
+  "steps": 25,
+  "prompt": "A seamless tileable top-down texture of forest floor with moss, fallen pine needles, leaves and small twigs, viewed straight from above, flat even diffuse lighting without shadows, uniform density across the whole image, stylized hand-painted fantasy game ground texture, high detail",
+  "negative": "objects, perspective, horizon, text, watermark, vignette, shadows, border"
+ },
+ {
+  "id": "hills",
+  "cat": "textures",
+  "alpha": false,
+  "seed": 64792,
+  "w": 1024,
+  "h": 1024,
+  "steps": 25,
+  "prompt": "A seamless tileable top-down texture of grassy rocky hillside soil with small stones and short grass, viewed straight from above, flat even diffuse lighting without shadows, uniform density across the whole image, stylized hand-painted fantasy game ground texture, high detail",
+  "negative": "objects, perspective, horizon, text, watermark, vignette, shadows, border"
+ },
+ {
+  "id": "rock",
+  "cat": "textures",
+  "alpha": false,
+  "seed": 34220,
+  "w": 1024,
+  "h": 1024,
+  "steps": 25,
+  "prompt": "A seamless tileable top-down texture of rough grey mountain rock with cracks and lichen, viewed straight from above, flat even diffuse lighting without shadows, uniform density across the whole image, stylized hand-painted fantasy game ground texture, high detail",
+  "negative": "objects, perspective, horizon, text, watermark, vignette, shadows, border"
+ },
+ {
+  "id": "swamp",
+  "cat": "textures",
+  "alpha": false,
+  "seed": 75247,
+  "w": 1024,
+  "h": 1024,
+  "steps": 25,
+  "prompt": "A seamless tileable top-down texture of dark muddy swamp ground with puddles, moss and reeds debris, viewed straight from above, flat even diffuse lighting without shadows, uniform density across the whole image, stylized hand-painted fantasy game ground texture, high detail",
+  "negative": "objects, perspective, horizon, text, watermark, vignette, shadows, border"
+ },
+ {
+  "id": "sand",
+  "cat": "textures",
+  "alpha": false,
+  "seed": 67551,
+  "w": 1024,
+  "h": 1024,
+  "steps": 25,
+  "prompt": "A seamless tileable top-down texture of wet beach sand with tiny pebbles, viewed straight from above, flat even diffuse lighting without shadows, uniform density across the whole image, stylized hand-painted fantasy game ground texture, high detail",
+  "negative": "objects, perspective, horizon, text, watermark, vignette, shadows, border"
+ },
+ {
+  "id": "crystal",
+  "cat": "textures",
+  "alpha": false,
+  "seed": 99652,
+  "w": 1024,
+  "h": 1024,
+  "steps": 25,
+  "prompt": "A seamless tileable top-down texture of dark violet-tinted soil with small glowing violet crystal shards and pebbles, viewed straight from above, flat even diffuse lighting without shadows, uniform density across the whole image, stylized hand-painted fantasy game ground texture, high detail",
+  "negative": "objects, perspective, horizon, text, watermark, vignette, shadows, border"
+ },
+ {
+  "id": "snow",
+  "cat": "textures",
+  "alpha": false,
+  "seed": 9981,
+  "w": 1024,
+  "h": 1024,
+  "steps": 25,
+  "prompt": "A seamless tileable top-down texture of fresh white snow with subtle blue shadows, viewed straight from above, flat even diffuse lighting without shadows, uniform density across the whole image, stylized hand-painted fantasy game ground texture, high detail",
+  "negative": "objects, perspective, horizon, text, watermark, vignette, shadows, border"
+ },
+ {
+  "id": "dirt",
+  "cat": "textures",
+  "alpha": false,
+  "seed": 56120,
+  "w": 1024,
+  "h": 1024,
+  "steps": 25,
+  "prompt": "A seamless tileable top-down texture of packed brown dirt path with small stones, viewed straight from above, flat even diffuse lighting without shadows, uniform density across the whole image, stylized hand-painted fantasy game ground texture, high detail",
+  "negative": "objects, perspective, horizon, text, watermark, vignette, shadows, border"
+ }
+]

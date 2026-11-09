@@ -1,0 +1,493 @@
+{
+ "units": {
+  "human_commoner": {
+   "file": "models/units/human_commoner.glb",
+   "height": 1.0
+  },
+  "human_heavy": {
+   "file": "models/units/human_heavy.glb",
+   "height": 1.0
+  },
+  "human_leader": {
+   "file": "models/units/human_leader.glb",
+   "height": 1.0
+  },
+  "human_light": {
+   "file": "models/units/human_light.glb",
+   "height": 1.0
+  },
+  "human_padded": {
+   "file": "models/units/human_padded.glb",
+   "height": 1.0
+  },
+  "human_robe": {
+   "file": "models/units/human_robe.glb",
+   "height": 1.0
+  },
+  "orc_commoner": {
+   "file": "models/units/orc_commoner.glb",
+   "height": 1.0
+  },
+  "orc_heavy": {
+   "file": "models/units/orc_heavy.glb",
+   "height": 1.0
+  },
+  "orc_leader": {
+   "file": "models/units/orc_leader.glb",
+   "height": 1.0
+  },
+  "orc_light": {
+   "file": "models/units/orc_light.glb",
+   "height": 1.0
+  },
+  "orc_padded": {
+   "file": "models/units/orc_padded.glb",
+   "height": 1.0
+  },
+  "orc_robe": {
+   "file": "models/units/orc_robe.glb",
+   "height": 1.0
+  },
+  "undead_commoner": {
+   "file": "models/units/undead_commoner.glb",
+   "height": 1.0
+  },
+  "undead_heavy": {
+   "file": "models/units/undead_heavy.glb",
+   "height": 1.0
+  },
+  "undead_leader": {
+   "file": "models/units/undead_leader.glb",
+   "height": 1.0
+  },
+  "undead_light": {
+   "file": "models/units/undead_light.glb",
+   "height": 1.0
+  },
+  "undead_padded": {
+   "file": "models/units/undead_padded.glb",
+   "height": 1.0
+  },
+  "undead_robe": {
+   "file": "models/units/undead_robe.glb",
+   "height": 1.0
+  }
+ },
+ "items": {
+  "axe": {
+   "file": "models/items/axe.glb"
+  },
+  "bow": {
+   "file": "models/items/bow.glb"
+  },
+  "shield_human": {
+   "file": "models/items/shield_human.glb"
+  },
+  "shield_orc": {
+   "file": "models/items/shield_orc.glb"
+  },
+  "shield_undead": {
+   "file": "models/items/shield_undead.glb"
+  },
+  "spear": {
+   "file": "models/items/spear.glb"
+  },
+  "staff": {
+   "file": "models/items/staff.glb"
+  },
+  "sword": {
+   "file": "models/items/sword.glb"
+  },
+  "tools": {
+   "file": "models/items/tools.glb"
+  },
+  "wand": {
+   "file": "models/items/wand.glb"
+  }
+ },
+ "mounts": {
+  "horse": {
+   "file": "models/mounts/horse.glb",
+   "saddle": [
+    0.0,
+    0.6796,
+    0.0457
+   ]
+  },
+  "nightmare": {
+   "file": "models/mounts/nightmare.glb",
+   "saddle": [
+    0.0,
+    0.7536,
+    0.0707
+   ]
+  },
+  "wolf": {
+   "file": "models/mounts/wolf.glb",
+   "saddle": [
+    0.0,
+    0.553,
+    0.0445
+   ]
+  }
+ },
+ "buildings": {
+  "castle_ashen": {
+   "file": "models/buildings/castle_ashen.glb"
+  },
+  "castle_thorn": {
+   "file": "models/buildings/castle_thorn.glb"
+  },
+  "castle_valen": {
+   "file": "models/buildings/castle_valen.glb"
+  },
+  "crystalmine": {
+   "file": "models/buildings/crystalmine.glb"
+  },
+  "farm": {
+   "file": "models/buildings/farm.glb"
+  },
+  "farm_ashen": {
+   "file": "models/buildings/farm_ashen.glb"
+  },
+  "farm_thorn": {
+   "file": "models/buildings/farm_thorn.glb"
+  },
+  "forge": {
+   "file": "models/buildings/forge.glb"
+  },
+  "house": {
+   "file": "models/buildings/house.glb"
+  },
+  "house_ashen": {
+   "file": "models/buildings/house_ashen.glb"
+  },
+  "house_thorn": {
+   "file": "models/buildings/house_thorn.glb"
+  },
+  "library": {
+   "file": "models/buildings/library.glb"
+  },
+  "lumber": {
+   "file": "models/buildings/lumber.glb"
+  },
+  "magetower": {
+   "file": "models/buildings/magetower.glb"
+  },
+  "mine": {
+   "file": "models/buildings/mine.glb"
+  },
+  "quarry": {
+   "file": "models/buildings/quarry.glb"
+  },
+  "shrine": {
+   "file": "models/buildings/shrine.glb"
+  },
+  "training": {
+   "file": "models/buildings/training.glb"
+  },
+  "wall": {
+   "file": "models/buildings/wall.glb"
+  },
+  "watchtower": {
+   "file": "models/buildings/watchtower.glb"
+  }
+ },
+ "props": {
+  "bush": {
+   "file": "models/props/bush.glb"
+  },
+  "crystal": {
+   "file": "models/props/crystal.glb"
+  },
+  "deadtree": {
+   "file": "models/props/deadtree.glb"
+  },
+  "oak": {
+   "file": "models/props/oak.glb"
+  },
+  "peak": {
+   "file": "models/props/peak.glb"
+  },
+  "pine": {
+   "file": "models/props/pine.glb"
+  },
+  "reeds": {
+   "file": "models/props/reeds.glb"
+  },
+  "rock": {
+   "file": "models/props/rock.glb"
+  },
+  "ruin": {
+   "file": "models/props/ruin.glb"
+  }
+ },
+ "monsters": {
+  "elemental": {
+   "file": "models/monsters/elemental.glb"
+  },
+  "golem": {
+   "file": "models/monsters/golem.glb"
+  },
+  "spider": {
+   "file": "models/monsters/spider.glb"
+  },
+  "wolf": {
+   "file": "models/monsters/wolf.glb"
+  }
+ },
+ "textures": {
+  "crystal": "textures/terrain/crystal.jpg",
+  "dirt": "textures/terrain/dirt.jpg",
+  "forest": "textures/terrain/forest.jpg",
+  "grass": "textures/terrain/grass.jpg",
+  "hills": "textures/terrain/hills.jpg",
+  "plains": "textures/terrain/plains.jpg",
+  "rock": "textures/terrain/rock.jpg",
+  "sand": "textures/terrain/sand.jpg",
+  "snow": "textures/terrain/snow.jpg",
+  "swamp": "textures/terrain/swamp.jpg",
+  "ui/defeat": "ui/defeat.jpg",
+  "ui/menu_bg": "ui/menu_bg.jpg",
+  "ui/parchment": "ui/parchment.jpg",
+  "ui/victory": "ui/victory.jpg"
+ },
+ "icons": {
+  "buildings/castle": "icons/buildings/castle.png",
+  "buildings/castle.png": "icons/buildings/castle.png",
+  "buildings/crystalmine": "icons/buildings/crystalmine.png",
+  "buildings/crystalmine.png": "icons/buildings/crystalmine.png",
+  "buildings/farm": "icons/buildings/farm.png",
+  "buildings/farm.png": "icons/buildings/farm.png",
+  "buildings/forge": "icons/buildings/forge.png",
+  "buildings/forge.png": "icons/buildings/forge.png",
+  "buildings/house": "icons/buildings/house.png",
+  "buildings/house.png": "icons/buildings/house.png",
+  "buildings/library": "icons/buildings/library.png",
+  "buildings/library.png": "icons/buildings/library.png",
+  "buildings/lumber": "icons/buildings/lumber.png",
+  "buildings/lumber.png": "icons/buildings/lumber.png",
+  "buildings/magetower": "icons/buildings/magetower.png",
+  "buildings/magetower.png": "icons/buildings/magetower.png",
+  "buildings/mine": "icons/buildings/mine.png",
+  "buildings/mine.png": "icons/buildings/mine.png",
+  "buildings/quarry": "icons/buildings/quarry.png",
+  "buildings/quarry.png": "icons/buildings/quarry.png",
+  "buildings/shrine": "icons/buildings/shrine.png",
+  "buildings/shrine.png": "icons/buildings/shrine.png",
+  "buildings/training": "icons/buildings/training.png",
+  "buildings/training.png": "icons/buildings/training.png",
+  "buildings/wall": "icons/buildings/wall.png",
+  "buildings/wall.png": "icons/buildings/wall.png",
+  "buildings/watchtower": "icons/buildings/watchtower.png",
+  "buildings/watchtower.png": "icons/buildings/watchtower.png",
+  "emblems/ashen": "icons/emblems/ashen.png",
+  "emblems/ashen.png": "icons/emblems/ashen.png",
+  "emblems/neutral": "icons/emblems/neutral.png",
+  "emblems/neutral.png": "icons/emblems/neutral.png",
+  "emblems/thorn": "icons/emblems/thorn.png",
+  "emblems/thorn.png": "icons/emblems/thorn.png",
+  "emblems/valen": "icons/emblems/valen.png",
+  "emblems/valen.png": "icons/emblems/valen.png",
+  "items/amulet": "icons/items/amulet.png",
+  "items/amulet.png": "icons/items/amulet.png",
+  "items/axe": "icons/items/axe.png",
+  "items/axe.png": "icons/items/axe.png",
+  "items/bow": "icons/items/bow.png",
+  "items/bow.png": "icons/items/bow.png",
+  "items/horse": "icons/items/horse.png",
+  "items/horse.png": "icons/items/horse.png",
+  "items/leather": "icons/items/leather.png",
+  "items/leather.png": "icons/items/leather.png",
+  "items/plate": "icons/items/plate.png",
+  "items/plate.png": "icons/items/plate.png",
+  "items/ring": "icons/items/ring.png",
+  "items/ring.png": "icons/items/ring.png",
+  "items/robe": "icons/items/robe.png",
+  "items/robe.png": "icons/items/robe.png",
+  "items/shield": "icons/items/shield.png",
+  "items/shield.png": "icons/items/shield.png",
+  "items/spear": "icons/items/spear.png",
+  "items/spear.png": "icons/items/spear.png",
+  "items/staff": "icons/items/staff.png",
+  "items/staff.png": "icons/items/staff.png",
+  "items/sword": "icons/items/sword.png",
+  "items/sword.png": "icons/items/sword.png",
+  "items/tools": "icons/items/tools.png",
+  "items/tools.png": "icons/items/tools.png",
+  "items/tunic": "icons/items/tunic.png",
+  "items/tunic.png": "icons/items/tunic.png",
+  "items/wand": "icons/items/wand.png",
+  "items/wand.png": "icons/items/wand.png",
+  "resources/crystal": "icons/resources/crystal.png",
+  "resources/crystal.png": "icons/resources/crystal.png",
+  "resources/food": "icons/resources/food.png",
+  "resources/food.png": "icons/resources/food.png",
+  "resources/gold": "icons/resources/gold.png",
+  "resources/gold.png": "icons/resources/gold.png",
+  "resources/iron": "icons/resources/iron.png",
+  "resources/iron.png": "icons/resources/iron.png",
+  "resources/mana": "icons/resources/mana.png",
+  "resources/mana.png": "icons/resources/mana.png",
+  "resources/research": "icons/resources/research.png",
+  "resources/research.png": "icons/resources/research.png",
+  "resources/stone": "icons/resources/stone.png",
+  "resources/stone.png": "icons/resources/stone.png",
+  "resources/wood": "icons/resources/wood.png",
+  "resources/wood.png": "icons/resources/wood.png",
+  "skills/berserker": "icons/skills/berserker.png",
+  "skills/berserker.png": "icons/skills/berserker.png",
+  "skills/blink": "icons/skills/blink.png",
+  "skills/blink.png": "icons/skills/blink.png",
+  "skills/devotion": "icons/skills/devotion.png",
+  "skills/devotion.png": "icons/skills/devotion.png",
+  "skills/eff_attack": "icons/skills/eff_attack.png",
+  "skills/eff_attack.png": "icons/skills/eff_attack.png",
+  "skills/eff_building": "icons/skills/eff_building.png",
+  "skills/eff_building.png": "icons/skills/eff_building.png",
+  "skills/eff_farming": "icons/skills/eff_farming.png",
+  "skills/eff_farming.png": "icons/skills/eff_farming.png",
+  "skills/eff_gathering": "icons/skills/eff_gathering.png",
+  "skills/eff_gathering.png": "icons/skills/eff_gathering.png",
+  "skills/eff_magic": "icons/skills/eff_magic.png",
+  "skills/eff_magic.png": "icons/skills/eff_magic.png",
+  "skills/eff_mana": "icons/skills/eff_mana.png",
+  "skills/eff_mana.png": "icons/skills/eff_mana.png",
+  "skills/eff_mining": "icons/skills/eff_mining.png",
+  "skills/eff_mining.png": "icons/skills/eff_mining.png",
+  "skills/eff_ranged": "icons/skills/eff_ranged.png",
+  "skills/eff_ranged.png": "icons/skills/eff_ranged.png",
+  "skills/eff_research": "icons/skills/eff_research.png",
+  "skills/eff_research.png": "icons/skills/eff_research.png",
+  "skills/eff_trade": "icons/skills/eff_trade.png",
+  "skills/eff_trade.png": "icons/skills/eff_trade.png",
+  "skills/firebolt": "icons/skills/firebolt.png",
+  "skills/firebolt.png": "icons/skills/firebolt.png",
+  "skills/fortify": "icons/skills/fortify.png",
+  "skills/fortify.png": "icons/skills/fortify.png",
+  "skills/harvester": "icons/skills/harvester.png",
+  "skills/harvester.png": "icons/skills/harvester.png",
+  "skills/heal": "icons/skills/heal.png",
+  "skills/heal.png": "icons/skills/heal.png",
+  "skills/inspiring": "icons/skills/inspiring.png",
+  "skills/inspiring.png": "icons/skills/inspiring.png",
+  "skills/ironskin": "icons/skills/ironskin.png",
+  "skills/ironskin.png": "icons/skills/ironskin.png",
+  "skills/leadership": "icons/skills/leadership.png",
+  "skills/leadership.png": "icons/skills/leadership.png",
+  "skills/manaspring": "icons/skills/manaspring.png",
+  "skills/manaspring.png": "icons/skills/manaspring.png",
+  "skills/marksman": "icons/skills/marksman.png",
+  "skills/marksman.png": "icons/skills/marksman.png",
+  "skills/masonry": "icons/skills/masonry.png",
+  "skills/masonry.png": "icons/skills/masonry.png",
+  "skills/pathfinder": "icons/skills/pathfinder.png",
+  "skills/pathfinder.png": "icons/skills/pathfinder.png",
+  "skills/poison": "icons/skills/poison.png",
+  "skills/poison.png": "icons/skills/poison.png",
+  "skills/powerstrike": "icons/skills/powerstrike.png",
+  "skills/powerstrike.png": "icons/skills/powerstrike.png",
+  "skills/prospector": "icons/skills/prospector.png",
+  "skills/prospector.png": "icons/skills/prospector.png",
+  "skills/rally": "icons/skills/rally.png",
+  "skills/rally.png": "icons/skills/rally.png",
+  "skills/regeneration": "icons/skills/regeneration.png",
+  "skills/regeneration.png": "icons/skills/regeneration.png",
+  "skills/scholar": "icons/skills/scholar.png",
+  "skills/scholar.png": "icons/skills/scholar.png",
+  "skills/skirmisher": "icons/skills/skirmisher.png",
+  "skills/skirmisher.png": "icons/skills/skirmisher.png",
+  "skills/stat_armor": "icons/skills/stat_armor.png",
+  "skills/stat_armor.png": "icons/skills/stat_armor.png",
+  "skills/stat_dex": "icons/skills/stat_dex.png",
+  "skills/stat_dex.png": "icons/skills/stat_dex.png",
+  "skills/stat_hp": "icons/skills/stat_hp.png",
+  "skills/stat_hp.png": "icons/skills/stat_hp.png",
+  "skills/stat_int": "icons/skills/stat_int.png",
+  "skills/stat_int.png": "icons/skills/stat_int.png",
+  "skills/stat_mov": "icons/skills/stat_mov.png",
+  "skills/stat_mov.png": "icons/skills/stat_mov.png",
+  "skills/stat_str": "icons/skills/stat_str.png",
+  "skills/stat_str.png": "icons/skills/stat_str.png",
+  "skills/stat_vis": "icons/skills/stat_vis.png",
+  "skills/stat_vis.png": "icons/skills/stat_vis.png",
+  "skills/vampiric": "icons/skills/vampiric.png",
+  "skills/vampiric.png": "icons/skills/vampiric.png",
+  "skills/volley": "icons/skills/volley.png",
+  "skills/volley.png": "icons/skills/volley.png",
+  "spells/bless": "icons/spells/bless.png",
+  "spells/bless.png": "icons/spells/bless.png",
+  "spells/farsight": "icons/spells/farsight.png",
+  "spells/farsight.png": "icons/spells/farsight.png",
+  "spells/fireball": "icons/spells/fireball.png",
+  "spells/fireball.png": "icons/spells/fireball.png",
+  "spells/haste": "icons/spells/haste.png",
+  "spells/haste.png": "icons/spells/haste.png",
+  "spells/heal": "icons/spells/heal.png",
+  "spells/heal.png": "icons/spells/heal.png",
+  "spells/storm": "icons/spells/storm.png",
+  "spells/storm.png": "icons/spells/storm.png",
+  "spells/summon": "icons/spells/summon.png",
+  "spells/summon.png": "icons/spells/summon.png",
+  "techs/arcana": "icons/techs/arcana.png",
+  "techs/arcana.png": "icons/techs/arcana.png",
+  "techs/architecture": "icons/techs/architecture.png",
+  "techs/architecture.png": "icons/techs/architecture.png",
+  "techs/croprotation": "icons/techs/croprotation.png",
+  "techs/croprotation.png": "icons/techs/croprotation.png",
+  "techs/crystallore": "icons/techs/crystallore.png",
+  "techs/crystallore.png": "icons/techs/crystallore.png",
+  "techs/grandarchitecture": "icons/techs/grandarchitecture.png",
+  "techs/grandarchitecture.png": "icons/techs/grandarchitecture.png",
+  "techs/guilds": "icons/techs/guilds.png",
+  "techs/guilds.png": "icons/techs/guilds.png",
+  "techs/horsemanship": "icons/techs/horsemanship.png",
+  "techs/horsemanship.png": "icons/techs/horsemanship.png",
+  "techs/jewelcraft": "icons/techs/jewelcraft.png",
+  "techs/jewelcraft.png": "icons/techs/jewelcraft.png",
+  "techs/masonry": "icons/techs/masonry.png",
+  "techs/masonry.png": "icons/techs/masonry.png",
+  "techs/mining": "icons/techs/mining.png",
+  "techs/mining.png": "icons/techs/mining.png",
+  "techs/platesmithing": "icons/techs/platesmithing.png",
+  "techs/platesmithing.png": "icons/techs/platesmithing.png",
+  "techs/polearms": "icons/techs/polearms.png",
+  "techs/polearms.png": "icons/techs/polearms.png",
+  "techs/scholarship": "icons/techs/scholarship.png",
+  "techs/scholarship.png": "icons/techs/scholarship.png",
+  "techs/shieldcraft": "icons/techs/shieldcraft.png",
+  "techs/shieldcraft.png": "icons/techs/shieldcraft.png",
+  "techs/tactics": "icons/techs/tactics.png",
+  "techs/tactics.png": "icons/techs/tactics.png",
+  "techs/tanning": "icons/techs/tanning.png",
+  "techs/tanning.png": "icons/techs/tanning.png",
+  "techs/wandcraft": "icons/techs/wandcraft.png",
+  "techs/wandcraft.png": "icons/techs/wandcraft.png",
+  "techs/writing": "icons/techs/writing.png",
+  "techs/writing.png": "icons/techs/writing.png"
+ },
+ "portraits": {
+  "human_commoner": "portraits/human_commoner.png",
+  "human_heavy": "portraits/human_heavy.png",
+  "human_leader": "portraits/human_leader.png",
+  "human_light": "portraits/human_light.png",
+  "human_padded": "portraits/human_padded.png",
+  "human_robe": "portraits/human_robe.png",
+  "monster_elemental": "portraits/monster_elemental.png",
+  "monster_golem": "portraits/monster_golem.png",
+  "monster_spider": "portraits/monster_spider.png",
+  "monster_wolf": "portraits/monster_wolf.png",
+  "orc_commoner": "portraits/orc_commoner.png",
+  "orc_heavy": "portraits/orc_heavy.png",
+  "orc_leader": "portraits/orc_leader.png",
+  "orc_light": "portraits/orc_light.png",
+  "orc_padded": "portraits/orc_padded.png",
+  "orc_robe": "portraits/orc_robe.png",
+  "undead_commoner": "portraits/undead_commoner.png",
+  "undead_heavy": "portraits/undead_heavy.png",
+  "undead_leader": "portraits/undead_leader.png",
+  "undead_light": "portraits/undead_light.png",
+  "undead_padded": "portraits/undead_padded.png",
+  "undead_robe": "portraits/undead_robe.png"
+ }
+}
