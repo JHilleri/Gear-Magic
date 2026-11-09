@@ -1,0 +1,56 @@
+# Builds the game from main and publishes it to GitHub Pages
+# (https://<owner>.github.io/<repo>/). Pages must use "GitHub Actions" as its source:
+# Settings → Pages → Build and deployment → Source.
+name: Deploy game to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One deployment at a time; a newer push waits instead of cancelling a live deploy.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: game
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 26
+          cache: npm
+          cache-dependency-path: game/package-lock.json
+
+      - run: npm ci
+
+      # Type-checks, then builds with Vite's base set to /<repo>/ so every asset URL
+      # resolves under the project page instead of the domain root.
+      - run: npm run build -- --base=/${{ github.event.repository.name }}/
+
+      - uses: actions/configure-pages@v6
+
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: game/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5

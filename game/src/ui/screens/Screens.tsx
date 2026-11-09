@@ -7,7 +7,7 @@ import { Btn, Segmented, stopKeys } from '../common';
 import { useUi } from '../ctx';
 import { Emblem, Sym } from '../icons';
 import { tip } from '../tooltip';
-import { cls } from '../util';
+import { assetUrl, cls } from '../util';
 import { Modal } from '../modals/Modal';
 import { describeSave, type SaveMeta } from '../../game/session';
 
@@ -50,7 +50,7 @@ export function useImage(url: string): string | null {
 }
 
 function KeyArt({ dim }: { dim?: boolean }) {
-  const bg = useImage('/assets/ui/menu_bg.jpg');
+  const bg = useImage(assetUrl('ui/menu_bg.jpg'));
   return (
     <div class={cls('keyart', dim && 'dim', bg && 'loaded')}>
       <div class="keyart-fallback" />

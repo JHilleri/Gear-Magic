@@ -24,7 +24,7 @@ import { SpellbookModal } from './modals/Spellbook';
 import { UnitSheetModal } from './modals/UnitSheet';
 import { LoadingScreen, NewGameModal, TitleScreen, useImage } from './screens/Screens';
 import { hideTip, TooltipLayer } from './tooltip';
-import { cls, viewerOf } from './util';
+import { assetUrl, cls, viewerOf } from './util';
 import './styles.css';
 
 /** Modals that need a running game. */
@@ -130,7 +130,7 @@ function App({ store }: { store: GameStore }) {
   useEffect(() => { hideTip(); }, [ui.modal, ui.screen]);
 
   // Parchment texture for modal sheets; the CSS gradient stands in until (or unless) it loads.
-  const parchment = useImage('/assets/ui/parchment.jpg');
+  const parchment = useImage(assetUrl('ui/parchment.jpg'));
   const s = store.state;
   const player = s ? FACTIONS[viewerOf(s)] : null;
   const vars: Record<string, string> = {};

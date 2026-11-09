@@ -6,7 +6,7 @@ import { describeSave, type SaveMeta, type SaveSlot } from '../../game/session';
 import { Btn } from '../common';
 import { useUi } from '../ctx';
 import { Emblem } from '../icons';
-import { buildingsOwned, cls, plural, unitsOwned, viewerOf } from '../util';
+import { assetUrl, buildingsOwned, cls, plural, unitsOwned, viewerOf } from '../util';
 import { useImage } from '../screens/Screens';
 import { Modal } from './Modal';
 
@@ -93,7 +93,7 @@ export function EndModal() {
   const ui = store.ui;
   const viewer = s ? viewerOf(s) : 'valen';
   const won = !!s && s.winner === viewer;
-  const art = useImage(won ? '/assets/ui/victory.jpg' : '/assets/ui/defeat.jpg');
+  const art = useImage(assetUrl(won ? 'ui/victory.jpg' : 'ui/defeat.jpg'));
   const [loadOpen, setLoadOpen] = useState(false);
   if (!s) return null;
   const winner = s.winner ? FACTIONS[s.winner] : null;

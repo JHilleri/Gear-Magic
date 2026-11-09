@@ -6,7 +6,7 @@ import { useState } from 'preact/hooks';
 import type { AttackKind, FactionId } from '../core/types';
 import { FACTIONS } from '../data/factions';
 import { useUi } from './ctx';
-import { cls, initials } from './util';
+import { assetUrl, cls, initials } from './util';
 
 /** URLs that failed to load once: never request them again this session. */
 const failed = new Set<string>();
@@ -15,14 +15,14 @@ function resolveIcon(k: string, lib: ReturnType<ReturnType<typeof useUi>['assets
   if (lib) {
     try { return lib.iconUrl(k); } catch { return null; }
   }
-  return '/assets/icons/' + k;
+  return assetUrl('icons/' + k);
 }
 
 function resolvePortrait(k: string, lib: ReturnType<ReturnType<typeof useUi>['assets']>): string | null {
   if (lib) {
     try { return lib.portraitUrl(k); } catch { return null; }
   }
-  return `/assets/portraits/${k}.png`;
+  return assetUrl(`portraits/${k}.png`);
 }
 
 /** Size is in UI pixels at the 16px reference scale (it grows with the UI scale). */

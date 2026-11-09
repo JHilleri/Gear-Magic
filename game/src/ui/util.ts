@@ -12,6 +12,13 @@ import { PRESETS } from '../data/presets';
 import { XP_CATEGORIES, XP_CATEGORY_NAMES } from '../data/skills';
 import { mainXpCategory } from '../sim/progression';
 
+/** URL of a file under public/assets ('ui/menu_bg.jpg'), honouring Vite's `base` (e.g. GitHub Pages' /<repo>/). */
+export function assetUrl(path: string): string {
+  let base = import.meta.env?.BASE_URL ?? '/';
+  if (!base.endsWith('/')) base += '/';
+  return `${base}assets/${path.replace(/^\/+/, '')}`;
+}
+
 // ───────────────────────────── defensive sim calls ─────────────────────────────
 const warned = new Set<string>();
 /**
