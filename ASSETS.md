@@ -48,3 +48,9 @@ Icon/portrait keys are the paths used in `data/*.ts` (`icon: 'items/sword.png'` 
 * Icons: 256² PNG, painted RPG-icon style, centered object, dark vignette background.
 * Portraits: 512×640 PNG bust portraits per `{race}_{body}`, plus `{race}_leader`.
 * UI: `ui/menu_bg.jpg` (1920×1080 key art), `ui/parchment.jpg` (tileable), emblems 256².
+
+## Audio (`game/public/assets/audio`, optional)
+`audio.json` lists Ogg Opus files: `{"sfx": {"clash": ["sfx/clash_0.ogg", …]}, "music": {"title": […], "game": […], "tension": […]}}`.
+SFX keys are the `SfxName`s in `src/audio/sfx.ts`; each listed file is one variant (one is picked at random per
+play), already trimmed and levelled per sound. Music files are full tracks, levelled to one target, played as
+per-mood playlists. Any sound or mood without files keeps its procedural version.

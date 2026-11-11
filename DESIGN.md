@@ -627,8 +627,12 @@ its vision). Layers:
   other on-screen beats faster (×1.6; framed marches ×1.25, repeated attacks on one unit ×1.3) and
   applies the rest (off screen) at once; *Watch all* frames every visible action. At turn start
   nothing stays selected from the previous turn.
-* **Audio**: procedural WebAudio SFX (clicks, steps, sword clash, bow, spell whoosh,
-  build hammer) and a generative ambient pad; volume slider; mute `N`.
+* **Audio**: recorded SFX (Stable Audio 3, 2–6 variants per sound, random variant + ±4 % pitch per
+  play) and a recorded soundtrack (ACE-Step 1.5: title theme, three calm in-game tracks, two battle
+  tracks), both generated locally (see README "Regenerating audio"). Music crossfades per mood and
+  switches to the battle tracks while combat intensity is high, then resumes the in-game track where it
+  left off. Without the files (or Ogg Opus support) the original procedural WebAudio SFX and generative
+  music play instead. Volume slider; mute `N`. Audition page: `dev/audio.html`.
 
 ## 11. Architecture
 
@@ -643,7 +647,8 @@ game/src
   render/ three.js scene (reads GameState, never mutates it)
   ui/     Preact components (read state, dispatch actions through the controller)
   game/   controller.ts (input → actions → events → animations), session.ts (save/load)
-  audio/  sfx.ts
+  audio/  sfx.ts (engine + procedural SFX), music.ts (track streaming + generative fallback),
+          samples.ts (assets/audio/audio.json, SFX sample bank)
 ```
 * All state mutations go through `sim/actions.ts` → returns `ActionResult { ok, error?,
   events: GameEvent[] }`. The controller plays `events` as animations, then re-syncs the

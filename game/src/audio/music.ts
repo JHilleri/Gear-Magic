@@ -1,9 +1,15 @@
+// Soundtrack. `music` (MusicEngine, bottom of the file) streams the recorded tracks listed in
+// assets/audio/audio.json, one playlist per mood, crossfading between two decks and switching to the
+// battle tracks while `intensity` (raised by combat via `pulse`) is high. When there are no tracks
+// (or the browser cannot play them) it hands over to ProceduralMusic:
+//
 // Generative medieval-fantasy soundtrack (WebAudio, no files).
 // Layers: low drone, slow detuned string pad with voice-led chords, a plucked lute
 // (Karplus–Strong) arpeggiating the chord, an occasional recorder melody, and a frame drum +
 // shaker that fade in with `intensity` (raised by combat via `pulse`).
 // A lookahead scheduler places notes bar by bar on the AudioContext clock.
 import { audio, midiToHz } from './sfx';
+import { audioUrl, loadAudioManifest, type TrackMood } from './samples';
 
 export type MusicMood = 'title' | 'game' | 'tension';
 
@@ -47,7 +53,7 @@ const ARP_PATTERNS: number[][] = [
 const rnd = (a: number, b: number) => a + Math.random() * (b - a);
 const choice = <T>(arr: readonly T[]): T => arr[Math.floor(Math.random() * arr.length)];
 
-class MusicEngine {
+class ProceduralMusic {
   private enabled = true;
   private mood: MusicMood = 'title';
   private intensity = 0;             // 0..1, decays over time
@@ -396,6 +402,284 @@ class MusicEngine {
       }
     }
     setTimeout(() => { try { bus.disconnect(); rev.disconnect(); } catch { /* */ } }, (t - ctx.currentTime + this.barLen() + 4) * 1000);
+  }
+}
+
+// ───────────────────────────── recorded tracks ─────────────────────────────
+
+const MOOD_FADE = 3;        // s, crossfade on a mood change
+const BATTLE_FADE = 1.5;    // s, crossfade into the battle music
+const END_FADE = 5;         // s, crossfade from the end of a track into the next one
+const TENSION_ON = 0.55;    // intensity that starts the battle music (same threshold as the procedural engine)
+const TENSION_OFF = 0.2;    // …and the level it must fall back under,
+const TENSION_MIN = 25;     // …after at least this many seconds of battle music
+const DECAY_PER_S = 0.018;  // intensity decay (same as the procedural engine)
+
+interface Deck { el: HTMLAudioElement; gain: GainNode; url: string }
+
+class MusicEngine {
+  private enabled = true;
+  private mood: MusicMood = 'title';
+  private intensity = 0;
+  private lastDecay = 0;
+  private readonly proc = new ProceduralMusic();
+  private mode: 'pending' | 'tracks' | 'procedural' = 'pending';
+  private tracks: Record<TrackMood, string[]> = { title: [], game: [], tension: [] };
+  private session: GainNode | null = null;
+  private decks: Deck[] = [];
+  private cur: Deck | null = null;
+  private playing: TrackMood | null = null;
+  private inTension = false;
+  private tensionSince = 0;
+  private recent: Record<TrackMood, string[]> = { title: [], game: [], tension: [] };
+  private resumeGame: { url: string; time: number } | null = null;
+  private timer: ReturnType<typeof setInterval> | null = null;
+  private advancing = false;
+  private waitingGesture = false;
+  private errors = 0;
+
+  /** Begin (or keep) playing once audio is unlocked. */
+  start(): void {
+    void loadAudioManifest(); // fetch early so the unlocking gesture can start a track right away
+    audio.onUnlock(() => this.resume());
+  }
+
+  setEnabled(on: boolean): void {
+    this.enabled = on;
+    if (this.mode === 'procedural') { this.proc.setEnabled(on); return; }
+    if (on) this.start();
+    else this.fadeOut();
+  }
+
+  isEnabled(): boolean { return this.enabled; }
+
+  setMood(m: MusicMood): void {
+    if (m === this.mood) return;
+    this.mood = m;
+    this.proc.setMood(m);
+    this.update();
+  }
+
+  /** Combat or other excitement: raise intensity (battle music above a threshold). */
+  pulse(amount = 0.25): void {
+    this.decay();
+    this.intensity = Math.min(1, this.intensity + amount);
+    this.proc.pulse(amount);
+    this.update();
+  }
+
+  /** Lower the music for a few seconds (under stingers). */
+  duck(seconds: number): void {
+    if (this.mode === 'procedural') { this.proc.duck(seconds); return; }
+    const ctx = audio.ctx;
+    if (!ctx || !this.session) return;
+    const now = ctx.currentTime;
+    const g = this.session.gain;
+    g.cancelScheduledValues(now);
+    g.setValueAtTime(g.value, now);
+    g.setTargetAtTime(0.15, now, 0.15);
+    g.setTargetAtTime(1, now + seconds, 1.2);
+  }
+
+  /** What is playing (dev pages and playtests). */
+  get state(): { mode: string; mood: MusicMood; playing: TrackMood | null; track: string | null; time: number; intensity: number } {
+    this.decay();
+    return {
+      mode: this.mode, mood: this.mood, playing: this.playing, track: this.cur?.url ?? null,
+      time: this.cur ? +this.cur.el.currentTime.toFixed(1) : 0, intensity: +this.intensity.toFixed(2),
+    };
+  }
+
+  private resume(): void {
+    if (!this.enabled) return;
+    if (this.mode === 'procedural') { this.proc.setEnabled(true); return; }
+    if (this.mode === 'tracks') { this.run(); return; }
+    void loadAudioManifest().then((m) => {
+      if (this.mode !== 'pending') { this.resume(); return; }
+      const lists = m?.music ?? {};
+      this.tracks = { title: lists.title ?? [], game: lists.game ?? [], tension: lists.tension ?? [] };
+      const ctx = audio.ctx as AudioContext | null;
+      const usable = this.tracks.game.length + this.tracks.title.length > 0
+        && typeof Audio !== 'undefined' && !!ctx && typeof ctx.createMediaElementSource === 'function';
+      if (!usable) { this.toProcedural(); return; }
+      this.mode = 'tracks';
+      this.run();
+    });
+  }
+
+  private toProcedural(): void {
+    this.mode = 'procedural';
+    if (this.timer) { clearInterval(this.timer); this.timer = null; }
+    for (const d of this.decks) { try { d.el.pause(); d.el.removeAttribute('src'); } catch { /* */ } }
+    try { this.session?.disconnect(); } catch { /* */ }
+    this.session = null;
+    this.cur = null;
+    this.playing = null;
+    this.proc.setEnabled(this.enabled);
+  }
+
+  /** Build the decks (once), fade the session in and play the right track. */
+  private run(): void {
+    const ctx = audio.ctx as AudioContext | null;
+    if (!ctx || !this.enabled) return;
+    if (!this.session) {
+      this.session = ctx.createGain();
+      this.session.gain.value = 0;
+      this.session.connect(audio.musicBus);
+      if (!this.decks.length) {
+        for (let i = 0; i < 2; i++) {
+          const el = new Audio();
+          el.preload = 'auto';
+          const deck: Deck = { el, gain: ctx.createGain(), url: '' };
+          deck.gain.gain.value = 0;
+          ctx.createMediaElementSource(el).connect(deck.gain);
+          el.addEventListener('timeupdate', () => this.onTime(deck));
+          el.addEventListener('ended', () => { if (deck === this.cur) this.next(END_FADE); });
+          el.addEventListener('error', () => this.onError(deck));
+          this.decks.push(deck);
+        }
+        document.addEventListener('visibilitychange', () => {
+          if (this.mode !== 'tracks' || !this.cur) return;
+          if (document.hidden) this.cur.el.pause();
+          else if (this.enabled) this.play(this.cur);
+        });
+      }
+      for (const d of this.decks) d.gain.connect(this.session);
+    }
+    const now = ctx.currentTime;
+    const g = this.session.gain;
+    g.cancelScheduledValues(now);
+    g.setValueAtTime(g.value, now);
+    g.linearRampToValueAtTime(1, now + 2);
+    if (!this.timer) this.timer = setInterval(() => { this.decay(); this.update(); }, 1000);
+    this.update();
+  }
+
+  private fadeOut(): void {
+    if (this.timer) { clearInterval(this.timer); this.timer = null; }
+    const ctx = audio.ctx;
+    if (!ctx || !this.session) return;
+    const now = ctx.currentTime;
+    const g = this.session.gain;
+    g.cancelScheduledValues(now);
+    g.setValueAtTime(g.value, now);
+    g.linearRampToValueAtTime(0, now + 1.5);
+    setTimeout(() => { if (!this.enabled) for (const d of this.decks) d.el.pause(); }, 1600);
+  }
+
+  private decay(): void {
+    const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
+    if (this.lastDecay) this.intensity = Math.max(0, this.intensity - ((now - this.lastDecay) / 1000) * DECAY_PER_S);
+    this.lastDecay = now;
+  }
+
+  /** The playlist that should be playing now (with battle hysteresis and empty-list fallbacks). */
+  private target(): TrackMood {
+    const now = (typeof performance !== 'undefined' ? performance.now() : Date.now()) / 1000;
+    if (!this.inTension && this.mood === 'game' && this.intensity > TENSION_ON && this.tracks.tension.length) {
+      this.inTension = true;
+      this.tensionSince = now;
+    } else if (this.inTension && (this.mood !== 'game' || (this.intensity < TENSION_OFF && now - this.tensionSince > TENSION_MIN))) {
+      this.inTension = false;
+    }
+    let m: TrackMood = this.mood === 'game' && this.inTension ? 'tension' : this.mood;
+    if (!this.tracks[m].length) m = this.tracks.game.length ? 'game' : 'title';
+    return m;
+  }
+
+  private update(): void {
+    if (this.mode !== 'tracks' || !this.enabled || !this.session) return;
+    const want = this.target();
+    if (this.cur && this.playing === want) {
+      if (this.cur.el.paused && !this.waitingGesture && !document.hidden) this.play(this.cur);
+      return;
+    }
+    let url = '';
+    let at = 0;
+    if (this.cur && this.playing === 'game' && want === 'tension') {
+      this.resumeGame = { url: this.cur.url, time: this.cur.el.currentTime };
+    }
+    if (want === 'game' && this.resumeGame && this.tracks.game.includes(this.resumeGame.url)) {
+      ({ url, time: at } = this.resumeGame);
+    } else {
+      url = this.pick(want);
+    }
+    this.resumeGame = want === 'tension' ? this.resumeGame : null;
+    this.crossfade(url, want, want === 'tension' ? BATTLE_FADE : MOOD_FADE, at);
+  }
+
+  /** A random track of the playlist that is not among the last ones played in it. */
+  private pick(m: TrackMood): string {
+    const list = this.tracks[m];
+    const fresh = list.filter((u) => !this.recent[m].includes(u));
+    const pool = fresh.length ? fresh : list;
+    return pool[Math.floor(Math.random() * pool.length)];
+  }
+
+  private crossfade(url: string, mood: TrackMood, fade: number, at: number): void {
+    const ctx = audio.ctx!;
+    const now = ctx.currentTime;
+    const prev = this.cur;
+    const next = this.decks.find((d) => d !== prev) ?? this.decks[0];
+    const n = this.tracks[mood].length;
+    this.recent[mood] = [url, ...this.recent[mood].filter((u) => u !== url)].slice(0, Math.max(1, n - 1));
+    next.url = url;
+    next.el.src = audioUrl(url);
+    if (at > 1) next.el.addEventListener('loadedmetadata', () => { if (next.url === url) next.el.currentTime = at; }, { once: true });
+    next.gain.gain.cancelScheduledValues(now);
+    next.gain.gain.setValueAtTime(0, now);
+    next.gain.gain.linearRampToValueAtTime(1, now + fade);
+    this.cur = next;
+    this.playing = mood;
+    this.advancing = false;
+    this.play(next);
+    if (prev && prev !== next) {
+      prev.gain.gain.cancelScheduledValues(now);
+      prev.gain.gain.setValueAtTime(prev.gain.gain.value, now);
+      prev.gain.gain.linearRampToValueAtTime(0, now + fade);
+      setTimeout(() => { if (this.cur !== prev) prev.el.pause(); }, fade * 1000 + 150);
+    }
+  }
+
+  /** Crossfade into another track of the current playlist. */
+  private next(fade: number): void {
+    if (this.mode !== 'tracks' || !this.enabled) return;
+    this.advancing = true;
+    const m = this.target();
+    this.crossfade(this.pick(m), m, fade, 0);
+  }
+
+  private onTime(deck: Deck): void {
+    if (deck !== this.cur || this.advancing) return;
+    const d = deck.el.duration;
+    if (Number.isFinite(d) && d > END_FADE * 2 && d - deck.el.currentTime < END_FADE) this.next(END_FADE);
+  }
+
+  private onError(deck: Deck): void {
+    if (this.mode !== 'tracks' || !deck.url) return;
+    console.warn('[music] track failed', deck.url);
+    for (const k of Object.keys(this.tracks) as TrackMood[]) this.tracks[k] = this.tracks[k].filter((u) => u !== deck.url);
+    deck.url = '';
+    if (++this.errors > 3 || this.tracks.game.length + this.tracks.title.length === 0) { this.toProcedural(); return; }
+    if (deck === this.cur) { this.cur = null; this.playing = null; this.update(); }
+  }
+
+  private play(deck: Deck): void {
+    const p = deck.el.play();
+    if (!p) return;
+    p.catch((e: unknown) => {
+      // Autoplay policy (e.g. the manifest arrived after the unlocking gesture): retry on the next one.
+      if ((e as { name?: string })?.name !== 'NotAllowedError' || this.waitingGesture) return;
+      this.waitingGesture = true;
+      const retry = () => {
+        window.removeEventListener('pointerdown', retry, true);
+        window.removeEventListener('keydown', retry, true);
+        this.waitingGesture = false;
+        if (this.cur && this.enabled && this.mode === 'tracks') this.play(this.cur);
+      };
+      window.addEventListener('pointerdown', retry, true);
+      window.addEventListener('keydown', retry, true);
+    });
   }
 }
 

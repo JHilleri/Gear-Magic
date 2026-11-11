@@ -1,0 +1,20 @@
+[
+  {"id": "title", "cat": "music", "model": "ace", "seconds": 150, "takes": 2, "seed": 101,
+   "tags": "instrumental, epic medieval fantasy orchestral main theme, noble and hopeful, solo lute and recorder melody introduction, warm string ensemble, soaring French horns, harp arpeggios, low taiko and frame drums, slow build to a heroic climax, cinematic strategy game title music, no vocals",
+   "bpm": 72, "key": "D minor", "time": "4"},
+  {"id": "game_1", "cat": "music", "model": "ace", "seconds": 180, "takes": 2, "seed": 102,
+   "tags": "instrumental, calm medieval fantasy pastoral music, gentle lute fingerpicking, wooden recorder melody, soft harp, light string pads, quiet frame drum and shaker, peaceful village and farmland, warm and relaxed, kingdom building strategy game background music, no vocals",
+   "bpm": 84, "key": "D minor", "time": "4"},
+  {"id": "game_2", "cat": "music", "model": "ace", "seconds": 180, "takes": 2, "seed": 103,
+   "tags": "instrumental, medieval folk adventure music, hurdy-gurdy drone and melody, fiddle, mandolin strumming, cello, bodhran and light hand percussion, steady walking groove, journey across hills, optimistic and earthy, fantasy strategy game background music, no vocals",
+   "bpm": 92, "key": "A minor", "time": "4"},
+  {"id": "game_3", "cat": "music", "model": "ace", "seconds": 180, "takes": 2, "seed": 104,
+   "tags": "instrumental, mystical medieval fantasy ambient music, celtic harp, hammered dulcimer, airy wooden flute, soft wordless choir pads, glassy crystal bells, slow and contemplative, arcane library and mage tower, calm and wondrous, fantasy strategy game background music, no vocals",
+   "bpm": 70, "key": "E minor", "time": "4"},
+  {"id": "battle_1", "cat": "music", "model": "ace", "seconds": 120, "takes": 2, "seed": 105,
+   "tags": "instrumental, tense medieval fantasy battle music, driving staccato strings, pounding war drums and timpani, low brass ostinato, heroic French horn calls, rising tension, armies clashing on a field, orchestral strategy game combat music, no vocals",
+   "bpm": 120, "key": "D minor", "time": "4"},
+  {"id": "battle_2", "cat": "music", "model": "ace", "seconds": 120, "takes": 2, "seed": 106,
+   "tags": "instrumental, dark epic orchestral battle music, aggressive cellos and basses, taiko and snare drum rolls, menacing low brass, chanting male choir, orcs and undead army attacking, relentless and dramatic, fantasy strategy game combat music, no vocals",
+   "bpm": 132, "key": "C minor", "time": "4"}
+]

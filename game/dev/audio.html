@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Gear &amp; Magic — audio audition</title>
+    <style>
+      body { background: #17151a; color: #e8e2d6; font: 14px/1.4 system-ui, sans-serif; margin: 24px; }
+      h1 { font-size: 20px; margin: 0 0 4px; } h2 { font-size: 16px; margin: 24px 0 8px; }
+      p { color: #a9a196; margin: 0 0 12px; }
+      table { border-collapse: collapse; } td { padding: 3px 8px; border-bottom: 1px solid #2a2730; }
+      td:first-child { font-weight: 600; min-width: 110px; }
+      button { background: #2c2833; color: #e8e2d6; border: 1px solid #4a4452; border-radius: 4px; padding: 3px 9px; cursor: pointer; margin: 1px; }
+      button:hover { background: #3a3542; } button.game { border-color: #c9a45c; } button.synth { color: #9fb7d9; }
+      .tracks div { margin: 4px 0; } .tracks span { display: inline-block; width: 150px; }
+      #state { font-family: ui-monospace, monospace; color: #c9a45c; }
+    </style>
+  </head>
+  <body>
+    <h1>Audio audition</h1>
+    <p>Click anywhere first to unlock audio. <b>Game</b> plays a random take through the game's mixer (levels, pan, pitch variation),
+      <b>synth</b> the old procedural version, numbers a single take.</p>
+    <h2>Music engine</h2>
+    <div id="music"></div>
+    <div id="state"></div>
+    <h2>Tracks</h2>
+    <div id="tracks" class="tracks"></div>
+    <h2>Sound effects</h2>
+    <table id="sfx"></table>
+    <script type="module" src="/src/dev/audio-dev.ts"></script>
+  </body>
+</html>

@@ -51,6 +51,19 @@ Notes from production:
 * Run heavy jobs one at a time (GPU generation, Blender, software-rendered browsers): this PC has switched
   off under combined full CPU + GPU load. `blender/batch.py` defaults to one job on 4 threads at low priority.
 
+## Regenerating audio
+
+```bash
+cd art
+python3 tools/gen_audio.py manifests/sfx.json     # Stable Audio 3 Medium, 4–6 takes per sound (~2 min)
+python3 tools/gen_audio.py manifests/music.json   # ACE-Step 1.5 XL Turbo, 2 takes per track (~10 min)
+python3 tools/export_audio.py                     # trim, level, Ogg Opus → game/public/assets/audio + audio.json
+python3 tools/audio_sheet.py                      # waveform sheet of the shipped SFX (outputs/audio/sfx_sheet.png)
+```
+`manifests/audio_pick.json` lists which takes ship when not all of them should (by take index). Re-roll one
+sound with `gen_audio.py manifests/sfx.json --only clash --force` (change its `seed` for new takes). Listen to
+everything at `http://127.0.0.1:5180/dev/audio.html` (recorded vs procedural, music moods).
+
 ## Checks
 
 ```bash

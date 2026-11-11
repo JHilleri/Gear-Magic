@@ -1,0 +1,245 @@
+{
+ "sfx": {
+  "select": [
+   "sfx/select_0.ogg",
+   "sfx/select_1.ogg",
+   "sfx/select_2.ogg",
+   "sfx/select_3.ogg"
+  ],
+  "deselect": [
+   "sfx/deselect_0.ogg",
+   "sfx/deselect_1.ogg",
+   "sfx/deselect_2.ogg",
+   "sfx/deselect_3.ogg"
+  ],
+  "error": [
+   "sfx/error_0.ogg",
+   "sfx/error_1.ogg",
+   "sfx/error_2.ogg",
+   "sfx/error_3.ogg"
+  ],
+  "modalOpen": [
+   "sfx/modalOpen_0.ogg",
+   "sfx/modalOpen_1.ogg",
+   "sfx/modalOpen_2.ogg",
+   "sfx/modalOpen_3.ogg"
+  ],
+  "modalClose": [
+   "sfx/modalClose_0.ogg",
+   "sfx/modalClose_1.ogg",
+   "sfx/modalClose_2.ogg",
+   "sfx/modalClose_3.ogg"
+  ],
+  "step": [
+   "sfx/step_0.ogg",
+   "sfx/step_1.ogg",
+   "sfx/step_2.ogg",
+   "sfx/step_3.ogg",
+   "sfx/step_4.ogg",
+   "sfx/step_5.ogg"
+  ],
+  "clash": [
+   "sfx/clash_0.ogg",
+   "sfx/clash_1.ogg",
+   "sfx/clash_2.ogg",
+   "sfx/clash_3.ogg",
+   "sfx/clash_4.ogg",
+   "sfx/clash_5.ogg"
+  ],
+  "hit": [
+   "sfx/hit_0.ogg",
+   "sfx/hit_1.ogg",
+   "sfx/hit_2.ogg",
+   "sfx/hit_3.ogg",
+   "sfx/hit_4.ogg",
+   "sfx/hit_5.ogg"
+  ],
+  "miss": [
+   "sfx/miss_0.ogg",
+   "sfx/miss_1.ogg",
+   "sfx/miss_2.ogg",
+   "sfx/miss_3.ogg"
+  ],
+  "bow": [
+   "sfx/bow_2.ogg",
+   "sfx/bow_3.ogg"
+  ],
+  "arrowWhoosh": [
+   "sfx/arrowWhoosh_0.ogg",
+   "sfx/arrowWhoosh_1.ogg",
+   "sfx/arrowWhoosh_3.ogg"
+  ],
+  "arrowHit": [
+   "sfx/arrowHit_0.ogg",
+   "sfx/arrowHit_1.ogg",
+   "sfx/arrowHit_2.ogg",
+   "sfx/arrowHit_3.ogg"
+  ],
+  "magicCast": [
+   "sfx/magicCast_0.ogg",
+   "sfx/magicCast_1.ogg",
+   "sfx/magicCast_2.ogg",
+   "sfx/magicCast_3.ogg"
+  ],
+  "magicWhoosh": [
+   "sfx/magicWhoosh_0.ogg",
+   "sfx/magicWhoosh_1.ogg",
+   "sfx/magicWhoosh_2.ogg",
+   "sfx/magicWhoosh_3.ogg"
+  ],
+  "magicHit": [
+   "sfx/magicHit_0.ogg",
+   "sfx/magicHit_1.ogg",
+   "sfx/magicHit_2.ogg",
+   "sfx/magicHit_3.ogg"
+  ],
+  "explosion": [
+   "sfx/explosion_0.ogg",
+   "sfx/explosion_1.ogg",
+   "sfx/explosion_2.ogg",
+   "sfx/explosion_3.ogg"
+  ],
+  "lightning": [
+   "sfx/lightning_0.ogg",
+   "sfx/lightning_1.ogg",
+   "sfx/lightning_2.ogg",
+   "sfx/lightning_3.ogg"
+  ],
+  "heal": [
+   "sfx/heal_0.ogg",
+   "sfx/heal_1.ogg",
+   "sfx/heal_2.ogg",
+   "sfx/heal_3.ogg"
+  ],
+  "bless": [
+   "sfx/bless_0.ogg",
+   "sfx/bless_1.ogg",
+   "sfx/bless_2.ogg",
+   "sfx/bless_3.ogg"
+  ],
+  "haste": [
+   "sfx/haste_0.ogg",
+   "sfx/haste_1.ogg",
+   "sfx/haste_2.ogg",
+   "sfx/haste_3.ogg"
+  ],
+  "farsight": [
+   "sfx/farsight_0.ogg",
+   "sfx/farsight_1.ogg",
+   "sfx/farsight_3.ogg"
+  ],
+  "summon": [
+   "sfx/summon_0.ogg",
+   "sfx/summon_1.ogg",
+   "sfx/summon_2.ogg",
+   "sfx/summon_3.ogg"
+  ],
+  "hammer": [
+   "sfx/hammer_0.ogg",
+   "sfx/hammer_1.ogg",
+   "sfx/hammer_2.ogg",
+   "sfx/hammer_3.ogg"
+  ],
+  "buildComplete": [
+   "sfx/buildComplete_0.ogg",
+   "sfx/buildComplete_1.ogg",
+   "sfx/buildComplete_2.ogg",
+   "sfx/buildComplete_3.ogg"
+  ],
+  "levelUp": [
+   "sfx/levelUp_0.ogg",
+   "sfx/levelUp_1.ogg",
+   "sfx/levelUp_2.ogg",
+   "sfx/levelUp_3.ogg"
+  ],
+  "turnHorn": [
+   "sfx/turnHorn_0.ogg",
+   "sfx/turnHorn_1.ogg",
+   "sfx/turnHorn_2.ogg",
+   "sfx/turnHorn_3.ogg"
+  ],
+  "victory": [
+   "sfx/victory_0.ogg",
+   "sfx/victory_1.ogg",
+   "sfx/victory_2.ogg",
+   "sfx/victory_3.ogg"
+  ],
+  "defeat": [
+   "sfx/defeat_1.ogg",
+   "sfx/defeat_2.ogg",
+   "sfx/defeat_3.ogg"
+  ],
+  "death": [
+   "sfx/death_0.ogg",
+   "sfx/death_1.ogg",
+   "sfx/death_2.ogg",
+   "sfx/death_3.ogg",
+   "sfx/death_4.ogg",
+   "sfx/death_5.ogg"
+  ],
+  "spawn": [
+   "sfx/spawn_0.ogg",
+   "sfx/spawn_1.ogg",
+   "sfx/spawn_2.ogg",
+   "sfx/spawn_3.ogg"
+  ],
+  "coin": [
+   "sfx/coin_0.ogg",
+   "sfx/coin_1.ogg",
+   "sfx/coin_2.ogg",
+   "sfx/coin_3.ogg"
+  ],
+  "research": [
+   "sfx/research_0.ogg",
+   "sfx/research_1.ogg",
+   "sfx/research_2.ogg",
+   "sfx/research_3.ogg"
+  ],
+  "capture": [
+   "sfx/capture_0.ogg",
+   "sfx/capture_1.ogg",
+   "sfx/capture_2.ogg",
+   "sfx/capture_3.ogg"
+  ],
+  "equip": [
+   "sfx/equip_0.ogg",
+   "sfx/equip_1.ogg",
+   "sfx/equip_2.ogg",
+   "sfx/equip_3.ogg"
+  ],
+  "craft": [
+   "sfx/craft_0.ogg",
+   "sfx/craft_1.ogg",
+   "sfx/craft_2.ogg",
+   "sfx/craft_3.ogg"
+  ],
+  "poison": [
+   "sfx/poison_0.ogg",
+   "sfx/poison_1.ogg",
+   "sfx/poison_2.ogg",
+   "sfx/poison_3.ogg"
+  ],
+  "destroy": [
+   "sfx/destroy_0.ogg",
+   "sfx/destroy_1.ogg",
+   "sfx/destroy_2.ogg",
+   "sfx/destroy_3.ogg"
+  ]
+ },
+ "music": {
+  "title": [
+   "music/title_0.ogg"
+  ],
+  "game": [
+   "music/game_1_0.ogg",
+   "music/game_1_1.ogg",
+   "music/game_2_1.ogg",
+   "music/game_3_0.ogg",
+   "music/game_3_1.ogg"
+  ],
+  "tension": [
+   "music/battle_1_0.ogg",
+   "music/battle_2_0.ogg"
+  ]
+ }
+}

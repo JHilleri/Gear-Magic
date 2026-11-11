@@ -1,0 +1,15 @@
+{
+  "sfx": {
+    "bow": [2, 3],
+    "arrowWhoosh": [0, 1, 3],
+    "farsight": [0, 1, 3]
+  },
+  "music": {
+    "title": [0],
+    "game_1": [0, 1],
+    "game_2": [1],
+    "game_3": [0, 1],
+    "battle_1": [0],
+    "battle_2": [0]
+  }
+}

@@ -1,5 +1,7 @@
-// Procedural WebAudio sound design — no audio files. One shared AudioContext (also used by
-// audio/music.ts) is created lazily and unlocked on the first user gesture (autoplay policy).
+// WebAudio sound effects. One shared AudioContext (also used by audio/music.ts) is created lazily
+// and unlocked on the first user gesture (autoplay policy). Each sound plays a recorded variant from
+// assets/audio (samples.ts) once those are decoded, and otherwise falls back to the procedural design
+// below, so the game never depends on the files.
 //
 // Graph:   voice → [gain] → [panner] → sfxBus ─┐
 //                              └→ reverbSend ─→ convolver ─→ reverbReturn ─┤
@@ -24,6 +26,8 @@ export interface PlayOpts {
   pitch?: number;
 }
 
+import { SampleBank } from './samples';
+
 type Dest = AudioNode;
 
 /** Loudness balance per sound (measured offline with debugRenderSfx). */
@@ -32,6 +36,17 @@ const LEVELS: Partial<Record<SfxName, number>> = {
   magicWhoosh: 1.7, magicHit: 1.3, equip: 2, modalOpen: 1.4, modalClose: 1.4, deselect: 1.3, bless: 1.5, haste: 1.4,
   capture: 1.4, coin: 1.3, buildComplete: 1.3, levelUp: 1.4, explosion: 0.9, summon: 0.8, lightning: 0.9,
 };
+
+/** Recorded variants are pre-levelled per sound by art/tools/export_audio.py; this sets them in the mix. */
+const SAMPLE_GAIN = 0.32;
+const SAMPLE_LEVELS: Partial<Record<SfxName, number>> = {};
+/** Reverb send for recorded variants (they carry their own room already). */
+const SAMPLE_REVERB: Partial<Record<SfxName, number>> = {
+  select: 0, deselect: 0, error: 0, modalOpen: 0, modalClose: 0, step: 0.02,
+  magicCast: 0.12, heal: 0.12, bless: 0.12, farsight: 0.12, summon: 0.1, turnHorn: 0.12,
+};
+/** Tonal sounds that must not get the random ±4 % pitch variation (they sit against the music). */
+const SAMPLE_TONAL = new Set<SfxName>(['victory', 'defeat', 'levelUp', 'turnHorn', 'heal', 'bless', 'research', 'buildComplete', 'farsight']);
 
 const clamp = (v: number, a: number, b: number) => Math.min(b, Math.max(a, v));
 const rnd = (a: number, b: number) => a + Math.random() * (b - a);
@@ -51,6 +66,8 @@ class AudioEngine {
   private unlockCbs: (() => void)[] = [];
   private lastPlayed = new Map<SfxName, number>();
   private activeVoices = 0;
+  /** Recorded SFX variants (loaded after unlock; procedural sounds cover the gap and any gaps). */
+  readonly samples = new SampleBank();
 
   /** True once a user gesture has created/resumed the context. */
   get ready(): boolean { return this.unlocked && !!this.ctx && this.ctx.state === 'running'; }
@@ -90,6 +107,7 @@ class AudioEngine {
       if (this.ctx.state !== 'running') void (this.ctx as AudioContext).resume().catch(() => undefined);
       if (!this.unlocked) {
         this.unlocked = true;
+        if (!this.offline) this.samples.load(this.ctx);
         const cbs = this.unlockCbs.splice(0);
         for (const cb of cbs) { try { cb(); } catch (e) { console.warn('[audio] unlock callback failed', e); } }
       }
@@ -392,10 +410,25 @@ class AudioEngine {
     if (t - last < minGap) return;
     this.lastPlayed.set(name, t);
     try {
-      this.render(name, t, opts.pan ?? 0, (opts.gain ?? 1) * (LEVELS[name] ?? 1), opts.pitch ?? 1);
+      if (this.samples.has(name)) this.renderSample(name, t, opts.pan ?? 0, (opts.gain ?? 1) * (SAMPLE_LEVELS[name] ?? 1), opts.pitch ?? 1);
+      else this.render(name, t, opts.pan ?? 0, (opts.gain ?? 1) * (LEVELS[name] ?? 1), opts.pitch ?? 1);
     } catch (e) {
       console.warn('[audio] sfx failed', name, e);
     }
+  }
+
+  /** Play one recorded variant of `name` through the usual gain/pan/reverb strip. */
+  private renderSample(name: SfxName, t: number, pan: number, gm: number, p: number): void {
+    const buf = this.samples.pick(name);
+    if (!buf) return;
+    const ctx = this.ctx!;
+    const rate = p * (SAMPLE_TONAL.has(name) ? 1 : rnd(0.96, 1.04));
+    const o = this.strip(t, SAMPLE_GAIN * gm, pan, SAMPLE_REVERB[name] ?? 0.05, buf.duration / rate);
+    const src = ctx.createBufferSource();
+    src.buffer = buf;
+    src.playbackRate.value = rate;
+    src.connect(o);
+    src.start(t);
   }
 
   private render(name: SfxName, t: number, pan: number, gm: number, p: number): void {
