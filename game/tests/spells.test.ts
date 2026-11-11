@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { GameEvent, Hex, TechId } from '../src/core/types';
 import { hexDistance, hexEq, tileIndex } from '../src/core/hex';
 import { binomial, canCast, castSpell, hitsOutcome, knownSpells, manaCap, previewSpell, towerRange, towersInRange } from '../src/sim/spells';
-import { previewSkill, volleyStrikeDamage } from '../src/sim/skills';
+import { previewSkill, volleyProfile } from '../src/sim/skills';
 import { attackProfile } from '../src/sim/combat';
 import { getAttackDefs } from '../src/sim/units';
 import { captureBuildings, recruit } from '../src/sim/economy';
@@ -73,7 +73,7 @@ describe('canCast', () => {
     expect(canCast(s, 'valen', 'heal', tower.id, ally.pos)).toMatch(/construction/);
     tower.buildLeft = 0;
     expect(canCast(s, 'valen', 'heal', tower.id, at(15, 11))).toMatch(/out of range/);
-    ally.hp = 22;
+    ally.hp = ally.base.maxHp;
     expect(canCast(s, 'valen', 'heal', tower.id, ally.pos)).toMatch(/wounded/);
     expect(canCast(s, 'valen', 'haste', tower.id, off(T, 3))).toMatch(/your units/);
     expect(canCast(s, 'valen', 'storm', tower.id, off(T, 3))).toMatch(/No enemies/);
@@ -94,9 +94,9 @@ describe('castSpell effects', () => {
     const b = makeTestUnit(s, 'valen', off(T, 4), { hp: 20 });
     const foe = makeTestUnit(s, 'thorn', off(T, 3, 1), { hp: 5 });
     const evs = castSpell(s, 'valen', 'heal', tower.id, a.pos);
-    expect(a.hp).toBe(20);
+    expect(a.hp).toBe(25); // 5 + 20
     expect(a.poisoned).toBe(false);
-    expect(b.hp).toBe(22);
+    expect(b.hp).toBe(30); // 20 + 20, capped at max hp
     expect(foe.hp).toBe(5);
     expect(s.factions.valen.resources.mana).toBe(80);
     expect(s.factions.valen.spellCooldowns.heal).toBe(2);
@@ -119,16 +119,16 @@ describe('castSpell effects', () => {
     expect(a.buffs.length).toBe(1); // refreshed, not stacked
   });
 
-  it('Fireball: 18 at the centre, 8 around, friend or foe, kills credit the channeler', () => {
+  it('Fireball: 22 at the centre, 10 around, friend or foe, kills credit the channeler', () => {
     const { s, tower } = setup();
     const mage = makeTestUnit(s, 'valen', T);
-    const c = makeTestUnit(s, 'thorn', off(T, 4), { hp: 30, base: { maxHp: 30, str: 4, dex: 4, int: 3, armor: 50, mov: 5, vis: 4 } });
+    const c = makeTestUnit(s, 'thorn', off(T, 4), { hp: 30, base: { maxHp: 30, str: 4, dex: 4, int: 3, armor: 50, block: 0, mov: 5, vis: 4 } });
     const ring1 = makeTestUnit(s, 'thorn', off(T, 5), { hp: 6 });
     const friend = makeTestUnit(s, 'valen', off(T, 3));
     const evs = castSpell(s, 'valen', 'fireball', tower.id, c.pos);
-    expect(c.hp).toBe(12); // magic fire ignores armor
-    expect(s.units[String(ring1.id)]).toBeUndefined();
-    expect(friend.hp).toBe(14);
+    expect(c.hp).toBe(8); // 30 − 22: magic fire ignores armor
+    expect(s.units[String(ring1.id)]).toBeUndefined(); // 6 hp, 10 splash
+    expect(friend.hp).toBe(20); // 30 − 10
     expect(has(evs, 'unitDied').length).toBe(1);
     expect(mage.kills).toBe(1);
     expect(s.factions.valen.stats.kills).toBe(1);
@@ -161,20 +161,20 @@ describe('castSpell effects', () => {
     expect(u.faction).toBe('valen');
     expect(u.monster).toBe('elemental');
     expect(u.summonTurns).toBe(8);
-    expect(u.hp).toBe(40);
+    expect(u.hp).toBe(54);
     expect(u.mp).toBe(0);
     expect(s.factions.valen.resources.mana).toBe(50);
   });
 
-  it('Storm of Ruin: 4 bolts of 14 on enemies only', () => {
+  it('Storm of Ruin: 4 bolts of 18 on enemies only', () => {
     const { s, tower } = setup();
-    const big = { maxHp: 200, str: 4, dex: 4, int: 3, armor: 0, mov: 5, vis: 4 };
+    const big = { maxHp: 200, str: 4, dex: 4, int: 3, armor: 0, block: 0, mov: 5, vis: 4 };
     const e1 = makeTestUnit(s, 'thorn', off(T, 5), { base: { ...big }, hp: 200 });
     const e2 = makeTestUnit(s, 'thorn', off(T, 6), { base: { ...big }, hp: 200 });
     const f = makeTestUnit(s, 'valen', off(T, 4));
     const evs = castSpell(s, 'valen', 'storm', tower.id, off(T, 5));
-    expect(400 - e1.hp - e2.hp).toBe(56);
-    expect(f.hp).toBe(22);
+    expect(400 - e1.hp - e2.hp).toBe(72); // 4 × 18
+    expect(f.hp).toBe(30); // untouched
     expect(has(evs, 'unitDamaged').length).toBe(4);
   });
 
@@ -289,7 +289,7 @@ describe('spell and skill previews (match the resolution)', () => {
     expect(p.entries.map((e) => e.unit).sort()).toEqual([foe.id, mine.id].sort());
     const ef = p.entries.find((e) => e.unit === foe.id)!;
     const em = p.entries.find((e) => e.unit === mine.id)!;
-    expect(ef).toMatchObject({ own: false, hpDelta: -18, killChance: 0 });
+    expect(ef).toMatchObject({ own: false, hpDelta: -22, killChance: 0 });
     expect(em).toMatchObject({ own: true, hpDelta: -6, killChance: 1 });
     castSpell(s, 'valen', 'fireball', tower.id, c);
     expect(s.units[String(foe.id)].hp).toBe(30 + ef.hpDelta);
@@ -299,7 +299,7 @@ describe('spell and skill previews (match the resolution)', () => {
   it('heal and haste: exact amounts', () => {
     const { s, tower } = setup();
     const a = makeTestUnit(s, 'valen', off(T, 2), { hp: 10 });
-    const b = makeTestUnit(s, 'valen', off(T, 3), { hp: 18 }); // max 20 by default
+    const b = makeTestUnit(s, 'valen', off(T, 3), { hp: 18 }); // max 30: the heal is capped
     const ph = previewSpell(s, 'valen', 'heal', a.pos);
     expect(ph.tone).toBe('help');
     const before = { a: a.hp, b: b.hp };
@@ -320,15 +320,15 @@ describe('spell and skill previews (match the resolution)', () => {
     const c = off(T, 3);
     const one = makeTestUnit(s, 'thorn', c, { hp: 30 });
     const solo = previewSpell(s, 'valen', 'storm', c);
-    // a single enemy takes all four bolts: 56 > 30, a certain kill
+    // a single enemy takes all four bolts: 72 > 30, a certain kill
     expect(solo.entries[0]).toMatchObject({ unit: one.id, hpDelta: -30, killChance: 1 });
     makeTestUnit(s, 'thorn', off(c, 1), { hp: 30 });
     const two = previewSpell(s, 'valen', 'storm', c);
     for (const e of two.entries) {
-      // P(k hits) = Binomial(4, 1/2); dead at k >= 3 (42 dmg)
-      expect(e.killChance).toBeCloseTo(5 / 16, 6);
+      // P(k hits) = Binomial(4, 1/2); dead at k >= 2 (36 dmg ≥ 30 hp)
+      expect(e.killChance).toBeCloseTo(11 / 16, 6);
       expect(e.approx).toBe(true);
-      const exp = -(14 * 4 / 16 + 28 * 6 / 16 + 30 * 5 / 16);
+      const exp = -(18 * 4 / 16 + 30 * 11 / 16);
       expect(e.hpDelta).toBeCloseTo(exp, 6);
     }
   });
@@ -339,22 +339,38 @@ describe('spell and skill previews (match the resolution)', () => {
     const mage = makeTestUnit(s, 'valen', c, { actives: ['firebolt'] });
     const foe = makeTestUnit(s, 'thorn', off(c, 2), { hp: 30, items: ['plate'] });
     const fb = previewSkill(s, mage, 'firebolt', foe.pos);
-    expect(fb.entries).toEqual([expect.objectContaining({ unit: foe.id, own: false, hpDelta: -14, killChance: 0 })]);
+    expect(fb.entries).toEqual([expect.objectContaining({ unit: foe.id, own: false, hpDelta: -18, killChance: 0 })]);
     expect(fb.notes.join(' ')).toMatch(/armor/);
     applyAction(s, { type: 'skill', unit: mage.id, skill: 'firebolt', target: foe.pos });
-    expect(s.units[String(foe.id)].hp).toBe(30 - 14); // armor ignored
+    expect(s.units[String(foe.id)].hp).toBe(30 - 18); // plate's armor and block ignored
 
     const archer = makeTestUnit(s, 'valen', at(5, 9), { items: ['bow'], actives: ['volley'] });
     const v1 = makeTestUnit(s, 'thorn', off(archer.pos, 2), { hp: 25 });
     const pv = previewSkill(s, archer, 'volley', v1.pos);
     const e = pv.entries.find((x) => x.unit === v1.id)!;
-    const prof = attackProfile(s, archer, v1, 'ranged')!;
-    const dmg = volleyStrikeDamage(prof.damage);
+    const prof = volleyProfile(s, archer, v1)!;
+    const dmg = prof.damage;
     const strikes = getAttackDefs(archer).find((a) => a.kind === 'ranged')!.strikes;
     expect(strikes * dmg).toBeLessThan(25); // no kill possible: the expectation is the binomial mean
     expect(e.killChance).toBe(0);
     expect(e.hpDelta).toBeCloseTo(-strikes * prof.hitChance * dmg, 6);
     expect(e.hpDist!.reduce((a, b) => a + b, 0)).toBeCloseTo(1, 9);
+  });
+
+  it('a Volley arrow is cut to 60% before block and armor: the whole block comes off every arrow', () => {
+    const s = makeTestState(16, 12);
+    // A Thornwild archer (no ranged bonus) at a Valen unit in plate.
+    const archer = makeTestUnit(s, 'thorn', at(5, 9), { items: ['bow'], actives: ['volley'] });
+    const foe = makeTestUnit(s, 'valen', off(archer.pos, 2), { hp: 30, items: ['plate'] }); // block 3, armor 25%
+    // Longbow 6 + ½ of 4 dex = 8; 8 × 0.6 = 4.8, − 3 block = 1.8, × 0.75 = 1.35 → 1.
+    // (Cutting after block and armor would give round(round(5 × 0.75) × 0.6) = 2: only 60% of the block.)
+    expect(volleyProfile(s, archer, foe)!.damage).toBe(1);
+    expect(attackProfile(s, archer, foe, 'ranged')!.damage).toBe(4); // a plain shot: (8 − 3) × 0.75 = 3.75 → 4
+    const pv = previewSkill(s, archer, 'volley', foe.pos);
+    const e = pv.entries.find((x) => x.unit === foe.id)!;
+    expect(e.hpDist!.length - 1).toBe(30);
+    expect(e.hpDist![30 - 3]).toBeGreaterThan(0); // three arrows of 1 at most
+    expect(pv.notes.join(' ')).toMatch(/block and armor apply/);
   });
 
   it('binomial and hit outcomes', () => {
@@ -371,11 +387,11 @@ describe('spell and skill previews (match the resolution)', () => {
     const tank = makeTestUnit(s, 'thorn', c, { hp: 40, items: ['plate', 'shield'] });
     const side = makeTestUnit(s, 'thorn', off(c, 1), { hp: 40, items: ['plate'] });
     castSpell(s, 'valen', 'fireball', tower.id, c);
-    expect(s.units[String(tank.id)].hp).toBe(40 - 18);
-    expect(s.units[String(side.id)].hp).toBe(40 - 8);
-    const lone = makeTestUnit(s, 'thorn', off(T, -4), { hp: 60, items: ['plate'] });
+    expect(s.units[String(tank.id)].hp).toBe(40 - 22);
+    expect(s.units[String(side.id)].hp).toBe(40 - 10);
+    const lone = makeTestUnit(s, 'thorn', off(T, -4), { hp: 80, items: ['plate'] });
     s.factions.valen.resources.mana = 100;
     castSpell(s, 'valen', 'storm', tower.id, lone.pos);
-    expect(s.units[String(lone.id)].hp).toBe(60 - 4 * 14);
+    expect(s.units[String(lone.id)].hp).toBe(80 - 4 * 18);
   });
 });

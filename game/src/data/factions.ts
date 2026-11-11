@@ -13,7 +13,7 @@ export const FACTIONS: Record<FactionId, FactionDef> = {
   },
   thorn: {
     id: 'thorn', name: 'Thornwild Clans', race: 'orc', color: '#c8342b', accent: '#d9c9a3',
-    statMods: { maxHp: 4, str: 1, int: -1 }, meleeMult: 1.1, foodUpkeep: 1, leaderName: 'Warchief Grukka Thornfist',
+    statMods: { maxHp: 5, str: 1, int: -1 }, meleeMult: 1.1, foodUpkeep: 1, leaderName: 'Warchief Grukka Thornfist',
     unitNames: ['Gash', 'Grakk', 'Urzog', 'Brakka', 'Throk', 'Durz', 'Dagrum', 'Skarn', 'Hrok', 'Krull', 'Narzh', 'Vorn', 'Zug', 'Brug', 'Borgo', 'Kazgar', 'Mogg', 'Taruk'],
     emblem: 'emblems/thorn.png',
     startingTechs: ['polearms'],
@@ -39,7 +39,7 @@ export const FACTIONS: Record<FactionId, FactionDef> = {
 export const PLAYABLE_FACTIONS: FactionId[] = ['valen', 'thorn', 'ashen'];
 
 const STAT_LABEL: Record<keyof UnitStats, string> = {
-  maxHp: 'HP', str: 'Strength', dex: 'Dexterity', int: 'Intellect', armor: 'armor', mov: 'movement', vis: 'vision',
+  maxHp: 'HP', str: 'Strength', dex: 'Dexterity', int: 'Intellect', armor: 'armor', block: 'block', mov: 'movement', vis: 'vision',
 };
 
 /**
@@ -49,7 +49,7 @@ const STAT_LABEL: Record<keyof UnitStats, string> = {
 export function factionPerks(def: FactionDef, techName: (t: TechId) => string = (t) => t): string[] {
   const out: string[] = [];
   const mods = Object.entries(def.statMods) as [keyof UnitStats, number][];
-  if (mods.length) out.push(mods.map(([k, v]) => `${v > 0 ? '+' : ''}${v} ${STAT_LABEL[k]}`).join(', '));
+  if (mods.length) out.push(mods.map(([k, v]) => `${v > 0 ? '+' : ''}${v}${k === 'armor' ? '%' : ''} ${STAT_LABEL[k]}`).join(', '));
   const mult: string[] = [];
   if (def.meleeMult) mult.push(`+${Math.round((def.meleeMult - 1) * 100)}% melee`);
   if (def.rangedMult) mult.push(`+${Math.round((def.rangedMult - 1) * 100)}% ranged`);
@@ -71,8 +71,8 @@ export interface MonsterDef {
 }
 
 export const MONSTERS: Record<MonsterKind, MonsterDef> = {
-  wolf:      { kind: 'wolf', name: 'Grey Wolf', level: 1, stats: { maxHp: 20, str: 4, dex: 2, int: 0, armor: 0, mov: 7, vis: 5 }, attack: { kind: 'melee', name: 'Fangs', base: 5, strikes: 2, range: 1 }, passives: ['skirmisher'], description: 'Hunts in packs near the ruins.' },
-  spider:    { kind: 'spider', name: 'Giant Spider', level: 2, stats: { maxHp: 28, str: 5, dex: 4, int: 0, armor: 10, mov: 5, vis: 4 }, attack: { kind: 'melee', name: 'Venom Bite', base: 6, strikes: 2, range: 1 }, passives: ['poison'], description: 'Its bite poisons.' },
-  golem:     { kind: 'golem', name: 'Ruin Golem', level: 3, stats: { maxHp: 48, str: 8, dex: 0, int: 0, armor: 30, mov: 3, vis: 3 }, attack: { kind: 'melee', name: 'Stone Fist', base: 11, strikes: 2, range: 1 }, passives: ['regeneration'], description: 'Ancient guardian of the ruins.' },
-  elemental: { kind: 'elemental', name: 'Stone Elemental', level: 0, stats: { maxHp: 40, str: 6, dex: 0, int: 0, armor: 20, mov: 4, vis: 3 }, attack: { kind: 'melee', name: 'Boulder Fist', base: 9, strikes: 2, range: 1 }, description: 'Summoned earth spirit. Crumbles after 8 turns.' },
+  wolf:      { kind: 'wolf', name: 'Grey Wolf', level: 1, stats: { maxHp: 28, str: 4, dex: 2, int: 0, armor: 0, block: 0, mov: 7, vis: 5 }, attack: { kind: 'melee', name: 'Fangs', base: 5, strikes: 2, range: 1 }, passives: ['skirmisher'], description: 'Hunts in packs near the ruins.' },
+  spider:    { kind: 'spider', name: 'Giant Spider', level: 2, stats: { maxHp: 38, str: 5, dex: 4, int: 0, armor: 5, block: 1, mov: 5, vis: 4 }, attack: { kind: 'melee', name: 'Venom Bite', base: 6, strikes: 2, range: 1 }, passives: ['poison'], description: 'Its bite poisons.' },
+  golem:     { kind: 'golem', name: 'Ruin Golem', level: 3, stats: { maxHp: 64, str: 8, dex: 0, int: 0, armor: 20, block: 3, mov: 3, vis: 3 }, attack: { kind: 'melee', name: 'Stone Fist', base: 11, strikes: 2, range: 1 }, passives: ['regeneration'], description: 'Ancient guardian of the ruins.' },
+  elemental: { kind: 'elemental', name: 'Stone Elemental', level: 0, stats: { maxHp: 54, str: 6, dex: 0, int: 0, armor: 15, block: 2, mov: 4, vis: 3 }, attack: { kind: 'melee', name: 'Boulder Fist', base: 9, strikes: 2, range: 1 }, description: 'Summoned earth spirit. Crumbles after 8 turns.' },
 };

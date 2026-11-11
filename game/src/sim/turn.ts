@@ -9,14 +9,18 @@ import { progressResearch } from './research';
 import { computeVisibility } from './visibility';
 import { aiChooseLevelOption, applyLevelOption, mainXpCategory, queueLevelOffer } from './progression';
 import { applyProduction, captureBuildings, progressConstruction } from './economy';
-import { applyDamage } from './combat';
+import { applyDamage, clearReactions, poisonOn } from './combat';
+import { augmentRank, inspireXp, regenHeal, venomDamage } from '../data/ranks';
 import { runNeutralTurn } from './neutral';
 import { checkStandingOrders } from './orders';
 import { buildingOn, giveXp, isFunctional, isHumanFaction, logEvent } from './ruleutil';
 
-const REST_HEAL = 2;
-const REGEN_HEAL = 4;
-const POISON_DAMAGE = 4;
+/** HP a unit heals at its turn start when it neither moved nor fought last turn. */
+export const REST_HEAL = 3;
+/** HP the Regeneration passive heals every turn at rank 1 (data/ranks regenHeal for every rank). */
+export const REGEN_HEAL = regenHeal(1);
+/** HP rank-1 poison takes every turn (never below 1); a higher Venom Blades rank poisons harder (unit.poisonDamage). */
+export const POISON_DAMAGE = venomDamage(1);
 
 function sortedUnitsOf(state: GameState, f: FactionId): Unit[] {
   return Object.values(state.units).filter((u) => u.faction === f).sort((a, b) => a.id - b.id);
@@ -53,15 +57,16 @@ export function unitTurnUpkeep(state: GameState, u: Unit): GameEvent[] {
     heal += hd;
     if (home.type === 'castle' || home.type === 'shrine') cures = true;
   }
-  if (u.passives.includes('regeneration')) heal += REGEN_HEAL;
+  const regen = augmentRank(u, 'regeneration');
+  if (regen > 0) heal += regenHeal(regen);
   for (const slot of ['main', 'off', 'body', 'trinket', 'mount'] as const) {
     const it = u.equipment[slot];
     if (it && ITEMS[it].regen) heal += ITEMS[it].regen!;
   }
-  if (u.poisoned && cures) u.poisoned = false;
+  if (u.poisoned && cures) { u.poisoned = false; delete u.poisonDamage; }
   if (u.poisoned) {
     // Poison bites first (never fatal), then whatever healing the unit gets.
-    events.push(...applyDamage(state, u, POISON_DAMAGE, 'poison', null, 1));
+    events.push(...applyDamage(state, u, poisonOn(u), 'poison', null, 1));
   }
   // Buff timers (before stats are read for max hp / mov).
   for (const bf of u.buffs) bf.turns--;
@@ -90,6 +95,8 @@ export function startTurn(state: GameState, faction: FactionId): GameEvent[] {
   const events: GameEvent[] = [{ type: 'turnStarted', faction, round: state.round }];
   const fs = state.factions[faction];
   if (!fs || !fs.alive) return events;
+  // A new turn: every unit on the map may retaliate again (DESIGN §4.5).
+  clearReactions(state);
 
   // Recruit / craft counters.
   for (const k in state.buildings) {
@@ -107,9 +114,10 @@ export function startTurn(state: GameState, faction: FactionId): GameEvent[] {
 
   // Inspiring units teach their neighbours a little every turn, in the neighbour's own trade.
   for (const u of sortedUnitsOf(state, faction)) {
-    if (!u.passives.includes('inspiring')) continue;
+    const rank = augmentRank(u, 'inspiring');
+    if (rank <= 0) continue;
     for (const o of sortedUnitsOf(state, faction)) {
-      if (o.id !== u.id && hexDistance(o.pos, u.pos) === 1) events.push(...giveXp(state, o, mainXpCategory(o), 1));
+      if (o.id !== u.id && hexDistance(o.pos, u.pos) === 1) events.push(...giveXp(state, o, mainXpCategory(o), inspireXp(rank)));
     }
   }
 

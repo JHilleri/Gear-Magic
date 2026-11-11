@@ -10,16 +10,17 @@ import { BUILDING_LIST } from '../data/buildings';
 import { FACTIONS } from '../data/factions';
 import { ITEM_LIST, ITEMS } from '../data/items';
 import { ACTIVES, LEVEL_OPTION_BY_ID, LEVEL_OPTIONS, PASSIVES, XP_CATEGORY_NAMES, xpToNext } from '../data/skills';
+import { augmentRank, augmentText, berserkMult, drainShare, marksmanMin, rankedName, venomDamage } from '../data/ranks';
 import { SPELLS } from '../data/spells';
-import { BERSERK_MULT, CHARGE_MULT, MAGIC_HIT, MARKSMAN_MIN, VAMPIRIC_SHARE } from '../sim/combat';
-import { BARE_WORKER_MULT, WORK_XP, WORKER_MULT } from '../sim/economy';
+import { CHARGE_MULT, COMBAT_XP, FLANK_MULT, MAGIC_HIT, reactionsLeft, reactionsPerTurn } from '../sim/combat';
+import { BARE_WORKER_MULT, BUILD_XP, WORK_XP, WORKER_MULT } from '../sim/economy';
 import { techDamageMult } from '../sim/research';
 import { displayDamage, safe, signed, STAT_LABELS, STAT_NAMES, XP_CATS } from './util';
 
 // ───────────────────────────── stats ─────────────────────────────
 
 /** Display order of the attributes on the sheet. */
-export const STAT_ORDER: readonly (keyof UnitStats)[] = ['maxHp', 'str', 'dex', 'int', 'armor', 'mov', 'vis'];
+export const STAT_ORDER: readonly (keyof UnitStats)[] = ['maxHp', 'str', 'dex', 'int', 'block', 'armor', 'mov', 'vis'];
 
 /** What each attribute does (the sheet's stat tooltips). */
 export const STAT_HELP: Record<keyof UnitStats, string> = {
@@ -27,7 +28,8 @@ export const STAT_HELP: Record<keyof UnitStats, string> = {
   str: 'Melee damage: +1 per strike for every 2 points.',
   dex: 'Ranged damage: +1 per strike for every 2 points.',
   int: 'Damage of magic attacks (staff, wand: +1 per 2 points) and spell range from a Mage Tower (+1 per 3 points). Spell and Firebolt damage is fixed.',
-  armor: 'Reduces damage from attacks and Volley by this percentage (at most 70). Spells, Firebolt, poison and starvation ignore it.',
+  armor: 'After block, takes this percentage off the damage of every strike that hits (at most 70). Spells, Firebolt, poison and starvation ignore it.',
+  block: 'Flat damage taken off every strike that hits, before armor. Magic attacks and flanking strikes pass it by; so do spells, Firebolt, poison and starvation.',
   mov: 'Movement points per turn.',
   vis: 'Vision radius in hexes (+1 on hills and mountains).',
 };
@@ -90,7 +92,7 @@ const STAT_OF_KIND: Record<AttackDef['kind'], keyof UnitStats> = { melee: 'str',
 export interface AttackMult { label: string; value: number }
 export interface AttackLine {
   attack: AttackDef;
-  /** Damage per strike before the target's armor (what the unit panel shows). */
+  /** Damage per strike before the target's block and armor (what the unit panel shows). */
   perStrike: number;
   base: number;
   /** floor(stat / 2) of the attack's stat. */
@@ -111,7 +113,7 @@ export interface AttackLine {
 export function attackLines(s: GameState, u: Unit, attacks: readonly AttackDef[], stats: UnitStats): AttackLine[] {
   const fd = FACTIONS[u.faction];
   const tech = u.faction === 'neutral' ? 1 : safe(() => techDamageMult(s, u.faction), 1);
-  return attacks.map((a) => {
+  return attacks.map((a, i) => {
     const statKey = STAT_OF_KIND[a.kind];
     const statBonus = Math.floor(Math.max(0, stats[statKey]) / 2);
     const mults: AttackMult[] = [];
@@ -136,16 +138,29 @@ export function attackLines(s: GameState, u: Unit, attacks: readonly AttackDef[]
     if (a.kind === 'melee' && !u.monster && u.equipment?.mount && ITEMS[u.equipment.mount]?.mount) {
       notes.push(`Charge: ${fmtMult(CHARGE_MULT)} when it attacks from open ground.`);
     }
-    if (a.kind === 'melee' && u.passives.includes('berserker')) {
-      notes.push(`Berserker: ${fmtMult(BERSERK_MULT)} while below half health${u.hp < stats.maxHp / 2 ? ' (now)' : ''}.`);
+    const berserk = augmentRank(u, 'berserker');
+    if (a.kind === 'melee' && berserk > 0) {
+      notes.push(`${rankedName('Berserker', berserk)}: ${fmtMult(berserkMult(berserk))} while below half health${u.hp < stats.maxHp / 2 ? ' (now)' : ''}.`);
     }
-    if (a.kind === 'melee' && u.passives.includes('poison')) notes.push('Venom Blades: a hit poisons the target.');
-    if (a.kind === 'melee' && u.passives.includes('vampiric')) notes.push(`Life Drinker: heals ${Math.round(VAMPIRIC_SHARE * 100)}% of the damage dealt.`);
+    const venom = augmentRank(u, 'poison');
+    if (a.kind === 'melee' && venom > 0) notes.push(`${rankedName('Venom Blades', venom)}: a hit poisons the target for ${venomDamage(venom)} damage a turn.`);
+    const drink = augmentRank(u, 'vampiric');
+    if (a.kind === 'melee' && drink > 0) notes.push(`${rankedName('Life Drinker', drink)}: heals ${Math.round(drainShare(drink) * 100)}% of the damage dealt.`);
     if (a.kind === 'melee' && u.buffs?.some((b) => b.id === 'powerstrike')) notes.push('Power Strike is spent on the next melee attack it makes.');
+    if (i === 0) {
+      // One riposte per turn for the whole unit, whichever weapon answers (DESIGN §4.5).
+      const per = safe(() => reactionsPerTurn(u), 1);
+      const left = safe(() => reactionsLeft(u), per);
+      const rank = augmentRank(u, 'reflexes');
+      const why = rank <= 0 ? '' : ` (${rankedName('Combat Reflexes', rank)})`;
+      const used = left < per ? (left === 0 ? ': already has this turn' : `: ${left} left this turn`) : '';
+      notes.push(`Strikes back ${per === 1 ? 'once' : `${per} times`} per turn${why}${used}.`);
+    }
+    if (a.kind === 'melee') notes.push(`Flanking (an ally on the far side of the target): ${fmtMult(FLANK_MULT)} and ignores block.`);
     const hit = a.kind === 'magic'
-      ? `Always ${Math.round(MAGIC_HIT * 100)}% to hit.`
-      : a.kind === 'ranged' && u.passives.includes('marksman')
-        ? `Hits 100% − the target's defense, at least ${Math.round(MARKSMAN_MIN * 100)}% (Marksman).`
+      ? `Always ${Math.round(MAGIC_HIT * 100)}% to hit; passes the target's block.`
+      : a.kind === 'ranged' && augmentRank(u, 'marksman') > 0
+        ? `Hits 100% − the target's defense, at least ${Math.round(marksmanMin(augmentRank(u, 'marksman')) * 100)}% (${rankedName('Marksman', augmentRank(u, 'marksman'))}).`
         : "Hits 100% − the target's terrain defense.";
     return { attack: a, perStrike, base: a.base, statBonus, statName: STAT_NAMES[statKey], mults, notes, hit };
   });
@@ -160,10 +175,10 @@ export const EFFICIENCY_NAMES: Record<EfficiencyId, string> = {
 
 /** Timed effects on a unit (the sheet's status pills): name, symbol and what it does. */
 export const BUFF_INFO: Record<Unit['buffs'][number]['id'], { name: string; icon: string; text: (b: Unit['buffs'][number]) => string }> = {
-  bless: { name: SPELLS.bless?.name ?? 'Bless', icon: 'star', text: (b) => `+${Math.round(((b.damageMult ?? 1.2) - 1) * 100)}% damage, +${b.armor ?? 10} armor` },
-  fortify: { name: ACTIVES.fortify.name, icon: 'shield', text: (b) => `+${b.armor ?? 20} armor` },
+  bless: { name: SPELLS.bless?.name ?? 'Bless', icon: 'star', text: (b) => `+${Math.round(((b.damageMult ?? 1.2) - 1) * 100)}% damage, +${b.armor ?? 10}% armor` },
+  fortify: { name: ACTIVES.fortify.name, icon: 'shield', text: (b) => `+${b.armor ?? 7.5}% armor` },
   haste: { name: SPELLS.haste?.name ?? 'Haste', icon: 'boot', text: () => 'Extra movement this turn' },
-  powerstrike: { name: ACTIVES.powerstrike.name, icon: 'sword', text: (b) => `Next melee attack deals ${Math.round(((b.damageMult ?? 1.5) - 1) * 100)}% more damage` },
+  powerstrike: { name: ACTIVES.powerstrike.name, icon: 'sword', text: (b) => `Next melee attack deals ${Math.round(((b.damageMult ?? 1.15) - 1) * 100)}% more damage` },
   farsight: { name: SPELLS.farsight?.name ?? 'Farsight', icon: 'eye', text: () => 'Revealing a distant area' },
 };
 
@@ -185,9 +200,10 @@ export function efficiencyRows(u: Unit): EffRow[] {
 }
 
 export interface Augments {
-  passives: { id: PassiveId; name: string; description: string; icon: string }[];
-  /** Usable active skills (with a cooldown). */
-  actives: ActiveSkillDef[];
+  /** Passives with their rank; `name` carries the rank numeral and `description` states that rank (DESIGN §4.8). */
+  passives: { id: PassiveId; name: string; description: string; icon: string; rank: number }[];
+  /** Usable active skills (with a cooldown), likewise at their rank. */
+  actives: (ActiveSkillDef & { rank: number })[];
   /** Permanent building skills (Masonry, Devotion: cooldown 0). */
   crafts: ActiveSkillDef[];
   efficiencies: EffRow[];
@@ -195,8 +211,14 @@ export interface Augments {
 
 export function augmentsOf(u: Unit): Augments {
   return {
-    passives: u.passives.filter((p) => PASSIVES[p]).map((p) => ({ id: p, ...PASSIVES[p] })),
-    actives: u.actives.map((a) => ACTIVES[a]).filter((d): d is ActiveSkillDef => !!d && d.cooldown > 0),
+    passives: u.passives.filter((p) => PASSIVES[p]).map((p) => {
+      const rank = augmentRank(u, p);
+      return { id: p, ...PASSIVES[p], name: rankedName(PASSIVES[p].name, rank), description: augmentText(p, rank), rank };
+    }),
+    actives: u.actives.map((a) => ACTIVES[a]).filter((d): d is ActiveSkillDef => !!d && d.cooldown > 0).map((d) => {
+      const rank = augmentRank(u, d.id);
+      return { ...d, name: rankedName(d.name, rank), description: augmentText(d.id, rank), rank };
+    }),
     crafts: u.actives.map((a) => ACTIVES[a]).filter((d): d is ActiveSkillDef => !!d && d.cooldown === 0),
     efficiencies: efficiencyRows(u),
   };
@@ -220,9 +242,9 @@ export function levelHistory(u: Unit): HistoryRow[] {
 
 /** How each kind of XP is earned (DESIGN §4.7), for the sheet and its tooltips. */
 export const XP_SOURCES: Record<XpCategory, string> = {
-  melee: 'Melee attacks and parries, melee kills, Training Ground drill (not for bowmen).',
+  melee: `Melee attacks and parries (+${COMBAT_XP} and +1 per hit landed), melee kills (+8 per level of the victim), Training Ground drill (not for bowmen).`,
   ranged: 'Ranged attacks and return fire, ranged kills, Volley, Training Ground drill for a unit with a bow.',
-  building: "Construction and upgrades with Builder's Tools (+3 a turn), the leader raising its castle.",
+  building: `Construction and upgrades with Builder's Tools (+${BUILD_XP} a turn), the leader raising its castle.`,
   civic: `Working a farm, mine, lumber camp, quarry, house or the castle (+${WORK_XP} a turn it does not act; the leader learns leadership there), the smith crafting at a forge.`,
   explore: 'Revealing new land (+1 per 3 hexes) and exploring ruins (+12).',
   leader: `Leaders only: recruiting (+2), allies' kills nearby (+1), working its castle (+${WORK_XP} a turn).`,

@@ -9,6 +9,8 @@ import { applyAction, validateAction } from '../src/sim/actions';
 import { startTurn } from '../src/sim/turn';
 import { manaCap } from '../src/sim/spells';
 import { AI_STEP_CAP, aiNextAction, createAiMemory } from '../src/sim/ai/index';
+import { buildingOn } from '../src/sim/ruleutil';
+import { workerOf } from '../src/sim/economy';
 import { at, makeTestBuilding, makeTestState, makeTestUnit, res, setTerrain } from './helpers';
 
 const nodeProc = (globalThis as { process?: { env: Record<string, string | undefined>; stderr: { write(s: string): void } } }).process;
@@ -112,13 +114,29 @@ describe('AI decisions', () => {
     expect(hexDistance(s.units[String(archer.id)].pos, target.pos)).toBe(2);
   });
 
+  it('steps round to flank: attacks from the hex opposite an ally (x1.25, block ignored)', () => {
+    const s = aiState();
+    s.factions.thorn.researching = 'writing';
+    makeTestUnit(s, 'thorn', at(12, 10), { isLeader: true });
+    const T = at(6, 5);
+    const target = makeTestUnit(s, 'valen', T, { items: ['plate'] }); // block 3, armor 25%, fists
+    // The ally holds the east side and has already acted; the flank hex is due west. Every hex
+    // around the target is grass with the same cover, so only the flank tells them apart (the
+    // per-call forecast cache once shared one forecast among them, flank or not).
+    makeTestUnit(s, 'thorn', { q: T.q + 1, r: T.r }, { items: ['sword'], acted: true, mp: 0 });
+    const axe = makeTestUnit(s, 'thorn', { q: T.q - 3, r: T.r + 1 }, { items: ['axe'] });
+    const atk = playTurn(s).find((a) => a.type === 'attack');
+    expect(atk).toMatchObject({ unit: axe.id, target: target.id, kind: 'melee' });
+    expect(s.units[String(axe.id)].pos).toEqual({ q: T.q - 1, r: T.r });
+  });
+
   it('does not throw a commoner at a golem', () => {
     const s = aiState();
     s.factions.thorn.researching = 'writing';
     makeTestUnit(s, 'thorn', at(12, 10), { isLeader: true });
     const c = makeTestUnit(s, 'thorn', at(5, 5));
     const golem = makeTestUnit(s, 'neutral', at(6, 5), {
-      monster: 'golem', race: 'monster', base: { maxHp: 48, str: 8, dex: 0, int: 0, armor: 30, mov: 3, vis: 3 }, hp: 48, level: 3,
+      monster: 'golem', race: 'monster', base: { maxHp: 48, str: 8, dex: 0, int: 0, armor: 30, block: 0, mov: 3, vis: 3 }, hp: 48, level: 3,
     });
     const acts = playTurn(s);
     expect(acts.some((a) => a.type === 'attack' && a.target === golem.id)).toBe(false);
@@ -697,7 +715,7 @@ describe('AI-vs-AI full games', () => {
 interface RoundStats {
   round: number;
   perFaction: Record<string, {
-    buildings: number; forge: boolean; training: boolean; towers: number; unarmed: number; builders: number;
+    buildings: number; forge: boolean; training: boolean; towers: number; unarmed: number; idleUnarmed: number; builders: number;
     manaFull: boolean;
   }>;
 }
@@ -759,6 +777,12 @@ function playSeeded(settings: GameSettings, rounds: number, humanAi: boolean): R
           training: bl.some((b) => b.type === 'training'),
           towers: bl.filter((b) => b.type === 'magetower' && b.buildLeft === 0).length,
           unarmed: us.filter((u) => !u.isLeader && !u.monster && !u.equipment.main).length,
+          // Unarmed and not working a building: a commoner nobody has a use for.
+          idleUnarmed: us.filter((u) => {
+            if (u.isLeader || u.monster || u.equipment.main) return false;
+            const b = buildingOn(s, u.pos);
+            return !(b && workerOf(s, b) === u);
+          }).length,
           builders: us.filter((u) => !u.isLeader && u.equipment.main === 'tools').length,
           manaFull: s.factions[g].resources.mana >= manaCap(s, g) * 0.95,
         };
@@ -782,17 +806,20 @@ describe('AI regressions from playtests (seeded)', () => {
 
   it('keeps the forge\'s iron: every AI house has a forge by round 20 and no unarmed glut (player idle)', () => {
     for (const seed of [544774, 1, 2, 3, 4, 5, 6]) {
-      const r = playSeeded(ai(seed), 20, false);
+      const r = playSeeded(ai(seed), seed === 544774 ? 25 : 20, false);
       const snap = atRound(r, 20);
       for (const f of ['thorn', 'ashen']) {
         const p = snap.perFaction[f];
         if (!p) continue;
         expect(p.forge, `seed ${seed} ${f} forge`).toBe(true);
-        expect(p.unarmed, `seed ${seed} ${f} unarmed`).toBeLessThanOrEqual(4);
+        // A commoner working a building doubles its output, so unarmed workers are wanted; the glut
+        // this guards against is idle ones (recruited, then never armed nor put to work).
+        expect(p.idleUnarmed, `seed ${seed} ${f} idle unarmed`).toBeLessThanOrEqual(2);
+        expect(p.unarmed, `seed ${seed} ${f} unarmed`).toBeLessThanOrEqual(6);
       }
-      // (Since any unit works a building, its leader's castle pays a little more early on and thorn
-      // spends it on troops first: the drill ground breaks ground in round 21 rather than 18.)
-      if (seed === 544774) expect(atRound(r, 21).perFaction.thorn.training).toBe(true);
+      // (Buildings cost about twice what they did and each further one of a kind 25% more, so thorn
+      // breaks ground on its drill ground during round 24 on this map, rather than 21.)
+      if (seed === 544774) expect(atRound(r, 25).perFaction.thorn.training).toBe(true);
     }
   }, 120_000);
 

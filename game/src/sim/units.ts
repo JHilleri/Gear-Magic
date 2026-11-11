@@ -9,6 +9,7 @@ import { BUILDINGS } from '../data/buildings';
 import { PRESETS, COMMONER_STATS, LEADER_STATS } from '../data/presets';
 import { TECHS } from '../data/research';
 import { ACTIVES, LEVEL_OPTION_BY_ID, PASSIVES, zeroXp } from '../data/skills';
+import { augmentRank, extraMov, ironskinBlock, rankedName } from '../data/ranks';
 import { SPELLS } from '../data/spells';
 import { tileIndex } from '../core/hex';
 import { rand } from '../core/rng';
@@ -29,7 +30,7 @@ export interface CreateUnitOpts {
 export const ARMOR_MAX = 70;
 /** Extra max HP per level above a unit's starting level (DESIGN §4.7). */
 export const HP_PER_LEVEL = 4;
-const STAT_KEYS: (keyof UnitStats)[] = ['maxHp', 'str', 'dex', 'int', 'armor', 'mov', 'vis'];
+const STAT_KEYS: (keyof UnitStats)[] = ['maxHp', 'str', 'dex', 'int', 'armor', 'block', 'mov', 'vis'];
 const ROMAN = ['II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'];
 
 /**
@@ -127,9 +128,8 @@ export function createUnit(state: GameState, opts: CreateUnitOpts): Unit {
   return unit;
 }
 
-const IRONSKIN_ARMOR = 8;
 const STAT_NAMES: Record<keyof UnitStats, string> = {
-  maxHp: 'Max HP', str: 'Strength', dex: 'Dexterity', int: 'Intellect', armor: 'Armor', mov: 'Movement', vis: 'Vision',
+  maxHp: 'Max HP', str: 'Strength', dex: 'Dexterity', int: 'Intellect', armor: 'Armor', block: 'Block', mov: 'Movement', vis: 'Vision',
 };
 const BUFF_NAMES: Record<Buff['id'], string> = {
   bless: SPELLS.bless.name, fortify: ACTIVES.fortify.name, haste: SPELLS.haste.name,
@@ -153,6 +153,7 @@ function clampStat(s: UnitStats, k: keyof UnitStats, lo: number, hi: number, sin
  */
 function sumStats(unit: Unit, sink?: StatSink): UnitStats {
   const s: UnitStats = { ...unit.base };
+  if (!Number.isFinite(s.block)) s.block = 0; // a unit from before the block stat (deserialize back-fills it too)
   if (!unit.monster) {
     for (const slot of Object.keys(unit.equipment) as EquipSlot[]) {
       const it = unit.equipment[slot];
@@ -166,16 +167,30 @@ function sumStats(unit: Unit, sink?: StatSink): UnitStats {
       }
     }
   }
-  if (unit.passives.includes('ironskin')) {
-    s.armor += IRONSKIN_ARMOR;
-    sink?.('armor', { source: PASSIVES.ironskin.name, kind: 'passive', value: IRONSKIN_ARMOR, passive: 'ironskin' });
+  // Passives that add to a stat, by rank (DESIGN §4.8): Iron Skin block; Skirmisher and Pathfinder
+  // movement from their second rank on.
+  const ironskin = augmentRank(unit, 'ironskin');
+  if (ironskin > 0) {
+    const v = ironskinBlock(ironskin);
+    s.block += v;
+    sink?.('block', { source: rankedName(PASSIVES.ironskin.name, ironskin), kind: 'passive', value: v, passive: 'ironskin' });
+  }
+  for (const p of ['skirmisher', 'pathfinder'] as const) {
+    const r = augmentRank(unit, p);
+    const v = r > 0 ? extraMov(r) : 0;
+    if (!v) continue;
+    s.mov += v;
+    sink?.('mov', { source: rankedName(PASSIVES[p].name, r), kind: 'passive', value: v, passive: p });
   }
   for (const b of unit.buffs) {
-    if (!b.armor || b.turns <= 0) continue;
-    s.armor += b.armor;
-    sink?.('armor', { source: BUFF_NAMES[b.id] ?? b.id, kind: 'buff', value: b.armor, buff: b.id });
+    if (b.turns <= 0) continue;
+    if (b.armor) {
+      s.armor += b.armor;
+      sink?.('armor', { source: BUFF_NAMES[b.id] ?? b.id, kind: 'buff', value: b.armor, buff: b.id });
+    }
   }
   clampStat(s, 'armor', 0, ARMOR_MAX, sink);
+  clampStat(s, 'block', 0, Infinity, sink);
   clampStat(s, 'mov', 1, Infinity, sink);
   clampStat(s, 'maxHp', 1, Infinity, sink);
   clampStat(s, 'vis', 1, Infinity, sink);
@@ -185,7 +200,7 @@ function sumStats(unit: Unit, sink?: StatSink): UnitStats {
   return s;
 }
 
-/** Base + equipment + passives (ironskin) + buffs. armor clamped to [0, ARMOR_MAX = 70] (DESIGN §4.1), mov ≥ 1. */
+/** Base + equipment + passives (ironskin) + buffs. armor clamped to [0, ARMOR_MAX = 70] (DESIGN §4.1), block ≥ 0, mov ≥ 1. */
 export function effectiveStats(state: GameState, unit: Unit): UnitStats {
   return sumStats(unit);
 }

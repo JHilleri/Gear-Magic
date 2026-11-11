@@ -1,28 +1,49 @@
 // Active unit skills. See DESIGN §4.8 and data/skills.ts ACTIVES.
-import type { ActiveId, Buff, EffectEntry, EffectPreview, GameEvent, GameState, Hex, Unit } from '../core/types';
+import type { ActiveId, AttackProfile, Buff, EffectEntry, EffectPreview, GameEvent, GameState, Hex, Unit } from '../core/types';
 import { hexDistance, inBounds, spiral } from '../core/hex';
 import { rand } from '../core/rng';
 import { ACTIVES } from '../data/skills';
+import { augmentRank, blinkRange, fireboltDamage, fortifyArmor, mendHp, powerStrikeMult, rallyMp, volleyShare } from '../data/ranks';
 import { isEnemy } from './state';
 import { effectiveStats, getAttackDefs } from './units';
 import { moveCost } from './pathfinding';
 import { isExplored, isVisible } from './visibility';
 import { applyDamage, attackProfile, withDeferredVictory } from './combat';
-import { giveXp, logFor, roundHalfUp, unitOn } from './ruleutil';
+import { giveXp, logFor, unitOn } from './ruleutil';
 import { binomial, hitsOutcome } from './spells';
 import { orderInterrupted } from './orders';
 
-const VOLLEY_DAMAGE = 0.6;
-const MEND_HP = 12;
-const FIREBOLT_DAMAGE = 14;
-const RALLY_MP = 2;
+/** Rank-1 values of the skills (data/ranks has every rank; a unit's own rank decides what it does). */
+export const VOLLEY_DAMAGE = volleyShare(1);
+export const MEND_HP = mendHp(1);
+export const FIREBOLT_DAMAGE = fireboltDamage(1);
 const RALLY_RADIUS = 2;
-const FORTIFY_ARMOR = 20;
-const POWERSTRIKE_MULT = 1.5;
 
-/** Damage of one Volley arrow given the unit's ranged damage against that target. */
-export function volleyStrikeDamage(rangedDamage: number): number {
-  return Math.max(1, roundHalfUp(rangedDamage * VOLLEY_DAMAGE));
+/** The unit's rank of `skill`, at least 1 (a skill used by a unit that has it). */
+const rankOf = (unit: Unit, skill: ActiveId): number => Math.max(1, augmentRank(unit, skill));
+
+/** Firebolt damage of `unit` (by its rank). */
+export function fireboltOf(unit: Unit): number {
+  return fireboltDamage(rankOf(unit, 'firebolt'));
+}
+
+/** HP `unit`'s Mend heals (by its rank). */
+export function mendOf(unit: Unit): number {
+  return mendHp(rankOf(unit, 'heal'));
+}
+
+/** Range of `skill` for `unit`: the skill's own, Blink's growing with rank. */
+export function skillRange(unit: Unit, skill: ActiveId): number {
+  return skill === 'blink' ? blinkRange(rankOf(unit, 'blink')) : ACTIVES[skill]?.range ?? 0;
+}
+
+/**
+ * One Volley arrow of `unit` at `target`: its ranged attack at 60% damage (more with each rank), the
+ * cut made before the target's block and armor (a whole block off every arrow, like any strike).
+ * Null without a bow.
+ */
+export function volleyProfile(state: GameState, unit: Unit, target: Unit): AttackProfile | null {
+  return attackProfile(state, unit, target, 'ranged', { mult: volleyShare(rankOf(unit, 'volley')) });
 }
 
 /** A unit the skill user's faction can currently see (fog of war). */
@@ -86,7 +107,7 @@ function targetError(state: GameState, unit: Unit, skill: ActiveId, target?: Hex
     }
     case 'heal': {
       if (!target) return 'Choose an ally';
-      if (hexDistance(unit.pos, target) > def.range) return 'Target must be adjacent';
+      if (hexDistance(unit.pos, target) > skillRange(unit, skill)) return 'Target must be adjacent';
       const o = unitOn(state, target);
       if (!o || o.faction !== unit.faction) return 'Choose an allied unit';
       const max = effectiveStats(state, o).maxHp;
@@ -96,14 +117,14 @@ function targetError(state: GameState, unit: Unit, skill: ActiveId, target?: Hex
     case 'firebolt': {
       if (!target) return 'Choose an enemy';
       const d = hexDistance(unit.pos, target);
-      if (d < 1 || d > def.range) return 'Target out of range';
+      if (d < 1 || d > skillRange(unit, skill)) return 'Target out of range';
       return visibleEnemyAt(state, unit, target) ? null : 'Choose a visible enemy';
     }
     case 'blink': {
       if (!target) return 'Choose a destination';
       if (!inBounds(target, state.width, state.height)) return 'Out of the map';
       const d = hexDistance(unit.pos, target);
-      if (d < 1 || d > def.range) return 'Destination out of range';
+      if (d < 1 || d > skillRange(unit, skill)) return 'Destination out of range';
       if (unit.faction !== 'neutral' && !isExplored(state, unit.faction, target)) return 'Cannot blink into unexplored land';
       if (!Number.isFinite(moveCost(state, unit, target))) return 'Cannot stand there';
       if (unitOn(state, target)) return 'The destination is occupied';
@@ -147,7 +168,7 @@ export function skillTargets(state: GameState, unit: Unit, skill: ActiveId): Hex
   const def = ACTIVES[skill];
   if (!def || def.target === 'none' || def.range <= 0) return [];
   const out: Hex[] = [];
-  for (const h of spiral(unit.pos, def.range)) {
+  for (const h of spiral(unit.pos, skillRange(unit, skill))) {
     if (!inBounds(h, state.width, state.height)) continue;
     if (skill === 'blink') {
       // Hidden units are not revealed by the highlight; the skill itself checks for real.
@@ -185,14 +206,15 @@ export function useSkill(state: GameState, unit: Unit, skill: ActiveId, target?:
   switch (skill) {
     case 'powerstrike':
       // Lasts until spent by a melee attack or the start of the unit's next turn.
-      addBuff(unit, { id: 'powerstrike', turns: 1, damageMult: POWERSTRIKE_MULT });
+      addBuff(unit, { id: 'powerstrike', turns: 1, damageMult: powerStrikeMult(rankOf(unit, 'powerstrike')) });
       events.push(...logFor(state, [unit.faction], `${unit.name} readies a Power Strike.`, 'combat', unit.faction));
       break;
 
     case 'fortify':
-      addBuff(unit, { id: 'fortify', turns: 1, armor: FORTIFY_ARMOR });
+      const fr = rankOf(unit, 'fortify');
+      addBuff(unit, { id: 'fortify', turns: 1, armor: fortifyArmor(fr) });
       unit.acted = true;
-      events.push(...logFor(state, [unit.faction], `${unit.name} fortifies (+${FORTIFY_ARMOR} armor).`, 'combat', unit.faction));
+      events.push(...logFor(state, [unit.faction], `${unit.name} fortifies (+${fortifyArmor(fr)}% armor).`, 'combat', unit.faction));
       break;
 
     case 'rally': {
@@ -200,11 +222,11 @@ export function useSkill(state: GameState, unit: Unit, skill: ActiveId, target?:
       // attacked has ended its movement (no hit-and-run): Rally passes them by.
       const allies = alliesAround(state, unit, RALLY_RADIUS).filter(canMarch);
       for (const a of allies) {
-        a.mp += RALLY_MP;
+        a.mp += rallyMp(rankOf(unit, 'rally'));
         addBuff(a, { id: 'haste', turns: 1 });
       }
       skillEv.targets = allies.map((a) => a.id);
-      events.push(...logFor(state, [unit.faction], `${unit.name} rallies ${allies.length} ${allies.length === 1 ? 'ally' : 'allies'} (+${RALLY_MP} movement).`, 'combat', unit.faction));
+      events.push(...logFor(state, [unit.faction], `${unit.name} rallies ${allies.length} ${allies.length === 1 ? 'ally' : 'allies'} (+${rallyMp(rankOf(unit, 'rally'))} movement).`, 'combat', unit.faction));
       break;
     }
 
@@ -218,9 +240,9 @@ export function useSkill(state: GameState, unit: Unit, skill: ActiveId, target?:
         const evs: GameEvent[] = [];
         for (const v of victims) {
           if (!state.units[String(v.id)]) continue;
-          const prof = attackProfile(state, unit, v, 'ranged');
+          const prof = volleyProfile(state, unit, v);
           if (!prof) continue;
-          const dmg = volleyStrikeDamage(prof.damage);
+          const dmg = prof.damage;
           let total = 0;
           for (let i = 0; i < ra.strikes; i++) if (rand(state) < prof.hitChance) { total += dmg; hits++; }
           if (total > 0) evs.push(...applyDamage(state, v, total, 'skill', unit, undefined, { cat: 'ranged' }));
@@ -243,9 +265,10 @@ export function useSkill(state: GameState, unit: Unit, skill: ActiveId, target?:
     case 'heal': {
       const o = unitOn(state, target!)!;
       const max = effectiveStats(state, o).maxHp;
-      const amount = Math.max(0, Math.min(MEND_HP, max - o.hp));
+      const amount = Math.max(0, Math.min(mendOf(unit), max - o.hp));
       o.hp += amount;
       o.poisoned = false;
+      delete o.poisonDamage;
       skillEv.targets = [o.id];
       if (amount > 0) events.push({ type: 'unitHealed', unit: o.id, amount });
       unit.acted = true;
@@ -262,7 +285,7 @@ export function useSkill(state: GameState, unit: Unit, skill: ActiveId, target?:
       unit.acted = true;
       events.push(...logFor(state, [unit.faction, o.faction], `${unit.name} hurls a firebolt at ${o.name}.`, 'magic', unit.faction));
       events.push(...giveXp(state, unit, 'magic', 2));
-      events.push(...applyDamage(state, o, FIREBOLT_DAMAGE, 'skill', unit, undefined, { cat: 'magic' }));
+      events.push(...applyDamage(state, o, fireboltOf(unit), 'skill', unit, undefined, { cat: 'magic' }));
       break;
     }
 
@@ -295,26 +318,27 @@ export function previewSkill(state: GameState, unit: Unit, skill: ActiveId, targ
   switch (skill) {
     case 'firebolt': {
       const o = visibleEnemyAt(state, unit, target);
-      if (o) entries.push(entry(o, -Math.min(FIREBOLT_DAMAGE, Math.max(0, o.hp)), o.hp <= FIREBOLT_DAMAGE ? 1 : 0));
-      notes.push('Ignores armor · no retaliation');
+      const fb = fireboltOf(unit);
+      if (o) entries.push(entry(o, -Math.min(fb, Math.max(0, o.hp)), o.hp <= fb ? 1 : 0));
+      notes.push('Ignores block and armor · no retaliation');
       return { tone: 'harm', entries, notes };
     }
     case 'volley': {
       const ra = rangedAttack(unit);
       if (ra) {
         for (const v of enemiesAround(state, unit, target, 1, true)) {
-          const prof = attackProfile(state, unit, v, 'ranged');
+          const prof = volleyProfile(state, unit, v);
           if (!prof) continue;
-          const o = hitsOutcome(Math.max(0, v.hp), volleyStrikeDamage(prof.damage), binomial(ra.strikes, prof.hitChance));
+          const o = hitsOutcome(Math.max(0, v.hp), prof.damage, binomial(ra.strikes, prof.hitChance));
           entries.push(entry(v, o.hpDelta, o.killChance, { hpDist: o.hpDist }));
         }
-        notes.push(`${ra.strikes} arrows at ${Math.round(VOLLEY_DAMAGE * 100)}% damage per enemy · armor applies · no retaliation`);
+        notes.push(`${ra.strikes} arrows at ${Math.round(volleyShare(rankOf(unit, 'volley')) * 100)}% damage per enemy · block and armor apply · no retaliation`);
       }
       return { tone: 'harm', entries, notes };
     }
     case 'heal': {
       const o = unitOn(state, target);
-      if (o && o.faction === unit.faction) entries.push(entry(o, Math.max(0, Math.min(MEND_HP, effectiveStats(state, o).maxHp - o.hp)), 0));
+      if (o && o.faction === unit.faction) entries.push(entry(o, Math.max(0, Math.min(mendOf(unit), effectiveStats(state, o).maxHp - o.hp)), 0));
       notes.push('Cures poison');
       return { tone: 'help', entries, notes };
     }

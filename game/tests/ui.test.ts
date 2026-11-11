@@ -5,6 +5,7 @@ import {
   xpSegments,
 } from '../src/ui/util';
 import type { UiState } from '../src/game/store';
+import { FACTIONS, factionPerks } from '../src/data/factions';
 import { at, makeTestState, makeTestUnit } from './helpers';
 
 const baseUi = (p: Partial<UiState> = {}): UiState => ({
@@ -17,6 +18,11 @@ const baseUi = (p: Partial<UiState> = {}): UiState => ({
 });
 
 describe('formatting', () => {
+  it('the New Game card shows a house\'s armor bonus as a percentage (block is the flat one)', () => {
+    expect(factionPerks(FACTIONS.ashen)[0]).toBe('+2 Intellect, +5% armor');
+    expect(factionPerks(FACTIONS.thorn)[0]).toBe('+5 HP, +1 Strength, -1 Intellect');
+  });
+
   it('formats numbers, signs and percentages', () => {
     expect(fmt(3)).toBe('3');
     expect(fmt(2.25)).toBe('2.3');
@@ -54,8 +60,10 @@ describe('units', () => {
   it('computes equip deltas including a shield displaced by a bow', () => {
     const s = makeTestState();
     const u = makeTestUnit(s, 'valen', at(2, 2), { items: ['sword', 'shield', 'tunic'] });
-    expect(equipDelta(u, 'plate')).toEqual({ armor: 25, mov: -1 });
-    expect(equipDelta(u, 'bow')).toEqual({ armor: -12 });
+    // Plate (3 block, 25% armor, −1 mov) in place of the tunic (1 block, 5% armor).
+    expect(equipDelta(u, 'plate')).toEqual({ block: 2, armor: 20, mov: -1 });
+    // The two-handed bow takes the shield (2 block, 5% armor) off too.
+    expect(equipDelta(u, 'bow')).toEqual({ block: -2, armor: -5 });
     expect(statDelta({ str: 1 }, { str: 1 })).toEqual({});
   });
   it('names roles from equipment', () => {

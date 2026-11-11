@@ -13,15 +13,15 @@ import { computeVisibility, isExplored, isVisible } from './visibility';
 import { applyDamage, withDeferredVictory } from './combat';
 import { buildingOn, giveXp, isFunctional, logFor, unitOn } from './ruleutil';
 
-const HEAL_HP = 15;
+export const HEAL_HP = 20;
 const BLESS_BUFF = { damageMult: 1.2, armor: 10, turns: 2 };
-const FIREBALL_CENTER = 18;
-const FIREBALL_SPLASH = 8;
+const FIREBALL_CENTER = 22;
+const FIREBALL_SPLASH = 10;
 const HASTE_MP = 3;
 const FARSIGHT_TURNS = 3;
 const SUMMON_TURNS = 8;
-const STORM_BOLTS = 4;
-const STORM_DAMAGE = 14;
+export const STORM_BOLTS = 4;
+export const STORM_DAMAGE = 18;
 const CAST_XP = 6;
 
 /** Fireball damage at `dist` hexes from its target hex (0 = the target hex itself). */
@@ -75,14 +75,14 @@ export function previewSpell(state: GameState, faction: FactionId, spell: SpellI
       return { tone: 'help', entries, notes };
     case 'bless':
       for (const u of inArea) if (u.faction === faction) entries.push(entry(u, 0, 0));
-      notes.push(`+${Math.round((BLESS_BUFF.damageMult - 1) * 100)}% damage and +${BLESS_BUFF.armor} armor for ${BLESS_BUFF.turns} turns`);
+      notes.push(`+${Math.round((BLESS_BUFF.damageMult - 1) * 100)}% damage and +${BLESS_BUFF.armor}% armor for ${BLESS_BUFF.turns} turns`);
       return { tone: 'help', entries, notes };
     case 'fireball':
       for (const u of inArea) {
         const dmg = fireballDamageAt(hexDistance(u.pos, target));
         entries.push(entry(u, -Math.min(dmg, Math.max(0, u.hp)), u.hp <= dmg ? 1 : 0));
       }
-      notes.push('Ignores armor · hits friend and foe');
+      notes.push('Ignores block and armor · hits friend and foe');
       return { tone: 'harm', entries, notes };
     case 'haste': {
       const u = unitOn(state, target);
@@ -96,7 +96,7 @@ export function previewSpell(state: GameState, faction: FactionId, spell: SpellI
         const o = hitsOutcome(Math.max(0, u.hp), STORM_DAMAGE, hits);
         entries.push(entry(u, o.hpDelta, o.killChance, { hpDist: o.hpDist, approx: foes.length > 1 }));
       }
-      notes.push(`${STORM_BOLTS} bolts of ${STORM_DAMAGE}, each at a random enemy in the area · ignores armor`);
+      notes.push(`${STORM_BOLTS} bolts of ${STORM_DAMAGE}, each at a random enemy in the area · ignores block and armor`);
       return { tone: 'harm', entries, notes };
     }
     case 'farsight':
@@ -246,6 +246,7 @@ export function castSpell(state: GameState, faction: FactionId, spell: SpellId, 
         const amount = Math.max(0, Math.min(HEAL_HP, max - u.hp));
         u.hp += amount;
         u.poisoned = false;
+        delete u.poisonDamage;
         affected.push(u.id);
         if (amount > 0) effects.push({ type: 'unitHealed', unit: u.id, amount });
       }
@@ -261,7 +262,7 @@ export function castSpell(state: GameState, faction: FactionId, spell: SpellId, 
       break;
     }
     case 'fireball': {
-      // Friend or foe: 18 on the target hex, 8 to everything around it. Victory is decided
+      // Friend or foe: 22 on the target hex, 10 to everything around it. Victory is decided
       // once the whole blast has landed.
       effects.push(...withDeferredVictory(state, () => {
         const evs: GameEvent[] = [];

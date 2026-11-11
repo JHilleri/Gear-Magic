@@ -2,8 +2,12 @@ import { describe, expect, it } from 'vitest';
 import type { GameEvent, GameState, Hex, Unit } from '../src/core/types';
 import { hexAdd, tileIndex } from '../src/core/hex';
 import {
-  applyDamage, attackProfile, availableAttackKinds, canAttack, forecastCombat, killUnit, resolveCombat, retaliationProfile, tileDefense,
+  applyDamage, attackProfile, availableAttackKinds, canAttack, COMBAT_XP, FLANK_MULT, flankingAlly, forecastCombat, killUnit, oppositeHex,
+  reachingRetaliation, reactionsLeft, resolveCombat, retaliationProfile, tileDefense,
 } from '../src/sim/combat';
+import { COMMONER_STATS } from '../src/data/presets';
+import { startTurn } from '../src/sim/turn';
+import { runNeutralTurn } from '../src/sim/neutral';
 import { at, makeTestBuilding, makeTestState, makeTestUnit, setTerrain } from './helpers';
 
 const E: Hex = { q: 1, r: 0 };
@@ -58,7 +62,7 @@ describe('attackProfile', () => {
   it('base + floor(stat/2), armor, hit chance from defender tile', () => {
     const { s, a, d } = duel({ a: { items: ['sword'] }, d: { items: ['plate'] } });
     const p = attackProfile(s, a, d, 'melee')!;
-    expect(p.damage).toBe(Math.round(9 * 0.7)); // (7 + 2) × (1 − 30%)
+    expect(p.damage).toBe(5); // (7 + 2 − plate's 3 block) × (1 − 25%) = 4.5 → 5
     expect(p.strikes).toBe(3);
     expect(p.hitChance).toBeCloseTo(0.6);
     setTerrain(s, d.pos, 'forest');
@@ -70,8 +74,10 @@ describe('attackProfile', () => {
     // Thorn fists: (3 + 2) × 1.1 = 5.5 → 6
     expect(attackProfile(s, d, a, 'melee')!.damage).toBe(6);
     a.base.armor = 70;
-    a.equipment.body = 'plate'; // 100% armor clamps at 70 in effectiveStats
-    expect(attackProfile(s, d, a, 'melee')!.damage).toBe(Math.max(1, Math.round(5.5 * 0.3)));
+    a.equipment.body = 'plate'; // 95% armor clamps at 70 in effectiveStats; plate adds 3 block
+    expect(attackProfile(s, d, a, 'melee')!.damage).toBe(1); // (5.5 − 3) × 0.3 = 0.75 → 1
+    a.base.block = 10; // block swallows the whole strike, but a hit always deals at least 1
+    expect(attackProfile(s, d, a, 'melee')!.damage).toBe(1);
   });
 
   it('magic always 70% and ring boosts magic', () => {
@@ -85,9 +91,9 @@ describe('attackProfile', () => {
 
   it('House Valen archers deal +10% ranged damage (rangedMult), others do not', () => {
     const s = makeTestState(14, 10);
-    const target = makeTestUnit(s, 'neutral', at(6, 5), { base: { maxHp: 200, str: 0, dex: 0, int: 0, armor: 0, mov: 5, vis: 4 }, hp: 200 });
-    const v = makeTestUnit(s, 'valen', at(4, 5), { items: ['bow'], base: { maxHp: 22, str: 4, dex: 10, int: 3, armor: 0, mov: 5, vis: 4 } });
-    const t = makeTestUnit(s, 'thorn', at(8, 5), { items: ['bow'], base: { maxHp: 22, str: 4, dex: 10, int: 3, armor: 0, mov: 5, vis: 4 } });
+    const target = makeTestUnit(s, 'neutral', at(6, 5), { base: { maxHp: 200, str: 0, dex: 0, int: 0, armor: 0, block: 0, mov: 5, vis: 4 }, hp: 200 });
+    const v = makeTestUnit(s, 'valen', at(4, 5), { items: ['bow'], base: { maxHp: 22, str: 4, dex: 10, int: 3, armor: 0, block: 0, mov: 5, vis: 4 } });
+    const t = makeTestUnit(s, 'thorn', at(8, 5), { items: ['bow'], base: { maxHp: 22, str: 4, dex: 10, int: 3, armor: 0, block: 0, mov: 5, vis: 4 } });
     const base = 6 + 5; // bow 6 + ⌊dex/2⌋
     expect(attackProfile(s, t, target, 'ranged')!.damage).toBe(base);
     expect(attackProfile(s, v, target, 'ranged')!.damage).toBe(Math.round(base * 1.1));
@@ -114,7 +120,7 @@ describe('attackProfile', () => {
     makeTestUnit(s, 'valen', hexAdd(a.pos, { q: 0, r: -1 }), { passives: ['leadership'] });
     expect(attackProfile(s, a, d, 'melee')!.damage).toBe(Math.round(base * 1.15));
     a.passives.push('berserker');
-    a.hp = 10; // below half of 22
+    a.hp = 10; // below half of 30
     expect(attackProfile(s, a, d, 'melee')!.damage).toBe(Math.round(base * 1.15 * 1.25));
     a.hp = 22;
     a.efficiency.attack = 1.25;
@@ -174,9 +180,9 @@ describe('attack legality and retaliation', () => {
 
 describe('forecastCombat', () => {
   it('exact distribution for a simple exchange', () => {
-    const { s, a, d } = duel({ a: { items: ['sword'] } });
+    const { s, a, d } = duel({ a: { items: ['sword'] }, d: { hp: 22 } });
     const fc = forecastCombat(s, a, d, 'melee')!;
-    // 9 × 3 at 60% vs 22 hp: dies only to 3 hits.
+    // 9 × 3 at 60% vs a wounded defender (22 of 30 hp): dies only to 3 hits.
     expect(fc.defenderKillChance).toBeCloseTo(0.216, 10);
     expect(fc.attackerKillChance).toBe(0);
     expect(fc.defenderHpDist[13]).toBeCloseTo(3 * 0.6 * 0.4 * 0.4, 10);
@@ -207,10 +213,13 @@ describe('forecastCombat', () => {
 
   it('matches the empirical distribution of resolveCombat (statistical)', () => {
     // A rich exchange: life-drinking axe vs a first-striking spear in a forest, both can die.
+    // Axe (10 + 2 − tunic's 1 block) × 95% = 10.45 → 10: two hits fell the 20-hp spearman.
+    // Spear (6 + 2) × 1.1 = 8.8 − leather's 2 block = 6.8 × 90% = 6.12 → 6: three hits kill
+    // the 17-hp axeman unless a drain (3) tops it up first.
     const base = makeTestState(10, 8);
     const pa = at(4, 4);
     const a = makeTestUnit(base, 'valen', pa, { items: ['axe', 'leather'], passives: ['vampiric', 'poison'], hp: 17 });
-    const d = makeTestUnit(base, 'thorn', right(pa), { items: ['spear', 'tunic'], hp: 21 });
+    const d = makeTestUnit(base, 'thorn', right(pa), { items: ['spear', 'tunic'], hp: 20 });
     setTerrain(base, d.pos, 'forest');
     const fc = forecastCombat(base, a, d, 'melee')!;
     const N = 20000;
@@ -253,35 +262,36 @@ describe('resolveCombat', () => {
     expect(ev.attackerHp).toBe(a.hp);
   });
 
-  it('grants XP = 1 + strikes landed, in the category of the attack kind used', () => {
-    const tough = { hp: 100, base: { maxHp: 100, str: 4, dex: 4, int: 3, armor: 0, mov: 5, vis: 4 } };
+  it('grants XP = 2 (COMBAT_XP) + strikes landed, in the category of the attack kind used', () => {
+    const tough = { hp: 100, base: { maxHp: 100, str: 4, dex: 4, int: 3, armor: 0, block: 0, mov: 5, vis: 4 } };
     const { s, a, d } = duel({ a: { items: ['sword'] }, d: tough });
     const ev = combatEv(resolveCombat(s, a, d, 'melee'));
     const aHits = ev.strikes.filter((x) => x.by === 'attacker' && x.hit).length;
     const dHits = ev.strikes.filter((x) => x.by === 'defender' && x.hit).length;
-    expect(a.xpByCat.melee).toBe(1 + aHits);
-    expect(d.xpByCat.melee).toBe(1 + dHits);
+    expect(COMBAT_XP).toBe(2); // the rule's number (DESIGN §4.5), pinned once
+    expect(a.xpByCat.melee).toBe(COMBAT_XP + aHits);
+    expect(d.xpByCat.melee).toBe(COMBAT_XP + dHits);
 
     const m = duel({ a: { items: ['wand'] }, dist: 2, d: tough });
     const mev = combatEv(resolveCombat(m.s, m.a, m.d, 'magic'));
-    expect(m.a.xpByCat.magic).toBe(1 + mev.strikes.filter((x) => x.hit).length);
-    expect(m.d.xpByCat.melee).toBe(1); // could not retaliate: learns in its own (fists) trade
+    expect(m.a.xpByCat.magic).toBe(COMBAT_XP + mev.strikes.filter((x) => x.hit).length);
+    expect(m.d.xpByCat.melee).toBe(COMBAT_XP); // could not retaliate: learns in its own (fists) trade
 
     // A bow volley teaches ranged XP to the archer and to an archer shooting back.
     const r = duel({ a: { items: ['bow'] }, dist: 2, d: { ...tough, items: ['bow'] } });
     const rev = combatEv(resolveCombat(r.s, r.a, r.d, 'ranged'));
-    expect(r.a.xpByCat.ranged).toBe(1 + rev.strikes.filter((x) => x.by === 'attacker' && x.hit).length);
-    expect(r.d.xpByCat.ranged).toBe(1 + rev.strikes.filter((x) => x.by === 'defender' && x.hit).length);
+    expect(r.a.xpByCat.ranged).toBe(COMBAT_XP + rev.strikes.filter((x) => x.by === 'attacker' && x.hit).length);
+    expect(r.d.xpByCat.ranged).toBe(COMBAT_XP + rev.strikes.filter((x) => x.by === 'defender' && x.hit).length);
     expect(r.a.xpByCat.melee + r.d.xpByCat.melee).toBe(0);
     // An archer hit in melee answers with its bow bash: melee XP.
     const b = duel({ a: { items: ['axe'] }, d: { ...tough, items: ['bow'] } });
     const bev = combatEv(resolveCombat(b.s, b.a, b.d, 'melee'));
-    expect(b.d.xpByCat.melee).toBe(1 + bev.strikes.filter((x) => x.by === 'defender' && x.hit).length);
+    expect(b.d.xpByCat.melee).toBe(COMBAT_XP + bev.strikes.filter((x) => x.by === 'defender' && x.hit).length);
     expect(b.d.xpByCat.ranged).toBe(0);
   });
 
   it('poison and vampiric', () => {
-    const { s, a, d } = duel({ a: { items: ['axe'], passives: ['poison', 'vampiric'], hp: 5 }, d: { hp: 100, base: { maxHp: 100, str: 4, dex: 4, int: 3, armor: 0, mov: 5, vis: 4 } } });
+    const { s, a, d } = duel({ a: { items: ['axe'], passives: ['poison', 'vampiric'], hp: 5 }, d: { hp: 100, base: { maxHp: 100, str: 4, dex: 4, int: 3, armor: 0, block: 0, mov: 5, vis: 4 } } });
     setTerrain(s, d.pos, 'swamp');
     let hitSeen = false;
     for (let i = 0; i < 20 && !hitSeen; i++) {
@@ -313,7 +323,7 @@ describe('resolveCombat', () => {
         expect(a.kills).toBe(1);
         expect(s.factions.valen.stats.kills).toBe(1);
         expect(s.factions.thorn.stats.lost).toBe(1);
-        expect(a.xpByCat.melee).toBeGreaterThanOrEqual(16 + 2);
+        expect(a.xpByCat.melee).toBeGreaterThanOrEqual(16 + COMBAT_XP + 1); // kill XP + the survivor's share for the killing hit
       }
     }
     expect(killed).toBe(true);
@@ -416,5 +426,191 @@ describe('forecast modifiers (descriptive)', () => {
     expect(ids(retaliationProfile(s, walker, spider, 'melee'))).toContain('poison');
     walker.poisoned = true;
     expect(ids(retaliationProfile(s, walker, spider, 'melee'))).not.toContain('poison');
+  });
+});
+
+describe('block', () => {
+  it('comes off every strike before armor; a hit still deals at least 1; magic passes it by', () => {
+    const { s, a, d } = duel({ a: { items: ['axe'] } });
+    const dmg = () => attackProfile(s, a, d, 'melee')!.damage;
+    expect(dmg()).toBe(12); // axe 10 + ⌊4/2⌋
+    d.base.block = 4;
+    expect(dmg()).toBe(8); // 12 − 4
+    d.base.armor = 50;
+    expect(dmg()).toBe(4); // (12 − 4) × 50%; armor first would have left 12 × 50% − 4 = 2
+    d.base.block = 3;
+    expect(dmg()).toBe(5); // (12 − 3) × 50% = 4.5 → 5 (half up)
+    d.base.block = 20;
+    expect(dmg()).toBe(1); // the whole strike is blocked, yet a hit always deals at least 1
+    // Ranged strikes are blocked like melee ones.
+    const r = duel({ a: { items: ['bow'] }, d: { base: { ...COMMONER_STATS, block: 2 } }, dist: 2 });
+    expect(attackProfile(r.s, r.a, r.d, 'ranged')!.damage).toBe(7); // (6 + 2) × 1.1 Valen = 8.8 − 2 = 6.8 → 7
+    // Magic passes block by; armor still takes its share.
+    const m = duel({ a: { items: ['staff'] }, dist: 2 });
+    const magic = () => attackProfile(m.s, m.a, m.d, 'magic')!.damage;
+    expect(magic()).toBe(10); // 8 + ⌊(3 + 2 staff) / 2⌋
+    m.d.base.block = 5;
+    expect(magic()).toBe(10);
+    m.d.base.armor = 50;
+    expect(magic()).toBe(5);
+  });
+
+  it('the forecast and the resolution deal the blocked amount', () => {
+    const { s, a, d } = duel({ a: { items: ['sword'] }, d: { items: ['leather'], hp: 30 } });
+    setTerrain(s, d.pos, 'swamp'); // easy to hit
+    const fc = forecastCombat(s, a, d, 'melee')!;
+    expect(fc.attacker.damage).toBe(6); // (7 + 2 − 2 block) × 90% = 6.3 → 6
+    s.rngState = 5;
+    const ev = combatEv(resolveCombat(s, a, d, 'melee'));
+    const hits = ev.strikes.filter((x) => x.by === 'attacker' && x.hit);
+    expect(hits.length).toBeGreaterThan(0);
+    for (const h of hits) expect(h.damage).toBe(6);
+  });
+});
+
+describe('flanking', () => {
+  const W: Hex = { q: -1, r: 0 };
+
+  it('a melee strike with an ally of the striker on the far side: ×1.25, passing block', () => {
+    const s = makeTestState(12, 10);
+    const T = at(5, 4);
+    const foe = makeTestUnit(s, 'thorn', T, { base: { ...COMMONER_STATS, block: 3 } });
+    const a = makeTestUnit(s, 'valen', hexAdd(T, W), { items: ['axe'] });
+    expect(oppositeHex(T, a.pos)).toEqual(hexAdd(T, E)); // axial: 2·target − striker
+    expect(flankingAlly(s, a, foe)).toBeNull();
+    expect(attackProfile(s, a, foe, 'melee')!.damage).toBe(9); // axe 12 − 3 block
+    const ally = makeTestUnit(s, 'valen', hexAdd(T, E));
+    expect(flankingAlly(s, a, foe)).toBe(ally);
+    const p = attackProfile(s, a, foe, 'melee')!;
+    expect(p.damage).toBe(15); // 12 × 1.25, block passed by
+    expect(p.mods).toContainEqual(expect.objectContaining({ id: 'flank', mult: FLANK_MULT }));
+    expect(FLANK_MULT).toBe(1.25);
+    expect(forecastCombat(s, a, foe, 'melee')!.attacker.damage).toBe(15);
+    foe.base.armor = 20;
+    expect(attackProfile(s, a, foe, 'melee')!.damage).toBe(12); // armor still counts: 15 × 80%
+    foe.base.armor = 0;
+    // Beside the target is not enough: the ally must stand exactly opposite the striker.
+    ally.pos = hexAdd(T, { q: 1, r: -1 });
+    expect(flankingAlly(s, a, foe)).toBeNull();
+    expect(attackProfile(s, a, foe, 'melee')!.damage).toBe(9);
+    // Only the striker's own house flanks: the target's friend or a monster there does not.
+    ally.pos = at(10, 8);
+    const other = makeTestUnit(s, 'thorn', hexAdd(T, E));
+    expect(flankingAlly(s, a, foe)).toBeNull();
+    other.faction = 'neutral';
+    expect(flankingAlly(s, a, foe)).toBeNull();
+    expect(attackProfile(s, a, foe, 'melee')!.mods?.some((m) => m.id === 'flank')).toBeFalsy();
+  });
+
+  it('a retaliating defender flanks too, when its own ally stands behind the attacker', () => {
+    const s = makeTestState(12, 10);
+    const T = at(5, 4);
+    const foe = makeTestUnit(s, 'thorn', T);
+    const a = makeTestUnit(s, 'valen', hexAdd(T, W), { items: ['sword'], base: { ...COMMONER_STATS, block: 2 } });
+    expect(retaliationProfile(s, a, foe, 'melee')!.damage).toBe(4); // fists (3 + 2) × 1.1 = 5.5 − 2 block = 3.5 → 4
+    const behind = makeTestUnit(s, 'thorn', hexAdd(a.pos, W));
+    expect(behind.pos).toEqual(oppositeHex(a.pos, foe.pos));
+    const r = retaliationProfile(s, a, foe, 'melee')!;
+    expect(r.mods?.map((m) => m.id)).toContain('flank');
+    expect(r.damage).toBe(7); // 5.5 × 1.25 = 6.875 → 7, block passed by
+    expect(forecastCombat(s, a, foe, 'melee')!.defender!.damage).toBe(7);
+    // The attacker itself is not flanked by that: nothing of its house stands beyond the target.
+    expect(attackProfile(s, a, foe, 'melee')!.mods?.some((m) => m.id === 'flank')).toBeFalsy();
+  });
+
+  it('ranged and magic strikes never flank, even from the next hex', () => {
+    const s = makeTestState(12, 10);
+    const T = at(5, 4);
+    const foe = makeTestUnit(s, 'thorn', T, { base: { ...COMMONER_STATS, block: 3 } });
+    const archer = makeTestUnit(s, 'valen', hexAdd(T, W), { items: ['bow'] });
+    makeTestUnit(s, 'valen', hexAdd(T, E));
+    const shot = attackProfile(s, archer, foe, 'ranged')!;
+    expect(shot.mods?.some((m) => m.id === 'flank')).toBeFalsy();
+    expect(shot.damage).toBe(6); // (6 + 2) × 1.1 = 8.8 − 3 block = 5.8 → 6
+    // The same archer's Bow Bash is a melee blow: that one flanks.
+    const bash = attackProfile(s, archer, foe, 'melee')!;
+    expect(bash.mods?.map((m) => m.id)).toContain('flank');
+    expect(bash.damage).toBe(5); // (2 + 2) × 1.25, block passed by
+    const mage = makeTestUnit(s, 'valen', hexAdd(T, { q: 0, r: -1 }), { items: ['staff'] });
+    makeTestUnit(s, 'valen', hexAdd(T, { q: 0, r: 1 }));
+    const bolt = attackProfile(s, mage, foe, 'magic')!;
+    expect(bolt.mods?.some((m) => m.id === 'flank')).toBeFalsy();
+    expect(bolt.damage).toBe(10); // 8 + ⌊5/2⌋: no ×1.25 (magic passes block anyway)
+  });
+});
+
+describe('reactions', () => {
+  /** A sword-wielding thorn defender and three valen swordsmen around it, none opposite another (no flanking). */
+  function arena() {
+    const s = makeTestState(12, 10);
+    const T = at(5, 4);
+    const tough = () => ({ items: ['sword'] as any[], base: { ...COMMONER_STATS, maxHp: 500 }, hp: 500 });
+    const foe = makeTestUnit(s, 'thorn', T, tough());
+    const raiders = [{ q: -1, r: 0 }, { q: 0, r: -1 }, { q: 1, r: -1 }].map((d) => makeTestUnit(s, 'valen', hexAdd(T, d), tough()));
+    return { s, foe, raiders };
+  }
+
+  it('a unit answers one attack per turn: the next attacker meets no retaliation, and the forecast says so', () => {
+    const { s, foe, raiders: [a1, a2] } = arena();
+    expect(reactionsLeft(foe)).toBe(1);
+    const f1 = forecastCombat(s, a1, foe, 'melee')!;
+    expect(f1.defender).not.toBeNull();
+    expect(f1.defenderSpent).toBeUndefined();
+    const ev1 = combatEv(resolveCombat(s, a1, foe, 'melee'));
+    expect(ev1.strikes.some((x) => x.by === 'defender')).toBe(true);
+    expect(foe.reacted).toBe(1);
+    expect(a1.reacted).toBeUndefined(); // attacking spends no reaction
+    expect(reactionsLeft(foe)).toBe(0);
+
+    const f2 = forecastCombat(s, a2, foe, 'melee')!;
+    expect(f2.defender).toBeNull();
+    expect(f2.defenderSpent).toBe(true);
+    expect(f2.expectedDamageToAttacker).toBe(0);
+    expect(retaliationProfile(s, a2, foe, 'melee')).toBeNull();
+    expect(reachingRetaliation(s, a2, foe, 'melee')).not.toBeNull(); // its sword still reaches
+    const hp2 = a2.hp;
+    const ev2 = combatEv(resolveCombat(s, a2, foe, 'melee'));
+    expect(ev2.strikes.length).toBe(3);
+    expect(ev2.strikes.every((x) => x.by === 'attacker')).toBe(true);
+    expect(a2.hp).toBe(hp2);
+    expect(foe.reacted).toBe(1);
+  });
+
+  it('a defender that could not answer anyway is not "spent"', () => {
+    const { s, foe } = arena();
+    foe.reacted = 1;
+    const archer = makeTestUnit(s, 'valen', hexAdd(foe.pos, { q: 2, r: 0 }), { items: ['bow'] });
+    const fc = forecastCombat(s, archer, foe, 'ranged')!;
+    expect(fc.defender).toBeNull();
+    expect(fc.defenderSpent).toBeUndefined(); // a sword never reaches 2 hexes
+  });
+
+  it('Combat Reflexes answers two attacks a turn', () => {
+    const { s, foe, raiders: [a1, a2, a3] } = arena();
+    foe.passives.push('reflexes');
+    expect(reactionsLeft(foe)).toBe(2);
+    resolveCombat(s, a1, foe, 'melee');
+    expect(reactionsLeft(foe)).toBe(1);
+    expect(forecastCombat(s, a2, foe, 'melee')!.defender).not.toBeNull();
+    const ev2 = combatEv(resolveCombat(s, a2, foe, 'melee'));
+    expect(ev2.strikes.some((x) => x.by === 'defender')).toBe(true);
+    expect(foe.reacted).toBe(2);
+    const f3 = forecastCombat(s, a3, foe, 'melee')!;
+    expect(f3.defender).toBeNull();
+    expect(f3.defenderSpent).toBe(true);
+  });
+
+  it('every turn start (any house, or the wilds) lets every unit answer again', () => {
+    const { s, foe, raiders: [a1] } = arena();
+    resolveCombat(s, a1, foe, 'melee');
+    expect(foe.reacted).toBe(1);
+    startTurn(s, 'valen'); // the attacker's house's turn clears the thorn defender too
+    expect(foe.reacted).toBeUndefined();
+    expect(reactionsLeft(foe)).toBe(1);
+    foe.reacted = 1;
+    a1.reacted = 1;
+    runNeutralTurn(s);
+    expect(foe.reacted).toBeUndefined();
+    expect(a1.reacted).toBeUndefined();
   });
 });

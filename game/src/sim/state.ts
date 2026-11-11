@@ -1,16 +1,18 @@
 // Game state construction & basic queries. Pure; no three.js / DOM.
 import type {
-  Building, BuildingId, BuildingInstanceId, FactionId, FactionState, GameSettings, GameState, Hex, LogEntry, Resources, Tile, Unit, UnitId,
-  XpCategory,
+  Building, BuildingId, BuildingInstanceId, FactionId, FactionState, GameSettings, GameState, Hex, LogEntry, MonsterKind, Resources, Tile, Unit,
+  UnitId, XpCategory,
 } from '../core/types';
 import { hexDistance, inBounds, spiral, tileIndex } from '../core/hex';
 import { mulberry32Next } from '../core/rng';
-import { FACTIONS, PLAYABLE_FACTIONS } from '../data/factions';
+import { FACTIONS, MONSTERS, PLAYABLE_FACTIONS } from '../data/factions';
+import { COMMONER_STATS, LEADER_STATS } from '../data/presets';
 import { BUILDINGS } from '../data/buildings';
 import { TERRAIN } from '../data/terrain';
 import { zeroXp } from '../data/skills';
 import { generateMap } from './mapgen';
 import { createUnit, effectiveStats, mainAttackKind } from './units';
+import { queueLevelOffer, settleLevelUps } from './progression';
 import { spawnInitialMonsters } from './neutral';
 import { computeAllVisibility } from './visibility';
 
@@ -18,7 +20,7 @@ export const LOG_CAP = 300;
 
 /** Starting stock of every faction (DESIGN §2). */
 export const STARTING_RESOURCES: Readonly<Resources> = {
-  gold: 60, food: 30, wood: 25, stone: 15, iron: 12, crystal: 0, mana: 0, research: 0,
+  gold: 60, food: 30, wood: 40, stone: 25, iron: 12, crystal: 0, mana: 0, research: 0,
 };
 
 const zeroResources = (): Resources => ({ gold: 0, food: 0, wood: 0, stone: 0, iron: 0, crystal: 0, mana: 0, research: 0 });
@@ -304,6 +306,57 @@ export function migrateUnitXp(u: Unit): void {
   if (Array.isArray(u.levelUpXp)) u.levelUpXp = u.levelUpXp.map(fix);
 }
 
+/** Hit points and armor before the block stat came in (to bring old saves up to the current numbers). */
+const OLD_BASE = {
+  commoner: { maxHp: 22, armor: 0 }, leader: { maxHp: 34, armor: 10 },
+  wolf: { maxHp: 20, armor: 0 }, spider: { maxHp: 28, armor: 10 }, golem: { maxHp: 48, armor: 30 }, elemental: { maxHp: 40, armor: 20 },
+} as const satisfies Record<'commoner' | 'leader' | MonsterKind, { maxHp: number; armor: number }>;
+
+/**
+ * A unit from a save made before the block stat (DESIGN §4.1): give it the current base hit points,
+ * armor and block of its kind (keeping its wounds: hp moves with max hp), the Thornwild's +5 HP
+ * (was +4), and the reworked level picks (+Max HP is now +8, was +6; +Armor is now +1 block and
+ * +5% armor, was +6%). Units already on the current numbers are left alone.
+ */
+export function migrateUnitBalance(u: Unit): void {
+  if (!u.base || Number.isFinite(u.base.block)) return;
+  const kind = u.monster ?? (u.isLeader ? 'leader' : 'commoner');
+  const old = OLD_BASE[kind];
+  const now = u.monster ? MONSTERS[u.monster]?.stats : u.isLeader ? LEADER_STATS : COMMONER_STATS;
+  if (!old || !now) { u.base.block = 0; return; }
+  let hp = now.maxHp - old.maxHp;
+  if (!u.monster && u.faction === 'thorn') hp += 1;
+  u.base.armor += now.armor - old.armor;
+  u.base.block = now.block;
+  for (const l of u.learned ?? []) {
+    if (l.option === 'stat_hp') hp += 2;
+    if (l.option === 'stat_armor') { u.base.armor -= 1; u.base.block += 1; }
+  }
+  u.base.maxHp += hp;
+  u.hp = Math.max(1, u.hp + hp);
+}
+
+/**
+ * Augment ranks live in `unit.ranks` (DESIGN §4.8); a save from the short-lived build that stored a
+ * second rank of a passive as a repeated entry gets each repeat folded into its rank, and stray rank
+ * entries (an augment the unit does not have, a rank below 2) are dropped.
+ */
+export function migrateAugmentRanks(u: Unit): void {
+  const ranks: Record<string, number> = { ...(u.ranks ?? {}) };
+  for (const list of [u.passives, u.actives] as string[][]) {
+    if (!Array.isArray(list)) continue;
+    const seen = new Map<string, number>();
+    for (const id of list) seen.set(id, (seen.get(id) ?? 0) + 1);
+    for (const [id, n] of seen) if (n > 1) ranks[id] = Math.max(ranks[id] ?? 1, n);
+    list.length = 0;
+    list.push(...seen.keys());
+  }
+  const owned = new Set<string>([...(u.passives ?? []), ...(u.actives ?? [])]);
+  for (const k of Object.keys(ranks)) if (!owned.has(k) || !(ranks[k] >= 2)) delete ranks[k];
+  if (Object.keys(ranks).length) u.ranks = ranks as Unit['ranks'];
+  else delete u.ranks;
+}
+
 /** Parse a saved game. Throws on malformed input; back-fills fields that older saves may lack. */
 export function deserialize(json: string): GameState {
   const raw = JSON.parse(json) as Partial<GameState>;
@@ -322,7 +375,11 @@ export function deserialize(json: string): GameState {
     fs.stockpile ??= {};
     fs.stats ??= { kills: 0, lost: 0, built: 0, researched: 0, spellsCast: 0 };
   }
+  // Units from a save made before the balance pass (no block stat): they also levelled on the old,
+  // higher XP thresholds, so the levels their XP already pays for are granted once the state is whole.
+  const preBalance: Unit[] = [];
   for (const u of Object.values(state.units)) {
+    if (u.base && !Number.isFinite(u.base.block) && !u.monster) preBalance.push(u);
     u.buffs ??= [];
     u.cooldowns ??= {};
     u.efficiency ??= {};
@@ -330,11 +387,18 @@ export function deserialize(json: string): GameState {
     migrateUnitXp(u);
     // Level history and standing orders came later: older saves have neither (no history, no order).
     if (!Array.isArray(u.learned)) u.learned = [];
+    migrateUnitBalance(u);
+    migrateAugmentRanks(u);
     if (u.order !== undefined && (u.monster || (u.order !== 'heal' && u.order !== 'sentry'))) delete u.order;
   }
   state.log ??= [];
   state.winner ??= null;
   state.gameOver ??= false;
   if (!Number.isFinite(state.rngState)) state.rngState = initialRngState(state.settings.seed ?? 1);
+  for (const u of preBalance.sort((a, b) => a.id - b.id)) {
+    // Offers already owed come first (startTurn would draw them the same way), then the new levels'.
+    while (u.levelUpOptions.length < u.pendingLevelUps) queueLevelOffer(state, u);
+    settleLevelUps(state, u, null);
+  }
   return state;
 }

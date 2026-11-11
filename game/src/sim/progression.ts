@@ -1,6 +1,7 @@
 // XP, levels and level-up choices. See DESIGN §4.7.
 import type { GameEvent, GameState, PassiveId, ActiveId, SkillOptionDef, Unit, UnitStats, XpCategory } from '../core/types';
-import { LEVEL_OPTIONS, LEVEL_OPTION_BY_ID, MAX_LEVEL, LEADER_XP_MULT, XP_CATEGORIES, xpToNext, zeroXp } from '../data/skills';
+import { LEVEL_OPTIONS, LEVEL_OPTION_BY_ID, LEADER_XP_MULT, XP_CATEGORIES, xpToNext, zeroXp } from '../data/skills';
+import { augmentRank, isUpgradable, type AugmentId } from '../data/ranks';
 import { rand } from '../core/rng';
 import { addLog } from './state';
 import { canBuildWith, getAttackDefs, effectiveStats, mainAttackKind } from './units';
@@ -31,7 +32,7 @@ export function queueLevelOffer(state: GameState, unit: Unit): void {
 
 /**
  * Add XP (×1.3 for leaders; the fraction is carried in xpFrac so small grants keep the bonus),
- * tracking xpByCat and levelXpByCat. While xp ≥ xpToNext(level) and level < MAX_LEVEL: level++,
+ * tracking xpByCat and levelXpByCat. While xp ≥ xpToNext(level) (there is no level cap): level++,
  * maxHp+4 & heal 4, pendingLevelUps++, queue an offer weighted by that level's XP, then start the
  * new level's tally with the overflow, emit unitLeveled.
  */
@@ -48,11 +49,21 @@ export function grantXp(state: GameState, unit: Unit, cat: XpCategory, amount: n
   }
   if (v <= 0) return [];
   unit.xpByCat[cat] = (unit.xpByCat[cat] ?? 0) + v;
-  if (unit.level >= MAX_LEVEL) { unit.xp = 0; return []; }
   unit.levelXpByCat[cat] = (unit.levelXpByCat[cat] ?? 0) + v;
   unit.xp += v;
+  return settleLevelUps(state, unit, cat);
+}
+
+/**
+ * Take every level `unit.xp` already pays for (grantXp after adding XP; deserialize for a unit saved
+ * under the older, higher thresholds): per level, maxHp +4 and heal 4, a pending level-up whose offer
+ * is drawn from that level's XP mix, then the overflow starts the next level's tally, in `cat` (the
+ * kind just earned; null: the kind the unit earned most).
+ */
+export function settleLevelUps(state: GameState, unit: Unit, cat: XpCategory | null): GameEvent[] {
   const events: GameEvent[] = [];
-  while (unit.level < MAX_LEVEL && unit.xp >= xpToNext(unit.level)) {
+  while (unit.xp >= xpToNext(unit.level)) {
+    const overflowCat = cat ?? mainXpCategory(unit);
     unit.xp -= xpToNext(unit.level);
     unit.level++;
     unit.base.maxHp += LEVEL_HP_GAIN;
@@ -62,13 +73,12 @@ export function grantXp(state: GameState, unit: Unit, cat: XpCategory, amount: n
     // The next level's tally starts now (with the overflow), not when the choice is made: XP
     // earned while the pick waits counts toward the next level's offer.
     unit.levelXpByCat = zeroXp();
-    if (unit.xp > 0) unit.levelXpByCat[cat] = unit.xp;
+    if (unit.xp > 0) unit.levelXpByCat[overflowCat] = unit.xp;
     events.push({ type: 'unitLeveled', unit: unit.id, level: unit.level });
     if (state.factions[unit.faction]?.isHuman) {
       events.push({ type: 'log', entry: addLog(state, `${unit.name} reached level ${unit.level}!`, 'levelup', unit.faction) });
     }
   }
-  if (unit.level >= MAX_LEVEL) unit.xp = 0;
   return events;
 }
 
@@ -88,14 +98,16 @@ export function optionEligible(unit: Unit, opt: SkillOptionDef): boolean {
       }
       return true;
     case 'passive':
-      if (!opt.passive || unit.passives.includes(opt.passive)) return false;
+      // An owned augment stays on offer: learning it again is one more rank (DESIGN §4.8).
+      if (!opt.passive || (unit.passives.includes(opt.passive) && !isUpgradable(opt.passive))) return false;
       if (unit.monster) {
         if (ECONOMY_PASSIVES.includes(opt.passive) || opt.passive === 'inspiring') return false;
         if (opt.passive === 'marksman') return getAttackDefs(unit).some((a) => a.kind === 'ranged');
       }
       return true;
     case 'active':
-      if (!opt.active || unit.actives.includes(opt.active)) return false;
+      // Building unlocks (Masonry, Devotion) are learned once; every other skill ranks up.
+      if (!opt.active || (unit.actives.includes(opt.active) && !isUpgradable(opt.active))) return false;
       if (unit.monster) return MONSTER_ACTIVES.includes(opt.active);
       return true;
     default:
@@ -113,6 +125,10 @@ const KIND_REPEAT_FACTOR = 0.3;
 const OFF_TRADE_REPEAT_FACTOR = 0.15;
 /** Bow-only options are less likely for a unit with no ranged attack (it may still take up a bow). */
 const NO_BOW_FACTOR = 0.4;
+/** Weight kept per rank already held: an upgrade stays on offer, new augments still turn up. */
+const OWNED_RANK_FACTOR = 0.8;
+/** The augment an option teaches (passive or active), if any. */
+const augmentOf = (o: SkillOptionDef): AugmentId | undefined => (o.kind === 'passive' ? o.passive : o.kind === 'active' ? o.active : undefined);
 const BOW_OPTIONS = new Set(['active_volley', 'eff_ranged', 'passive_marksman']);
 /** Likewise, melee-only options are less likely for a unit whose main weapon shoots or casts (an archer). */
 const NO_MELEE_FACTOR = 0.4;
@@ -147,6 +163,8 @@ function drawOptions(
     let w = o.weight * (0.35 + shareOf(o) * 3) * (0.75 + 0.5 * rand(state));
     if (!ranged && BOW_OPTIONS.has(o.id)) w *= NO_BOW_FACTOR;
     if (shooter && MELEE_ONLY_OPTIONS.has(o.id)) w *= NO_MELEE_FACTOR;
+    const aug = augmentOf(o);
+    if (aug) w *= OWNED_RANK_FACTOR ** augmentRank(unit, aug);
     return w;
   });
   let picked = 0;
@@ -220,12 +238,20 @@ export function applyLevelOption(state: GameState, unit: Unit, optionId: string)
       }
       break;
     case 'passive':
-      if (def.passive && !unit.passives.includes(def.passive)) unit.passives.push(def.passive);
+    case 'active': {
+      // New: learn it (rank 1). Already known: one rank more (DESIGN §4.8). Building unlocks
+      // ('masonry' / 'devotion') are permanent knowledge: knowing them is enough.
+      const id = (def.kind === 'passive' ? def.passive : def.active) as AugmentId | undefined;
+      if (!id) break;
+      const rank = augmentRank(unit, id);
+      if (rank === 0) {
+        if (def.kind === 'passive') unit.passives.push(def.passive!);
+        else unit.actives.push(def.active!);
+      } else if (isUpgradable(id)) {
+        (unit.ranks ??= {})[id] = rank + 1;
+      }
       break;
-    case 'active':
-      // 'masonry' / 'devotion' are permanent building unlocks: knowing them is enough.
-      if (def.active && !unit.actives.includes(def.active)) unit.actives.push(def.active);
-      break;
+    }
   }
   const after = effectiveStats(state, unit);
   unit.hp = Math.max(1, Math.min(unit.hp, after.maxHp));
@@ -282,11 +308,11 @@ const ROLE_PREFS: Record<Role, Record<string, number>> = {
   fighter: {
     stat_str: 9, eff_attack: 9, stat_armor: 7, stat_hp: 7, passive_ironskin: 7, active_powerstrike: 6,
     passive_berserker: 5, passive_vampiric: 6, passive_poison: 6, passive_regeneration: 5, active_fortify: 5,
-    passive_skirmisher: 4, stat_mov: 3,
+    passive_skirmisher: 4, stat_mov: 3, passive_reflexes: 6,
   },
   archer: {
     stat_dex: 10, eff_ranged: 9, passive_marksman: 8, active_volley: 7, passive_skirmisher: 4,
-    stat_hp: 4, stat_mov: 3, stat_vis: 3, stat_armor: 3, passive_pathfinder: 3,
+    stat_hp: 4, stat_mov: 3, stat_vis: 3, stat_armor: 3, passive_pathfinder: 3, passive_reflexes: 3,
   },
   mage: {
     stat_int: 10, eff_magic: 9, active_firebolt: 8, passive_manaspring: 6, eff_mana: 6, active_heal: 6,
@@ -294,7 +320,7 @@ const ROLE_PREFS: Record<Role, Record<string, number>> = {
   },
   leader: {
     passive_leadership: 10, stat_hp: 8, stat_armor: 8, passive_inspiring: 7, active_rally: 7, passive_ironskin: 7,
-    active_fortify: 5, stat_str: 4, eff_attack: 4, passive_regeneration: 4, eff_trade: 3,
+    active_fortify: 5, stat_str: 4, eff_attack: 4, passive_regeneration: 4, eff_trade: 3, passive_reflexes: 6,
   },
 };
 
@@ -333,6 +359,9 @@ export function aiChooseLevelOption(state: GameState, unit: Unit): string {
     if (def.kind === 'active' && def.active && !PERMANENT_ACTIVES.includes(def.active) && !hasCombatActive) s += 4;
     // A badly hurt unit values hit points a little more.
     if (id === 'stat_hp' && unit.hp < effectiveStats(state, unit).maxHp * 0.5) s += 1;
+    // An augment it already holds is worth a little less with each rank (spread the picks).
+    const aug = augmentOf(def);
+    if (aug) s -= 2 * augmentRank(unit, aug);
     if (s > bestScore) { bestScore = s; best = id; }
   }
   return best;

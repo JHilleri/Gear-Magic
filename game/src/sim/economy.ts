@@ -6,6 +6,7 @@ import type {
 import { DIRS, hexEq, inBounds, neighbors, spiral, tileIndex } from '../core/hex';
 import { aOrAn } from '../core/text';
 import { BUILDINGS } from '../data/buildings';
+import { augmentRank, yieldPerTurn } from '../data/ranks';
 import { ITEMS } from '../data/items';
 import { PRESETS, COMMONER_COST } from '../data/presets';
 import { FACTIONS } from '../data/factions';
@@ -130,6 +131,32 @@ function castleOf(state: GameState, f: FactionId): Building | undefined {
   return b && b.owner === f && b.type === 'castle' ? b : undefined;
 }
 
+/** Each producing building of a type the house already has (finished or not) makes the next one this much dearer. */
+export const BUILDING_COST_STEP = 0.25;
+
+/**
+ * What `faction` pays to start a `type` building now: its base cost, +25% for every building of
+ * that type the house already owns (sites included) when the type produces something (farms,
+ * houses, mines, libraries…), rounded up. The castle, forge, training ground and wall keep their
+ * base cost. DESIGN §5. `planned`: more of that type assumed already started (AI plans).
+ */
+export function buildingCost(state: GameState, faction: FactionId, type: BuildingId, planned = 0): ResourceCost {
+  const base = BUILDINGS[type].cost;
+  if (type === 'castle' || !hasWorkableOutput(type)) return { ...base };
+  let n = Math.max(0, planned);
+  for (const k in state.buildings) {
+    const b = state.buildings[k];
+    if (b.owner === faction && b.type === type) n++;
+  }
+  if (n === 0) return { ...base };
+  const out: ResourceCost = {};
+  for (const k of RESOURCE_ORDER) {
+    const c = base[k];
+    if (c) out[k] = Math.ceil(c * (1 + BUILDING_COST_STEP * n) - 1e-9);
+  }
+  return out;
+}
+
 /** Null if `unit` can start `building` on its hex now: tools, unlocked (tech or unit skill), terrain/deposit fit, empty hex (no building), inside or adjacent to own territory (castle: anywhere own-adjacent... castle also allowed anywhere the leader stands if the faction has no castle), cost affordable, unit not acted. */
 export function canBuildAt(state: GameState, unit: Unit, building: BuildingId): string | null {
   const def = BUILDINGS[building];
@@ -151,7 +178,8 @@ export function canBuildAt(state: GameState, unit: Unit, building: BuildingId): 
   }
   const site = siteError(state, f, unit.pos, building, founding);
   if (site) return site;
-  if (!canAfford(fs.resources, def.cost)) return missing(fs.resources, def.cost);
+  const cost = buildingCost(state, f, building);
+  if (!canAfford(fs.resources, cost)) return missing(fs.resources, cost);
   return null;
 }
 
@@ -185,7 +213,7 @@ export function startBuilding(state: GameState, unit: Unit, building: BuildingId
   const f = unit.faction;
   const fs = state.factions[f];
   const events: GameEvent[] = [];
-  pay(fs.resources, def.cost);
+  pay(fs.resources, buildingCost(state, f, building));
   if (building === 'castle') {
     // One seat per house: the old castle (or castle site) is torn down.
     const oldId = fs.castleId;
@@ -288,11 +316,15 @@ const RESOURCE_EFF: Record<ResourceId, EfficiencyId> = {
 };
 
 /** Output multiplier of a building worked by a unit with Builder's Tools (before its efficiencies). */
-export const WORKER_MULT = 1.5;
+export const WORKER_MULT = 2.5;
 /** Output multiplier of a building worked bare-handed: any unit can work, tools just work better. */
-export const BARE_WORKER_MULT = 1.25;
+export const BARE_WORKER_MULT = 2;
 /** XP a worker earns for each turn it works its building without acting. */
-export const WORK_XP = 2;
+export const WORK_XP = 5;
+/** XP a unit earns for each turn it puts build points into a construction or upgrade. */
+export const BUILD_XP = 5;
+/** HP every unit that eats loses when the house runs out of food (never below 1). */
+export const STARVATION_DAMAGE = 4;
 
 const DIFFICULTY_MULT = { easy: 0.8, normal: 1.0, hard: 1.3 } as const;
 
@@ -335,7 +367,7 @@ export function workerMult(worker: Unit): number {
 }
 
 /**
- * Everything `worker` multiplies resource `k` of its building by: ×1.5 with Builder's Tools (×1.25
+ * Everything `worker` multiplies resource `k` of its building by: ×2.5 with Builder's Tools (×2
  * bare-handed) times its building and resource efficiencies (each pick is a clean +25% of the
  * whole output). buildingOutput and the tile panel's "worked by" line both read it.
  */
@@ -356,7 +388,7 @@ export function workXpCategory(u: Unit, b: Building): XpCategory {
   return 'civic';
 }
 
-/** Per-turn output of a completed building incl. level, fertile bonus, worker bonus (an own unit on it: ×1.5 with Builder's Tools, ×1.25 bare-handed, × its building & resource efficiencies), leader-on-castle +10%, tech multipliers, AI difficulty multiplier. */
+/** Per-turn output of a completed building incl. level, fertile bonus, worker bonus (an own unit on it: ×2.5 with Builder's Tools, ×2 bare-handed, × its building & resource efficiencies), leader-on-castle +10%, tech multipliers, AI difficulty multiplier. */
 export function buildingOutput(state: GameState, b: Building): ResourceCost {
   if (!isFunctional(b)) return {};
   const owner = b.owner!;
@@ -390,10 +422,15 @@ export function unitIncome(state: GameState, u: Unit): ResourceCost {
     if (it && ITEMS[it].manaPerTurn) mana += ITEMS[it].manaPerTurn!;
   }
   if (mana) out.mana = mana * eff(u, 'mana');
-  if (u.passives.includes('manaspring')) out.mana = (out.mana ?? 0) + 1;
-  if (u.passives.includes('harvester')) out.food = 1;
-  if (u.passives.includes('prospector')) out.iron = 1;
-  if (u.passives.includes('scholar')) out.research = 1;
+  // Yield passives: +1 per rank (DESIGN §4.8).
+  const rank = (p: 'manaspring' | 'harvester' | 'prospector' | 'scholar'): number => {
+    const r = augmentRank(u, p);
+    return r > 0 ? yieldPerTurn(r) : 0;
+  };
+  if (rank('manaspring')) out.mana = (out.mana ?? 0) + rank('manaspring');
+  if (rank('harvester')) out.food = rank('harvester');
+  if (rank('prospector')) out.iron = rank('prospector');
+  if (rank('scholar')) out.research = rank('scholar');
   return out;
 }
 
@@ -443,11 +480,11 @@ export function applyProduction(state: GameState, faction: FactionId): GameEvent
   if (fs.resources.mana < 0) fs.resources.mana = 0;
   if (fs.resources.food < 0) {
     fs.resources.food = 0;
-    // Starvation: every mouth that eats loses 3 hp, never below 1.
+    // Starvation: every mouth that eats loses STARVATION_DAMAGE hp, never below 1.
     const hungry = Object.values(state.units).filter((u) => u.faction === faction && !u.monster && !u.summonTurns)
       .sort((a, b) => a.id - b.id);
-    for (const u of hungry) events.push(...applyDamage(state, u, 3, 'starvation', null, 1));
-    events.push(...logFor(state, [faction], 'Your people are starving! Every unit loses 3 HP. Build farms or reduce your army.', 'warning', faction));
+    for (const u of hungry) events.push(...applyDamage(state, u, STARVATION_DAMAGE, 'starvation', null, 1));
+    events.push(...logFor(state, [faction], `Your people are starving! Every unit loses ${STARVATION_DAMAGE} HP. Build farms or reduce your army.`, 'warning', faction));
   }
   for (const r of RESOURCE_ORDER) if (fs.resources[r] < 0 && r !== 'research') fs.resources[r] = 0;
   return events;
@@ -472,7 +509,7 @@ export function buildRate(u: Unit): number {
 
 /**
  * End-of-turn: tools units (and the leader on its castle site) that did not act contribute build
- * points (+3 building XP); workers (workerOf) that did not act (nor just appear) get +2 XP in workXpCategory; units
+ * points (+BUILD_XP building XP); workers (workerOf) that did not act (nor just appear) get +WORK_XP XP in workXpCategory; units
  * on a Training Ground / Mage Tower get its drill XP. Completes constructions.
  */
 export function progressConstruction(state: GameState, faction: FactionId): GameEvent[] {
@@ -492,7 +529,7 @@ export function progressConstruction(state: GameState, faction: FactionId): Game
       if ((!builder && !raisesCastle) || u.acted) continue;
       const pts = buildRate(u);
       b.buildLeft = round2(Math.max(0, b.buildLeft - pts));
-      events.push(...giveXp(state, u, 'building', 3));
+      events.push(...giveXp(state, u, 'building', BUILD_XP));
       if (b.buildLeft <= 1e-6) {
         b.buildLeft = 0;
         if (b.upgrading) {

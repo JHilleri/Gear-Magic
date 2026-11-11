@@ -12,6 +12,8 @@ import { manaCap } from '../src/sim/spells';
 import { SPELLS } from '../src/data/spells';
 import { hasTech } from '../src/sim/research';
 import { aiNextAction, createAiMemory } from '../src/sim/ai/index';
+import { buildingOn } from '../src/sim/ruleutil';
+import { workerOf } from '../src/sim/economy';
 
 const env = (globalThis as { process?: { env: Record<string, string | undefined>; stderr: { write(s: string): void } } }).process;
 const ON = !!env?.env.AI_METRICS;
@@ -28,6 +30,8 @@ interface House {
   /** Income summed over every round up to 45 (smoother than one snapshot): goods, research, mana. */
   cum45: { goods: number; research: number; mana: number };
   techAt: Record<string, number>; fellAt?: number; mageChanAt: number | null; cmineAt: number | null; towerStartAt: number | null;
+  /** Average level of the house's non-leader units, and how many of them work a building, at rounds 20/40/60. */
+  levels: Record<number, number>; workers: Record<number, number>;
 }
 
 function towersDone(s: GameState, f: FactionId): number {
@@ -50,7 +54,7 @@ function play(seed: number, difficulty: Difficulty, rounds: number) {
     houses[f] = {
       arcanaAt: null, towerAt: null, chanAt: null, firstSpellAt: null, towers: {}, mana: {}, manaFullRounds: 0,
       buildings: {}, military: {}, techs: 0, spells: {}, alive: true, kills: 0, lost: 0,
-      income: {}, built: 0, manaSpent: 0, cum45: { goods: 0, research: 0, mana: 0 },
+      income: {}, built: 0, manaSpent: 0, cum45: { goods: 0, research: 0, mana: 0 }, levels: {}, workers: {},
       techAt: Object.fromEntries(s.factions[f].techs.map((t) => [t, 0])), mageChanAt: null, cmineAt: null, towerStartAt: null,
     };
   }
@@ -136,6 +140,11 @@ function play(seed: number, difficulty: Difficulty, rounds: number) {
             goods: Math.round(inc.gold + inc.food + inc.wood + inc.stone + inc.iron + inc.crystal), research: Math.round(inc.research), mana: Math.round(inc.mana * 10) / 10,
           };
         }
+        if (s.round % 20 === 0) {
+          const mine = Object.values(s.units).filter((u) => u.faction === g && !u.isLeader && !u.monster);
+          h.levels[s.round] = mine.length ? Math.round((mine.reduce((a, u) => a + u.level, 0) / mine.length) * 10) / 10 : 0;
+          h.workers[s.round] = mine.filter((u) => { const b = buildingOn(s, u.pos); return !!b && workerOf(s, b) === u; }).length;
+        }
         if (s.round % 10 === 0) {
           h.towers[s.round] = n;
           h.mana[s.round] = Math.round(s.factions[g].resources.mana);
@@ -171,7 +180,7 @@ describe.runIf(ON)('AI metrics (AI-only games)', () => {
           out(`  ${f}${f === g.human ? '(P)' : ''}${h.alive ? '' : '†'} arcana@${h.arcanaAt ?? '-'} tower@${h.towerAt ?? '-'} mageChan@${h.mageChanAt ?? '-'} `
             + `spell1@${h.firstSpellAt ?? '-'} towers ${JSON.stringify(h.towers)} mana ${JSON.stringify(h.mana)} full ${h.manaFullRounds} `
             + `bld ${JSON.stringify(h.buildings)} mil ${JSON.stringify(h.military)} techs ${h.techs} k/l ${h.kills}/${h.lost} spells ${JSON.stringify(h.spells)}`
-            + `${h.fellAt ? ` fell@${h.fellAt}` : ''}\n     cmine@${h.cmineAt ?? '-'} towerStart@${h.towerStartAt ?? '-'} anyChan@${h.chanAt ?? '-'} techs ${Object.entries(h.techAt).map(([t, r]) => `${t}@${r}`).join(' ')}`);
+            + ` lvl ${JSON.stringify(h.levels)} workers ${JSON.stringify(h.workers)}${h.fellAt ? ` fell@${h.fellAt}` : ''}\n     cmine@${h.cmineAt ?? '-'} towerStart@${h.towerStartAt ?? '-'} anyChan@${h.chanAt ?? '-'} techs ${Object.entries(h.techAt).map(([t, r]) => `${t}@${r}`).join(' ')}`);
           rows.push({ f, ai: f !== g.human, h });
         }
         aiPlayer += g.attacks['ai>player'] ?? 0;
@@ -197,7 +206,8 @@ describe.runIf(ON)('AI metrics (AI-only games)', () => {
           + `income goods r20 ${avg(rs.map((x) => x.h.income[20]?.goods))} r30 ${avg(rs.map((x) => x.h.income[30]?.goods))} r45 ${avg(rs.map((x) => x.h.income[45]?.goods))}, `
           + `research r20 ${avg(rs.map((x) => x.h.income[20]?.research))} r30 ${avg(rs.map((x) => x.h.income[30]?.research))} r45 ${avg(rs.map((x) => x.h.income[45]?.research))}, `
           + `mana/turn r30 ${avg(rs.map((x) => x.h.income[30]?.mana))} r45 ${avg(rs.map((x) => x.h.income[45]?.mana))}, `
-          + `income summed r1-45 (houses alive at 45) goods ${avg(rs.filter((x) => x.h.income[45]).map((x) => x.h.cum45.goods))} research ${avg(rs.filter((x) => x.h.income[45]).map((x) => x.h.cum45.research))} mana ${avg(rs.filter((x) => x.h.income[45]).map((x) => x.h.cum45.mana))}, kills ${avg(rs.map((x) => x.h.kills))} lost ${avg(rs.map((x) => x.h.lost))}`);
+          + `income summed r1-45 (houses alive at 45) goods ${avg(rs.filter((x) => x.h.income[45]).map((x) => x.h.cum45.goods))} research ${avg(rs.filter((x) => x.h.income[45]).map((x) => x.h.cum45.research))} mana ${avg(rs.filter((x) => x.h.income[45]).map((x) => x.h.cum45.mana))}, kills ${avg(rs.map((x) => x.h.kills))} lost ${avg(rs.map((x) => x.h.lost))}, `
+          + `unit level r20 ${avg(rs.map((x) => x.h.levels[20]))} r40 ${avg(rs.map((x) => x.h.levels[40]))} r60 ${avg(rs.map((x) => x.h.levels[60]))}, workers r20 ${avg(rs.map((x) => x.h.workers[20]))} r40 ${avg(rs.map((x) => x.h.workers[40]))}`);
       };
       sumUp('AI houses', rows.filter((x) => x.ai));
       sumUp('all houses', rows);

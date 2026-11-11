@@ -5,9 +5,12 @@ import type { AttackDef, EquipSlot, GameState, Unit, UnitStats } from '../../cor
 import { BUILDINGS } from '../../data/buildings';
 import { FACTIONS, MONSTERS } from '../../data/factions';
 import { FISTS_ATTACK, ITEMS } from '../../data/items';
-import { ACTIVES, MAX_LEVEL, PASSIVES, xpToNext } from '../../data/skills';
+import { ACTIVES, PASSIVES, xpToNext } from '../../data/skills';
+import { augmentRank, augmentText, rankedName } from '../../data/ranks';
 import { techDamageMult } from '../../sim/research';
 import { HEAL_ORDER_ALERT } from '../../sim/orders';
+import { POISON_DAMAGE } from '../../sim/turn';
+import { poisonOn } from '../../sim/combat';
 import { bodyVariant, effectiveStats, getAttackDefs, isMounted } from '../../sim/units';
 import { Bar, Kbd, TipCard } from '../common';
 import { dutyOf, ORDER_DUTY } from '../../game/duty';
@@ -34,10 +37,10 @@ const EFF_NAMES: Record<string, string> = {
 };
 
 const BUFF_INFO: Record<string, { name: string; icon: string; text: (b: Unit['buffs'][number]) => string }> = {
-  bless: { name: 'Blessed', icon: 'star', text: (b) => `+${Math.round(((b.damageMult ?? 1.2) - 1) * 100)}% damage, +${b.armor ?? 10} armor` },
-  fortify: { name: 'Fortified', icon: 'shield', text: (b) => `+${b.armor ?? 20} armor` },
+  bless: { name: 'Blessed', icon: 'star', text: (b) => `+${Math.round(((b.damageMult ?? 1.2) - 1) * 100)}% damage, +${b.armor ?? 10}% armor` },
+  fortify: { name: 'Fortified', icon: 'shield', text: (b) => `+${b.armor ?? 7.5}% armor` },
   haste: { name: 'Hasted', icon: 'boot', text: () => 'Extra movement this turn' },
-  powerstrike: { name: 'Power Strike', icon: 'sword', text: () => 'Next melee attack deals 50% more damage' },
+  powerstrike: { name: 'Power Strike', icon: 'sword', text: (b) => `Next melee attack deals ${Math.round(((b.damageMult ?? 1.15) - 1) * 100)}% more damage` },
   farsight: { name: 'Farsight', icon: 'eye', text: () => 'Revealing a distant area' },
 };
 
@@ -78,7 +81,8 @@ const STAT_HELP: Record<keyof UnitStats, string> = {
   str: 'Melee damage: +1 per strike for every 2 points.',
   dex: 'Ranged damage: +1 per strike for every 2 points.',
   int: 'Damage of magic attacks (staff, wand: +1 per 2 points) and spell range from a Mage Tower (+1 per 3 points). Spell and Firebolt damage is fixed.',
-  armor: 'Reduces damage from attacks and Volley by this percentage. Spells, Firebolt, poison and starvation ignore it.',
+  armor: 'After block, takes this percentage off the damage of every strike that hits (at most 70). Spells, Firebolt, poison and starvation ignore it.',
+  block: 'Flat damage taken off every strike that hits, before armor. Magic attacks and flanking strikes pass it by; so do spells, Firebolt, poison and starvation.',
   mov: 'Movement points per turn.',
   vis: 'Vision radius in hexes.',
 };
@@ -103,7 +107,6 @@ export function UnitPanel() {
   const body = safe(() => bodyVariant(u), u.isLeader ? 'leader' : 'commoner');
   const mounted = safe(() => isMounted(u), !!u.equipment.mount);
   const toNext = xpToNext(u.level);
-  const maxed = u.level >= MAX_LEVEL;
   const segs = xpSegments(u, toNext);
   const here = buildingAtHex(s, u.pos);
   const hereOwn = here && here.owner === viewer && isComplete(here) ? here : null;
@@ -114,7 +117,7 @@ export function UnitPanel() {
   const skipped = ui.skippedUnits.includes(u.id);
 
   const xpTip = () => (
-    <TipCard title={maxed ? `Level ${u.level} — maximum` : `Experience ${fmt(u.xp)} / ${toNext}`} sub="XP earned this level (lifetime in brackets)">
+    <TipCard title={`Experience ${fmt(u.xp)} / ${toNext}`} sub="XP earned this level (lifetime in brackets)">
       <table class="breakdown">
         <tbody>
           {XP_CATS.filter((c) => c !== 'leader' || u.isLeader).map((c) => (
@@ -159,7 +162,7 @@ export function UnitPanel() {
           <div class="up-faction"><Emblem faction={u.faction} size={18} /><span>{fd.name}</span></div>
           <div class="up-status">
             {!own && <span class="pill pill-enemy">{u.faction === 'neutral' ? 'Hostile beast' : 'Enemy'}</span>}
-            {u.poisoned && <span class="pill pill-bad" {...tip('Poisoned: loses 4 HP each turn until cured at a castle or shrine')}><Sym name="poison" />Poisoned</span>}
+            {u.poisoned && <span class="pill pill-bad" {...tip(`Poisoned: loses ${safe(() => poisonOn(u), POISON_DAMAGE)} HP each turn until cured at a castle or shrine`)}><Sym name="poison" />Poisoned</span>}
             {u.buffs?.map((b, i) => {
               const info = BUFF_INFO[b.id];
               return info ? <span key={i} class="pill pill-good" {...tip(`${info.text(b)} · ${b.turns} turn${b.turns === 1 ? '' : 's'} left`)}><Sym name={info.icon} />{info.name}</span> : null;
@@ -182,9 +185,8 @@ export function UnitPanel() {
       <div class="up-bars">
         <Bar kind="hp" value={u.hp} max={stats.maxHp} label={`${fmt(u.hp)} / ${fmt(stats.maxHp)}`}
           tipContent={`Hit points${stats.maxHp !== u.base.maxHp ? ` (base ${u.base.maxHp})` : ''}`} />
-        <Bar kind="xp" value={u.xp} max={toNext} label={maxed ? 'MAX' : `${fmt(u.xp)} / ${toNext}`} tipContent={xpTip}>
-          {maxed ? <div class="bar-fill xp-max" style={{ width: '100%' }} />
-            : segs.map((g) => <div key={g.cat} class={`bar-seg xp-${g.cat}`} style={{ width: `${g.frac * 100}%` }} />)}
+        <Bar kind="xp" value={u.xp} max={toNext} label={`${fmt(u.xp)} / ${toNext}`} tipContent={xpTip}>
+          {segs.map((g) => <div key={g.cat} class={`bar-seg xp-${g.cat}`} style={{ width: `${g.frac * 100}%` }} />)}
         </Bar>
       </div>
 
@@ -192,6 +194,7 @@ export function UnitPanel() {
         <StatCell k="str" eff={stats.str} base={u.base.str} />
         <StatCell k="dex" eff={stats.dex} base={u.base.dex} />
         <StatCell k="int" eff={stats.int} base={u.base.int} />
+        <StatCell k="block" eff={stats.block} base={u.base.block ?? 0} />
         <StatCell k="armor" eff={stats.armor} base={u.base.armor} />
         <StatCell k="mov" eff={stats.mov} base={u.base.mov} extra={own ? `${fmt(u.mp)}/${fmt(stats.mov)}` : undefined} />
         <StatCell k="vis" eff={stats.vis} base={u.base.vis} />
@@ -223,7 +226,7 @@ export function UnitPanel() {
           return (
             <div class={cls('attack-row', `atk-${a.kind}`)} key={i}
               {...tip(<TipCard title={a.name} sub={`${a.kind[0].toUpperCase() + a.kind.slice(1)} attack · range ${a.range}`}>
-                {fmt(dmg)} damage per strike before the target's armor, {a.strikes} strike{a.strikes === 1 ? '' : 's'}.
+                {fmt(dmg)} damage per strike before the target's block and armor, {a.strikes} strike{a.strikes === 1 ? '' : 's'}.
                 {a.kind === 'magic' && ' Magic always has a 70% chance to hit.'}
                 {a.firststrike && ' First strike: always strikes first, even when defending.'}
                 {a.vsMounted && ` ×${a.vsMounted} damage against mounted units.`}
@@ -244,18 +247,22 @@ export function UnitPanel() {
             {foreignActives.map((a) => {
               const def = ACTIVES[a];
               const cd = u.cooldowns?.[a] ?? 0;
+              const rank = augmentRank(u, a);
               return (
-                <span class="passive learned" key={a} {...tip(<TipCard icon={<Icon k={def.icon} size={32} />} title={def.name}
-                  sub={`Active · cooldown ${def.cooldown}${cd > 0 ? ` · ready in ${cd}` : ' · ready'}`}>{def.description}</TipCard>)}>
+                <span class="passive learned" key={a} {...tip(<TipCard icon={<Icon k={def.icon} size={32} />} title={rankedName(def.name, rank)}
+                  sub={`Active${rank > 1 ? ` · rank ${rank}` : ''} · cooldown ${def.cooldown}${cd > 0 ? ` · ready in ${cd}` : ' · ready'}`}>{augmentText(a, rank)}</TipCard>)}>
                   <Icon k={def.icon} size={22} dim={cd > 0} />
+                  {rank > 1 && <span class="passive-rank">{rank}</span>}
                 </span>
               );
             })}
             {u.passives.map((p) => {
               const def = PASSIVES[p];
+              const rank = augmentRank(u, p);
               return def ? (
-                <span class="passive" key={p} {...tip(<TipCard icon={<Icon k={def.icon} size={32} />} title={def.name} sub="Passive">{def.description}</TipCard>)}>
+                <span class="passive" key={p} {...tip(<TipCard icon={<Icon k={def.icon} size={32} />} title={rankedName(def.name, rank)} sub={rank > 1 ? `Passive · rank ${rank}` : 'Passive'}>{augmentText(p, rank)}</TipCard>)}>
                   <Icon k={def.icon} size={22} />
+                  {rank > 1 && <span class="passive-rank">{rank}</span>}
                 </span>
               ) : null;
             })}

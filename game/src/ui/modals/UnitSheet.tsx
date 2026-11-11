@@ -7,12 +7,14 @@ import type { EquipSlot, GameState, Unit, UnitStats } from '../../core/types';
 import { BUILDINGS } from '../../data/buildings';
 import { FACTIONS, MONSTERS } from '../../data/factions';
 import { FISTS_ATTACK, ITEMS } from '../../data/items';
-import { LEADER_XP_MULT, MAX_LEVEL, xpToNext } from '../../data/skills';
+import { LEADER_XP_MULT, xpToNext } from '../../data/skills';
 import { TERRAIN } from '../../data/terrain';
 import { dutyOf } from '../../game/duty';
-import { tileDefense } from '../../sim/combat';
+import { poisonOn, tileDefense } from '../../sim/combat';
+import { skillRange } from '../../sim/skills';
 import { BARE_WORKER_MULT, unitIncome, unitUpkeep, workerMult, workerOf, WORKER_MULT } from '../../sim/economy';
 import { HEAL_ORDER_ALERT, ORDER_NAMES } from '../../sim/orders';
+import { POISON_DAMAGE, REST_HEAL } from '../../sim/turn';
 import { bodyVariant, canBuildWith, effectiveStats, getAttackDefs, isMounted, statBreakdown } from '../../sim/units';
 import { Bar, Btn, Output, TipCard } from '../common';
 import { useUi } from '../ctx';
@@ -23,8 +25,8 @@ import {
 } from '../sheet';
 import { tip } from '../tooltip';
 import {
-  buildingAtHex, cls, fmt, hexVisible, isComplete, isMyTurn, pct, portraitKey, safe, selectedUnitId, SLOT_EMPTY_SYM, tileAt, unitById, unitRole,
-  unitsOwned, viewerOf, XP_NAMES, xpSegments,
+  buildingAtHex, cls, fmt, hexVisible, isComplete, isMyTurn, pct, portraitKey, safe, selectedUnitId, SLOT_EMPTY_SYM, tileAt,
+  unitById, unitRole, unitsOwned, viewerOf, XP_NAMES, xpSegments,
 } from '../util';
 import { itemSummary } from './Forge';
 import { optionIcon } from './LevelUp';
@@ -36,10 +38,10 @@ const SLOTS: { slot: EquipSlot; label: string }[] = [
   { slot: 'trinket', label: 'Trinket' }, { slot: 'mount', label: 'Mount' },
 ];
 
-const STAT_SYM: Record<keyof UnitStats, string> = { maxHp: 'heart', str: 'fist', dex: 'ranged', int: 'magic', armor: 'shield', mov: 'boot', vis: 'eye' };
+const STAT_SYM: Record<keyof UnitStats, string> = { maxHp: 'heart', str: 'fist', dex: 'ranged', int: 'magic', block: 'shield', armor: 'plate', mov: 'boot', vis: 'eye' };
 
 const ORDER_HELP: Record<NonNullable<Unit['order']>, string> = {
-  heal: `Stays put and rests (+2 HP a turn) until it is fully healed. A hostile within ${HEAL_ORDER_ALERT} hexes, or an attack, wakes it.`,
+  heal: `Stays put and rests (+${REST_HEAL} HP a turn) until it is fully healed. A hostile within ${HEAL_ORDER_ALERT} hexes, or an attack, wakes it.`,
   sentry: 'Keeps watch where it stands. A hostile coming into its sight, or an attack, wakes it.',
 };
 
@@ -69,7 +71,6 @@ function Hero({ s, u, own, stats }: { s: GameState; u: Unit; own: boolean; stats
   const body = safe(() => bodyVariant(u), u.isLeader ? 'leader' : 'commoner');
   const name = u.monster ? (u.name || MONSTERS[u.monster]?.name) : u.name;
   const toNext = xpToNext(u.level);
-  const maxed = u.level >= MAX_LEVEL;
   const segs = xpSegments(u, toNext);
   const myTurn = isMyTurn(s, store.ui);
   const duty = own && !u.order ? safe(() => dutyOf(s, u), null) : null;
@@ -87,7 +88,7 @@ function Hero({ s, u, own, stats }: { s: GameState; u: Unit; own: boolean; stats
     <div class="us-hero" style={{ '--fc': fd.color, '--fa': fd.accent } as Record<string, string>}>
       <div class="us-portrait-wrap">
         <Portrait k={portraitKey(u, body)} name={name} color={fd.color} class="us-portrait" />
-        <span class="us-level" {...tip(maxed ? `Level ${u.level} — the maximum` : `Level ${u.level}`)}><small>Lvl</small>{u.level}</span>
+        <span class="us-level" {...tip(`Level ${u.level}`)}><small>Lvl</small>{u.level}</span>
         {u.isLeader && <span class="leader-crown" {...tip('Leader — if they fall, the house is lost')}><Sym name="castle" /></span>}
       </div>
       <div class="us-vitals">
@@ -97,10 +98,9 @@ function Hero({ s, u, own, stats }: { s: GameState; u: Unit; own: boolean; stats
         </div>
         <div class="us-vital">
           <span class="us-vk">Experience</span>
-          <Bar kind="xp" value={u.xp} max={toNext} label={maxed ? 'Maximum level' : `${fmt(u.xp)} / ${toNext} to level ${u.level + 1}`}
-            tipContent={maxed ? 'This unit has reached the highest level.' : 'XP earned this level, by kind (see Experience below)'}>
-            {maxed ? <div class="bar-fill xp-max" style={{ width: '100%' }} />
-              : segs.map((g) => <div key={g.cat} class={`bar-seg xp-${g.cat}`} style={{ width: `${g.frac * 100}%` }} {...tip(`${XP_NAMES[g.cat]}: ${fmt(g.amount)} XP`)} />)}
+          <Bar kind="xp" value={u.xp} max={toNext} label={`${fmt(u.xp)} / ${toNext} to level ${u.level + 1}`}
+            tipContent="XP earned this level, by kind (see Experience below)">
+            {segs.map((g) => <div key={g.cat} class={`bar-seg xp-${g.cat}`} style={{ width: `${g.frac * 100}%` }} {...tip(`${XP_NAMES[g.cat]}: ${fmt(g.amount)} XP`)} />)}
           </Bar>
         </div>
         <div class="us-facts">
@@ -130,7 +130,7 @@ function Hero({ s, u, own, stats }: { s: GameState; u: Unit; own: boolean; stats
             <Sym name={u.order === 'heal' ? 'heart' : 'eye'} />{ORDER_NAMES[u.order]}</span>}
           {duty && <span class="pill pill-work" {...tip('A standing job: left out of Tab and the idle count')}><Sym name="hammer" />{duty}</span>}
           {turnState && <span class={cls('pill', turnState === 'Ready' ? 'pill-good' : 'pill-dim')}>{turnState}</span>}
-          {u.poisoned && <span class="pill pill-bad" {...tip('Loses 4 HP each turn until cured at a castle or shrine, or by Mend / Healing Light')}><Sym name="poison" />Poisoned</span>}
+          {u.poisoned && <span class="pill pill-bad" {...tip(`Loses ${safe(() => poisonOn(u), POISON_DAMAGE)} HP each turn until cured at a castle or shrine, or by Mend / Healing Light`)}><Sym name="poison" />Poisoned</span>}
           {u.buffs?.map((b, i) => {
             const info = BUFF_INFO[b.id];
             return info ? (
@@ -199,7 +199,7 @@ function AttackRow({ l }: { l: AttackLine }) {
         <KindIcon kind={a.kind} />
         <b class="us-atk-name">{a.name}</b>
         <span class="us-atk-kind">{kind} · {a.range > 1 ? `range ${a.range}` : 'adjacent'}</span>
-        <span class="us-atk-dmg" {...tip('Damage per strike before the target\'s armor × strikes')}>{fmt(l.perStrike)}<small>×</small>{a.strikes}</span>
+        <span class="us-atk-dmg" {...tip('Damage per strike before the target\'s block and armor × strikes')}>{fmt(l.perStrike)}<small>×</small>{a.strikes}</span>
       </div>
       <div class="us-atk-formula">
         <span>{fmt(l.base)} base</span>
@@ -300,9 +300,9 @@ function AugmentList({ u, own }: { u: Unit; own: boolean }) {
           <div key={d.id} class="us-aug kind-active">
             <span class="us-aug-icon"><Icon k={d.icon} size={40} dim={cd > 0} />{cd > 0 && <span class="us-cd">{cd}</span>}</span>
             <span class="us-aug-main">
-              <b>{d.name}</b>
+              <b>{d.name}{d.rank > 1 && <small class="t-dim"> · rank {d.rank}</small>}</b>
               <span class="us-aug-meta">
-                Cooldown {d.cooldown}{d.range ? ` · range ${d.range}` : ''} · {cd > 0 ? <span class="t-warn">ready in {cd} turn{cd === 1 ? '' : 's'}</span> : <span class="t-good">ready</span>}
+                Cooldown {d.cooldown}{d.range ? ` · range ${safe(() => skillRange(u, d.id), d.range)}` : ''} · {cd > 0 ? <span class="t-warn">ready in {cd} turn{cd === 1 ? '' : 's'}</span> : <span class="t-good">ready</span>}
               </span>
               <span class="us-aug-desc">{d.description}</span>
             </span>
@@ -313,7 +313,7 @@ function AugmentList({ u, own }: { u: Unit; own: boolean }) {
       {a.passives.map((p) => (
         <div key={p.id} class="us-aug kind-passive">
           <span class="us-aug-icon"><Icon k={p.icon} size={40} /></span>
-          <span class="us-aug-main"><b>{p.name}</b><span class="us-aug-desc">{p.description}</span></span>
+          <span class="us-aug-main"><b>{p.name}{p.rank > 1 && <small class="t-dim"> · rank {p.rank}</small>}</b><span class="us-aug-desc">{p.description}</span></span>
         </div>
       ))}
       {a.crafts.length > 0 && <div class="us-sub">Building skills</div>}
@@ -471,7 +471,7 @@ export function UnitSheetModal() {
         </div>
       </div>
       <SheetCard title="Experience" icon="research" class="us-wide"
-        right={<span class="t-dim">{u.level >= MAX_LEVEL ? 'maximum level' : `${fmt(u.xp)} / ${xpToNext(u.level)} XP to level ${u.level + 1}`}</span>}>
+        right={<span class="t-dim">{`${fmt(u.xp)} / ${xpToNext(u.level)} XP to level ${u.level + 1}`}</span>}>
         <XpTable u={u} />
       </SheetCard>
     </Modal>

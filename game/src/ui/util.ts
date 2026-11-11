@@ -219,7 +219,7 @@ export function xpSegments(u: Unit, toNext: number): { cat: XpCategory; frac: nu
     .filter((seg) => seg.frac > 0);
 }
 
-/** Display damage per strike of an attack before target armor (mirrors DESIGN §4.4 for UI). */
+/** Display damage per strike of an attack before the target's block and armor (mirrors DESIGN §4.4 for UI). */
 export function displayDamage(u: Unit, a: AttackDef, stats: UnitStats, extraMult = 1): number {
   const stat = a.kind === 'melee' ? stats.str : a.kind === 'ranged' ? stats.dex : stats.int;
   const effKey = a.kind === 'melee' ? 'attack' : a.kind;
@@ -233,7 +233,7 @@ export function displayDamage(u: Unit, a: AttackDef, stats: UnitStats, extraMult
 /** Stat differences between two partial stat blocks (b - a), non-zero only. */
 export function statDelta(a: Partial<UnitStats> | undefined, b: Partial<UnitStats> | undefined): Partial<UnitStats> {
   const out: Partial<UnitStats> = {};
-  const keys: (keyof UnitStats)[] = ['maxHp', 'str', 'dex', 'int', 'armor', 'mov', 'vis'];
+  const keys: (keyof UnitStats)[] = ['maxHp', 'str', 'dex', 'int', 'block', 'armor', 'mov', 'vis'];
   for (const k of keys) {
     const d = (b?.[k] ?? 0) - (a?.[k] ?? 0);
     if (d !== 0) out[k] = d;
@@ -259,10 +259,10 @@ export const SLOT_EMPTY_SYM: Record<'main' | 'off' | 'body' | 'trinket' | 'mount
 };
 
 export const STAT_LABELS: Record<keyof UnitStats, string> = {
-  maxHp: 'HP', str: 'STR', dex: 'DEX', int: 'INT', armor: 'ARM', mov: 'MOV', vis: 'VIS',
+  maxHp: 'HP', str: 'STR', dex: 'DEX', int: 'INT', armor: 'ARM', block: 'BLK', mov: 'MOV', vis: 'VIS',
 };
 export const STAT_NAMES: Record<keyof UnitStats, string> = {
-  maxHp: 'Max HP', str: 'Strength', dex: 'Dexterity', int: 'Intellect', armor: 'Armor', mov: 'Movement', vis: 'Vision',
+  maxHp: 'Max HP', str: 'Strength', dex: 'Dexterity', int: 'Intellect', armor: 'Armor', block: 'Block', mov: 'Movement', vis: 'Vision',
 };
 
 export function formatStatDelta(d: Partial<UnitStats>): string {
@@ -304,6 +304,15 @@ export function cls(...parts: (string | false | null | undefined)[]): string {
 export function hexLabel(h: Hex): string {
   return `${h.q}, ${h.r}`;
 }
+/** Roman numeral for a rank (II, III, IV…); plain digits past 3999. */
+export function roman(n: number): string {
+  if (!Number.isInteger(n) || n < 1 || n > 3999) return String(n);
+  const parts: [number, string][] = [[1000, 'M'], [900, 'CM'], [500, 'D'], [400, 'CD'], [100, 'C'], [90, 'XC'], [50, 'L'], [40, 'XL'], [10, 'X'], [9, 'IX'], [5, 'V'], [4, 'IV'], [1, 'I']];
+  let out = '';
+  for (const [v, sym] of parts) while (n >= v) { out += sym; n -= v; }
+  return out;
+}
+
 export function plural(n: number, one: string, many = one + 's'): string {
   return `${n} ${n === 1 ? one : many}`;
 }

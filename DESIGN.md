@@ -34,7 +34,7 @@ is its code form; `game/src/data/*` holds the balance numbers.
 The human player picks a faction in the main menu (default Valen) and the number of AI
 opponents (1–2; default 2). Each faction starts with: Leader (lv 2) + 2 Commoners (one
 with Builder's Tools), a Castle on the start hex, 1 Farm, 1 House, and resources
-`gold 60, food 30, wood 25, stone 15, iron 12, crystal 0, mana 0` — enough iron for a forge
+`gold 60, food 30, wood 40, stone 25, iron 12, crystal 0, mana 0` — enough iron for a forge
 plus a first sword, or a couple of builders, before the first Iron Mine. Each house also starts
 knowing its signature tech (`startingTechs`): Valen Tanning (archers from turn 1), Thorn Polearms
 (spears and war axes), Ashen Crystal Lore (crystal mines). House bonuses apply to every
@@ -72,26 +72,30 @@ controller, player or AI.
 ## 4. Units
 
 ### 4.1 Stats (`UnitStats`)
-`maxHp, str (melee), dex (ranged), int (magic), armor (% damage reduction, 0–70),
-mov (movement points), vis (vision radius)`.
+`maxHp, str (melee), dex (ranged), int (magic), block (flat damage off every strike that hits),
+armor (% damage reduction after block, 0–70), mov (movement points), vis (vision radius)`.
 
-Commoner base: `maxHp 22, str 4, dex 4, int 3, armor 0, mov 5, vis 4`.
-Leader base:  `maxHp 34, str 6, dex 5, int 5, armor 10, mov 5, vis 5`, starts level 2.
+Commoner base: `maxHp 30, str 4, dex 4, int 3, block 0, armor 0, mov 5, vis 4`.
+Leader base:  `maxHp 46, str 6, dex 5, int 5, block 1, armor 10, mov 5, vis 5`, starts level 2.
 
-Race modifiers (added to base stats, `data/factions.ts` `statMods`): human +1 dex; orc +4 maxHp,
+Race modifiers (added to base stats, `data/factions.ts` `statMods`): human +1 dex; orc +5 maxHp,
 +1 str, −1 int; undead +2 int, +5 armor (armor is already a % reduction, so +5 points). House
 damage multipliers: valen ×1.1 ranged (`rangedMult`), thorn ×1.1 melee (`meleeMult`), ashen ×1.1
 magic (`magicMult`) and 0.5 food upkeep.
 
 Effective stats (`effectiveStats` in `sim/units.ts`) = `unit.base` + equipment stats (not for
-monsters) + Iron Skin (+8 armor) + armor buffs (Bless, Fortify), then the clamps (armor 0–70,
-mov/maxHp/vis ≥ 1, str/dex/int ≥ 0). `statBreakdown(state, unit)` explains every stat for the unit
+monsters) + Iron Skin (+1 block per rank) + armor buffs (Bless, Fortify; no buff gives block), then the clamps (armor
+0–70, block ≥ 0, mov/maxHp/vis ≥ 1, str/dex/int ≥ 0). `statBreakdown(state, unit)` explains every stat for the unit
 sheet: a `base` and signed `contributions` (`source` label, `kind`: `item`, `mount`, `passive`,
 `buff`, `faction`, `tech`, `other`) whose sum is exactly the effective value. Both read one shared
 sum, so they cannot drift. Since `unit.base` already holds the race mods, the level-up hit points
 (+4 per level above the starting one) and the stat picks, those are split back out of it (`faction`;
 `other` for "Level-ups (n × +4)" and "Level 3: +3 Strength"; a unit without a level history keeps
 its picks in `base`). Clamps show as `other` ("Armor cap (70)", "Minimum Movement (1)").
+
+Saves made before the block stat load through `migrateUnitBalance` (`sim/state.ts`): each unit gets
+the current base hit points, armor and block of its kind (hp moves with max hp, so wounds stay),
+orcs their +5 HP, and its recorded +Max HP and +Armor picks are brought to the current values.
 
 ### 4.2 Equipment slots (`EquipSlot`)
 `main` (tool, weapon, staff, wand), `off` (shield), `body` (armor/robe), `trinket`,
@@ -100,19 +104,19 @@ its picks in `base`). Clamps show as `other` ("Armor cap (70)", "Minimum Movemen
 ### 4.3 Items (`data/items.ts`)
 | id | slot | effect | cost | unlock |
 |---|---|---|---|---|
-| `tools` Builder's Tools | main | can build/upgrade; ×1.5 production of the building it works (×1.25 bare-handed); melee 4×2 | 6 wood, 4 iron... (cheap: 5 wood 2 iron) | start |
+| `tools` Builder's Tools | main | can build/upgrade; ×2.5 output of the building it works (×2 bare-handed); melee 4×2 | 5 wood 2 iron | start |
 | `sword` Iron Sword | main | melee 7×3 blade | 4 wood 6 iron | start |
 | `spear` Spear | main | melee 6×3 pierce, *firststrike*, +50% vs mounted | 6 wood 4 iron | Polearms |
 | `axe` War Axe | main | melee 10×2 | 4 wood 7 iron | Polearms |
 | `bow` Longbow | main (2H) | ranged 6×3 range 2; melee 2×1 | 8 wood 1 iron | start |
 | `staff` Magic Staff | main (2H) | magic ranged 8×2 range 2 (70% hit), +2 int | 4 wood 4 crystal | Arcana |
 | `wand` Wand | main | magic ranged 5×3 range 2, +1 int, +1 mana/turn | 2 wood 3 crystal 1 iron | Wandcraft |
-| `shield` Shield | off | +12 armor, +5 terrain defense | 6 wood 3 iron | Shieldcraft |
-| `tunic` Padded Tunic | body | +5 armor | 4 food 2 gold (cloth) | start |
-| `leather` Leather Armor | body | +15 armor | 6 food 4 wood | Tanning |
-| `plate` Plate Armor | body | +30 armor, −1 mov | 10 iron 2 stone | Plate Smithing |
-| `robe` Mage Robe | body | +3 armor, +2 int, +1 mana/turn | 3 crystal 4 gold | Arcana |
-| `amulet` Amulet of Vigor | trinket | +8 maxHp, regen +2 | 3 crystal 6 gold | Jewelcraft |
+| `shield` Shield | off | +2 block, +5% armor, +5 terrain defense | 6 wood 3 iron | Shieldcraft |
+| `tunic` Padded Tunic | body | +1 block, +5% armor | 4 food 2 gold (cloth) | start |
+| `leather` Leather Armor | body | +2 block, +10% armor | 6 food 4 wood | Tanning |
+| `plate` Plate Armor | body | +3 block, +25% armor, −1 mov | 10 iron 2 stone | Plate Smithing |
+| `robe` Mage Robe | body | +5% armor, +2 int, +1 mana/turn | 3 crystal 4 gold | Arcana |
+| `amulet` Amulet of Vigor | trinket | +10 maxHp, regen +3 | 3 crystal 6 gold | Jewelcraft |
 | `ring` Ring of Focus | trinket | +2 int, +15% magic dmg | 4 crystal 4 gold | Jewelcraft |
 | `horse` Warhorse (race: wolf for orc, nightmare for undead — same item, different model) | mount | +3 mov, +25% melee when attacking from flat terrain (*charge*), −10 defense in forest/hills/swamp, cannot enter mountain | 10 food 6 gold 2 iron | Horsemanship |
 
@@ -125,16 +129,30 @@ own castle/forge/house/training ground/mage tower may **equip** from the stockpi
 Each unit has at most one melee and one ranged attack, from its `main` item (fists 3×2
 melee if none). Damage per strike:
 `base + floor(stat/2)` where stat = str (melee), dex (ranged), int (magic); then × efficiency
-multipliers (attack/ranged/magic), × buffs, × race bonus; then × (1 − target armor%).
-Rounded, min 1.
+multipliers (attack/ranged/magic), × buffs, × race bonus, × flanking (1.25, §4.5); then minus the
+target's block (not for magic, nor for a flanking strike), then × (1 − target armor%). Rounded, min 1:
+`max(1, round(max(0, raw − block) × (1 − armor%)))`. Block makes armor a mix of flat and percentage
+protection: a plate-and-shield knight (block 5, armor 30%) takes 3 from a 9-damage sword stroke and
+still 6 from a 14-damage axe blow, so many light strikes break on it while heavy blows bite.
 Spell and active-skill damage (Fireball, Storm of Ruin, Firebolt) is fixed: not scaled by stats or
-multipliers and not reduced by armor. Volley is a real ranged attack (60% damage per arrow) and does
-use armor.
+multipliers and not reduced by block or armor. Volley is a real ranged attack (60% damage per arrow)
+and does meet block and armor.
 
 ### 4.5 Combat (`sim/combat.ts`) — Wesnoth-like
 * Melee: target adjacent. Ranged/magic: target within range (2). Defender retaliates with
   the attack of the **same kind** (melee vs melee, ranged/magic vs ranged/magic) if it has
   one *and* the attacker is within that attack's range.
+* **One reaction per turn.** A unit retaliates at most `reactionsPerTurn` times per turn: 1, plus 1
+  per rank of the Combat Reflexes passive (`reflexes`, learnable again: rank 2 retaliates 3 times). `unit.reacted` counts the retaliations made; every
+  turn start (any house's, and the wilds') clears it for every unit (`clearReactions`). A defender
+  with none left takes the blows without answering; the forecast has `defender: null` and
+  `defenderSpent: true` ("Already retaliated this turn"). So the first attacker eats the riposte and
+  the next ones strike freely: focus fire wears a strong unit down.
+* **Flanking.** A melee strike (attack or retaliation) whose striker has a unit of its own house on
+  the hex directly opposite it around the target (`oppositeHex`: axial `2·target − striker`) is a
+  flank: ×`FLANK_MULT` 1.25 damage and the target's block is ignored (forecast mod `flank`). Two
+  cheap fighters on either side of a knight hurt it; a unit that steps between two enemies can be
+  flanked on their ripostes the same way.
 * Strikes alternate attacker, defender, attacker, … until both have used their strikes or
   one dies. *firststrike* on the defender makes it strike first.
 * Hit chance = `100 − defender tile defense` (+ wall/castle bonus, + shield +5, mounted
@@ -142,7 +160,7 @@ use armor.
 * Forecast (`forecastCombat`) gives exact probabilities of each side's HP outcome
   (dynamic programming over strike sequence) and expected damage; the UI shows it on
   hover before the click.
-* XP: attacker and defender each get XP = 1 + 1 per strike landed, in the category of the attack
+* XP: attacker and defender each get XP = 2 (`COMBAT_XP`) + 1 per strike landed, in the category of the attack
   kind each used (`melee`, `ranged` or `magic`; a defender that cannot answer learns in its own
   main weapon's kind); a kill grants `8 × target.level` (4 for level-0 summons) in the kind of
   the killing blow (Volley → `ranged`, Firebolt and spells → `magic`).
@@ -161,27 +179,31 @@ Seven XP categories (`XP_CATEGORIES` in `data/skills.ts`), so a unit's trade sha
 
 | category | name | earned by |
 |---|---|---|
-| `melee` | Melee | melee attacks and parries, melee kills, Training Ground drill (+5/+8/+10) for a unit whose main weapon is not ranged |
+| `melee` | Melee | melee attacks and parries (2 + hits), melee kills, Training Ground drill (+5/+8/+10) for a unit whose main weapon is not ranged |
 | `ranged` | Ranged | ranged attacks and return fire, ranged kills, Volley, Training Ground drill for a unit with a bow |
-| `building` | Building | construction and upgrades with Builder's Tools (+3 per turn), the leader raising its castle |
-| `civic` | Civic | working a building (+2 per turn without acting; §5), the castle included for anyone but the leader, the smith on a forge (+2 per item crafted) |
+| `building` | Building | construction and upgrades with Builder's Tools (+5 per turn), the leader raising its castle |
+| `civic` | Civic | working a building (+5 per turn without acting; §5), the castle included for anyone but the leader, the smith on a forge (+2 per item crafted) |
 | `explore` | Exploration | +1 per 3 new hexes revealed, ruins +12 |
-| `leader` | Leadership | leader only: +2 per unit recruited, +1 per allied kill within 3 hexes, working its own castle (+2) |
+| `leader` | Leadership | leader only: +2 per unit recruited, +1 per allied kill within 3 hexes, working its own castle (+5) |
 | `magic` | Research & Magic | magic attacks, Firebolt, Mend, spells cast from the tower the unit stands in (+6), Mage Tower drill (+3/+5/+6), working a building that yields research or mana (library, watchtower, shrine, mage tower; not the castle: it is the seat of rule, and teaches civic) |
 
-Inspiring gives 1 XP in the ally's main category (its largest share this level, else lifetime,
+Inspiring gives 3 XP per rank in the ally's main category (its largest share this level, else lifetime,
 else by kit: builder → `building`, archer → `ranged`, fighter → `melee`, mage → `magic`, leader
 → `leader`). Leader gets ×1.3 on all XP (fractions carry over to the next grant). Saves made
 before the split load with `civil` → `civic` and `fight` → `ranged` for a unit whose main weapon
 is ranged, else `melee` (`migrateUnitXp` in `sim/state.ts`).
 
-XP to next level: `25 + 15 × level`. Level cap 10. On level-up: `maxHp += 4` (heal 4),
+XP to next level: `20 + 10 × level` (30, 40, 50, …). There is no level cap: the curve keeps climbing
+(level 20 → 21 costs 220). On level-up: `maxHp += 4` (heal 4),
 then the owner picks **1 of 3 options**. Options are drawn from four kinds:
 `stat`, `efficiency`, `passive`, `active` (see `data/skills.ts`). Each option has category
 tags; the draw weights each candidate by the share of XP earned in its categories during
 that level (+ a small base weight + randomness). A level's tally closes the moment the level is
-reached: XP earned while the choice waits (and the overflow) counts toward the next level. Already-owned passives/actives are
-excluded. The draw softly avoids repeating an option kind on one offer, and offers at most one
+reached: XP earned while the choice waits (and the overflow) counts toward the next level. Augments a
+unit already has stay on offer: taking one again is an **upgrade**, one rank more (§4.8 "Ranks"). Only
+the building unlocks (Masonry, Devotion) drop out once learned. An owned augment's weight is ×0.8 per
+rank it already has, so fresh augments keep turning up beside the upgrades; the AI values each further
+rank 2 points less. The draw softly avoids repeating an option kind on one offer, and offers at most one
 option outside the level's XP categories (a cross-trade wildcard such as Firebolt for a knight);
 bow skills (Volley, Keen Eye, Marksman) are less likely (×0.4) for a unit without a ranged attack,
 and melee-only options (+3 Strength, Weapon Mastery, Venom Blades, Berserker, Power Strike) are
@@ -192,8 +214,8 @@ likewise ×0.4 for a unit whose main weapon shoots or casts. Option categories (
 | +3 str · Weapon Mastery · Venom Blades · Iron Skin · Berserker · Power Strike | melee |
 | +3 dex | ranged, explore |
 | +3 int · Arcane Focus · Mana Spring · Firebolt | magic |
-| +6 max HP | melee, building, leader |
-| +6 armor | melee, leader |
+| +8 max HP | melee, building, leader |
+| +1 block, +5% armor | melee, leader |
 | +1 mov · Pathfinder | explore |
 | +1 vis · Skirmisher | explore, ranged |
 | Keen Eye · Marksman · Volley | ranged |
@@ -206,6 +228,7 @@ likewise ×0.4 for a unit whose main weapon shoots or casts. Option categories (
 | Leadership | leader, melee |
 | Scholar · Mend | magic, civic, leader |
 | Inspiring | leader, civic |
+| Combat Reflexes | melee, ranged, leader |
 | Rally | leader |
 | Fortify | melee, building |
 | Blink | magic, explore |
@@ -228,27 +251,61 @@ choices off: they stay behind a "Level up" reminder by End Turn and a star badge
 portrait (both open the window), and the window only opens by itself again for a newer level-up.
 
 ### 4.8 Skills (`data/skills.ts`)
-* **Stats**: +3 str, +3 dex, +3 int, +6 maxHp, +6 armor, +1 mov, +1 vis.
+* **Stats**: +3 str, +3 dex, +3 int, +8 maxHp, +1 block and +5% armor, +1 mov, +1 vis.
 * **Efficiency**: ×1.25 on one of `attack`, `ranged`, `magic`, `farming`, `building`
   (build points & production of the worked building), `mining` (iron/stone/crystal),
   `gathering` (wood), `mana` (also own wand/robe mana), `research`, `trade` (gold). Work
   efficiencies apply to the building the unit works (tools or not).
-* **Passive**: `regeneration` (+4 hp/turn), `poison` (melee hits poison: 4 dmg/turn,
+* **Passive**: `regeneration` (+2 hp/turn), `poison` (melee hits poison: 5 dmg/turn,
   until healed in a castle/shrine), `skirmisher` (ignores ZOC), `pathfinder` (forest/hills
-  cost 1), `ironskin` (+8 armor), `leadership` (adjacent allies +15% damage),
+  cost 1), `ironskin` (+1 block), `leadership` (adjacent allies +15% damage),
   `harvester` (+1 food/turn), `prospector` (+1 iron/turn), `manaspring` (+1 mana/turn),
   `scholar` (+1 research/turn), `marksman` (ranged hit chance min 60%), `berserker` (+25%
   melee dmg when below 50% hp), `vampiric` (heal 30% of melee damage dealt), `inspiring`
-  (+1 XP to adjacent allies per turn, in the category each ally earns most).
+  (+3 XP to adjacent allies per turn, in the category each ally earns most), `reflexes` (Combat
+  Reflexes: retaliate twice per turn instead of once).
 * **Active** (cooldown in turns; used from the unit panel; costs the unit's action — no attack
   after it, though Fortify and Mend leave movement — except `powerstrike` and `rally`, which are
   free so they can open an attack or a march):
-  `powerstrike` (next melee ×1.5 dmg, cd 3), `volley` (ranged attack on all enemies in
-  radius 1 of target at 60% dmg, cd 4), `heal` (adjacent ally or self +12 hp, cd 2), `firebolt`
-  (14 dmg ignoring armor, range 3, cd 3), `rally` (allies in radius 2 that have not attacked get +2 mp this turn, cd 4),
-  `fortify` (+20 armor until next turn, cd 3), `blink` (teleport up to 3 hexes, cd 4),
+  `powerstrike` (next melee ×1.15 dmg, cd 3), `volley` (ranged attack on all enemies in
+  radius 1 of target at 60% dmg, cd 4), `heal` (adjacent ally or self +15 hp, cd 2), `firebolt`
+  (18 dmg ignoring block and armor, range 3, cd 3), `rally` (allies in radius 2 that have not attacked get +2 mp this turn, cd 4),
+  `fortify` (+7.5% armor until next turn, no block, cd 3), `blink` (teleport up to 3 hexes, cd 4),
   **building unlocks**: `masonry` (can build Watchtower), `devotion` (can build Shrine)
   — these are permanent once learned (cd 0, not an action).
+
+**Ranks** (`data/ranks.ts`). Every passive and active skill except the two building unlocks can be
+learned again; each learning is one more rank. `unit.passives` / `unit.actives` hold each augment once
+and `unit.ranks` holds ranks of 2 and more (`augmentRank(unit, id)`: 0 without it, 1 once learned).
+Stats and efficiencies were already repeatable (+3 str again, ×1.25 again). Rank 1 is the effect above;
+each further rank adds (Regeneration, Iron Skin, Inspiring, Power Strike and the armor of Fortify scale from 0, so rank 1 is one step; they stay modest so items keep their worth):
+
+| augment | per rank | rank 2 | rank 3 |
+|---|---|---|---|
+| Regeneration | +2 HP/turn (rank 1: 2; the Amulet of Vigor's 3 still counts) | 4 | 6 |
+| Venom Blades | +3 poison/turn (a stronger venom replaces a weaker one on the victim, `unit.poisonDamage`) | 8 | 11 |
+| Skirmisher, Pathfinder | +1 movement from rank 2 | +1 mov | +2 mov |
+| Iron Skin | +1 block (rank 1: 1; a shield's 2 still counts) | 2 | 3 |
+| Leadership | +15% for adjacent allies (the strongest aura applies, auras never add up) | +30% | +45% |
+| Harvester, Prospector, Mana Spring, Scholar | +1 of its resource/turn | 2 | 3 |
+| Marksman | +5% minimum hit chance (at most 90%) | 65% | 70% |
+| Berserker | +25% melee below half HP | +50% | +75% |
+| Life Drinker | +10% of melee damage healed (at most 100%) | 40% | 50% |
+| Inspiring | +3 XP to each adjacent ally (rank 1: 3, a level-1 ally levels in 10 turns) | 6 | 9 |
+| Combat Reflexes | +1 riposte per turn | 3 | 4 |
+| Power Strike | +15% on the next melee attack (rank 1: ×1.15) | ×1.30 | ×1.45 |
+| Volley | +10% of ranged damage per arrow, before block and armor (at most 100%) | 70% | 80% |
+| Mend | +5 HP | 20 | 25 |
+| Firebolt | +6 damage | 24 | 30 |
+| Rally | +1 movement | +3 | +4 |
+| Fortify | +7.5% armor (no block: that stays Iron Skin's and the shield's) | 15% | 22.5% |
+| Blink | +1 hex range | 4 | 5 |
+
+`augmentText(id, rank)` states an augment at any rank and is the one source of the texts: the rank-1
+text is the augment's description, the level-up card of an upgrade names the rank it reaches
+("Firebolt II", kind label "Active skill · upgrade") with that rank's effect, the unit panel shows the
+rank on the chip and the sheet and command bar name and describe each augment at its rank. Saves load
+through `migrateAugmentRanks` (a repeated entry becomes a rank; stray ranks are dropped).
 
 ### 4.9 Presets (`data/presets.ts`)
 Recruit a Commoner pre-equipped; cost = commoner cost + item costs; requires item
@@ -280,14 +337,14 @@ capture where it stands until its next turn. Summoned elementals follow the same
 appear on another faction's building, and neither march nor capture on their first turn.
 
 Upkeep: each unit eats 1 food/turn (undead 0.5); leader free. If food < 0 at upkeep,
-every unit loses 3 hp (cannot die from starvation below 1 hp) and food is set to 0.
+every unit loses 4 hp (`STARVATION_DAMAGE`; cannot die from starvation below 1 hp) and food is set to 0.
 
 ### 4.10 Standing orders (`sim/orders.ts`)
 A unit can be told to stay put: **Rest until healed** (`'heal'`) or **Sentry** (`'sentry'`), with
 the action `{ type: 'order', unit, order: 'heal' | 'sentry' | null }` (null cancels). It is free (no
 movement, no action) and only for the house's own units on its turn; creatures (monsters, summons)
 take no orders, and Rest is refused at full HP. The order changes no rule: a unit that stays still
-already rests (+2 HP) and works the building it stands on. It only keeps the unit out of the
+already rests (+3 HP) and works the building it stands on. It only keeps the unit out of the
 "awaiting orders" list (Tab, the idle count; the panel reads "Resting until healed" / "On sentry")
 until something needs the player:
 * any move, attack, skill, build or upgrade by the unit clears it (silently);
@@ -312,9 +369,14 @@ tooltip and amber mark, a toast on Y/V), as it would end at the next turn start.
 ## 5. Buildings (`data/buildings.ts`)
 
 Built by a unit with `tools` standing on a valid hex inside or adjacent to own territory.
+Starting a construction pays `buildingCost(state, faction, type)`: the table cost below, +25%
+(`BUILDING_COST_STEP`) for every building of that type the house already owns, sites included, each
+resource rounded up, for every type that produces something (the castle, forge, training ground and
+wall keep their table cost). Buildings are an investment, and working the ones you have (×2, ×2.5
+with tools) is often the better deal than spreading another farm.
 Starting a construction pays the resource cost; the building then has `buildPoints`;
 each **end of turn** a tools-equipped unit standing on it that did not attack contributes
-`1 × building efficiency × (1 + 0.1 × level)` points (+ `building` 3 XP). Max level 3; an
+`1 × building efficiency × (1 + 0.1 × level)` points (+ `building` 5 XP, `BUILD_XP`). Max level 3; an
 upgrade costs `cost × level` and `buildPoints × level` and requires the tech
 `Architecture` (lv 2) / `Grand Architecture` (lv 3).
 
@@ -322,9 +384,9 @@ Production per level is `base × (1 + 0.5 × (level − 1))`. **Working a buildi
 any own unit (not a monster or summon) standing on an own functional building with some output
 (castle, house, farm, lumber camp, quarry, mines, library, mage tower, watchtower, shrine — an
 upgrade in progress keeps working at the current level) is its worker and multiplies the output
-by `WORKER_MULT 1.5` with Builder's Tools, `BARE_WORKER_MULT 1.25` bare-handed (any other weapon
+by `WORKER_MULT 2.5` with Builder's Tools, `BARE_WORKER_MULT 2` bare-handed (any other weapon
 too), times its `building` and resource efficiencies (each efficiency pick is +25% of the whole
-output). A worker earns 2 XP per turn it did not act (a unit recruited or summoned that turn has
+output). A worker earns 5 XP (`WORK_XP`) per turn it did not act (a unit recruited or summoned that turn has
 not worked yet): on the castle `leader` for the leader and `civic` for anyone else (fresh recruits
 stand there; its research must not hand them magic XP), else `magic` if the building yields
 research or mana, `civic` otherwise (`workerOf` / `workXpCategory` in `sim/economy.ts`). A castle with the leader on it also adds +10% to all own
@@ -335,20 +397,20 @@ to the older building.
 
 | id | allowed terrain | base output | cost | build pts | unlock | special |
 |---|---|---|---|---|---|---|
-| `castle` | grass/plains/hills | 3 gold 1 food 3 research | 20 stone 15 wood 20 gold | 6 | start (one per faction; building a new one moves the seat: old castle is destroyed) | +25 defense; recruit any preset when leader on it; heals +8 |
-| `house` | grass/plains/forest/hills | 2 gold | 8 wood 4 stone | 2 | start | recruit Commoner/Builder; heals +4 |
-| `farm` | grass/plains (+1 on fertile) | 3 food | 6 wood | 2 | start | |
-| `lumber` Lumber Camp | forest | 3 wood | 4 gold 2 stone | 2 | start | |
-| `quarry` | hills/mountain | 3 stone | 6 wood | 2 | start | |
-| `forge` | grass/plains/hills/crystal | — | 10 stone 6 wood 4 iron | 3 | start | crafting; armory |
-| `training` Training Ground | grass/plains | — | 10 wood 6 gold | 3 | start | +5/+8/+10 melee XP (by level) to units on it (ranged XP for a unit whose main weapon is ranged); recruit commoners/fighters/archers |
-| `mine` | iron deposit | 2 iron | 8 wood 6 stone | 3 | Mining | |
-| `crystalmine` Crystal Mine | crystal deposit | 2 crystal | 10 wood 8 stone 2 iron | 3 | Crystal Lore | |
-| `library` | grass/plains/hills/crystal | 3 research | 10 wood 8 stone 10 gold | 3 | Writing | |
-| `magetower` Mage Tower | any land except swamp | 2 mana | 12 stone 8 crystal 10 gold | 4 | Arcana | global spells; recruit mages; +3/+5/+6 magic XP (by level) to units on it |
-| `wall` | any land | — | 12 stone | 2 | Masonry (tech) | +20/+30/+40 defense; enemies cannot capture |
-| `watchtower` | any land | 1 research | 8 wood 6 stone | 2 | skill `masonry` | +3 vision radius around it, +10 defense |
-| `shrine` | any land | 1 mana | 6 stone 4 crystal | 2 | skill `devotion` | heals +8, cures poison |
+| `castle` | grass/plains/hills | 3 gold 1 food 3 research | 30 stone 20 wood 30 gold | 6 | start (one per faction; building a new one moves the seat: old castle is destroyed) | +25 defense; recruit any preset when leader on it; heals +10 |
+| `house` | grass/plains/forest/hills | 2 gold | 10 wood 6 stone 6 gold | 2 | start | recruit Commoner/Builder; heals +6 |
+| `farm` | grass/plains (+1 on fertile) | 3 food | 8 wood 6 gold | 2 | start | |
+| `lumber` Lumber Camp | forest | 3 wood | 8 gold 4 stone | 2 | start | |
+| `quarry` | hills/mountain | 3 stone | 8 wood 6 gold | 2 | start | |
+| `forge` | grass/plains/hills/crystal | — | 14 stone 8 wood 4 iron 8 gold | 3 | start | crafting; armory |
+| `training` Training Ground | grass/plains | — | 12 wood 14 gold | 3 | start | +5/+8/+10 melee XP (by level) to units on it (ranged XP for a unit whose main weapon is ranged); recruit commoners/fighters/archers |
+| `mine` | iron deposit | 2 iron | 10 wood 8 stone 8 gold | 3 | Mining | |
+| `crystalmine` Crystal Mine | crystal deposit | 2 crystal | 12 wood 10 stone 2 iron 8 gold | 3 | Crystal Lore | |
+| `library` | grass/plains/hills/crystal | 3 research | 12 wood 10 stone 20 gold | 3 | Writing | |
+| `magetower` Mage Tower | any land except swamp | 2 mana | 18 stone 10 crystal 16 gold | 4 | Arcana | global spells; recruit mages; +3/+5/+6 magic XP (by level) to units on it |
+| `wall` | any land | — | 16 stone | 2 | Masonry (tech) | +20/+30/+40 defense; enemies cannot capture |
+| `watchtower` | any land | 1 research | 10 wood 8 stone 4 gold | 2 | skill `masonry` | +3 vision radius around it, +10 defense |
+| `shrine` | any land | 1 mana | 10 stone 6 crystal | 2 | skill `devotion` | heals +10, cures poison |
 
 Capture: an enemy unit that **ends its turn** on a building (not wall, not castle) of
 another faction flips its ownership (construction progress is kept). A castle is
@@ -382,13 +444,13 @@ mana; each spell has a faction-wide cooldown. Casting gives the tower's unit 6 `
 
 | spell | mana | range | cd | effect |
 |---|---|---|---|---|
-| Healing Light | 20 | 6 | 2 | allies radius 1: +15 hp, cure poison |
-| Blessing | 25 | 6 | 3 | allies radius 1: +20% dmg, +10 armor, 2 turns |
-| Fireball | 30 | 7 | 2 | 18 dmg target hex, 8 to radius 1 (all units, own included), ignores armor |
+| Healing Light | 20 | 6 | 2 | allies radius 1: +20 hp, cure poison |
+| Blessing | 25 | 6 | 3 | allies radius 1: +20% dmg, +10% armor, 2 turns |
+| Fireball | 30 | 7 | 2 | 22 dmg target hex, 10 to radius 1 (all units, own included), ignores block and armor |
 | Haste | 15 | 8 | 2 | one ally that has not attacked: +3 mp now |
 | Farsight | 10 | 10 | 1 | reveal radius 4 for 3 turns |
-| Summon Elemental | 50 | 4 | 5 | summon Stone Elemental (own unit, 40 hp, melee 12×2, no upkeep, lives 8 turns) on target empty hex that holds no other faction's (or abandoned) building |
-| Storm of Ruin | 45 | 7 | 4 | 4 random bolts of 14 dmg in radius 2 (enemies only), ignores armor |
+| Summon Elemental | 50 | 4 | 5 | summon Stone Elemental (own unit, 54 hp, melee 12×2, no upkeep, lives 8 turns) on target empty hex that holds no other faction's (or abandoned) building |
+| Storm of Ruin | 45 | 7 | 4 | 4 random bolts of 18 dmg in radius 2 (enemies only), ignores block and armor |
 
 Mana also comes from robes/wands/passives. Mana cap: 100 + 50 per mage tower.
 
@@ -398,7 +460,8 @@ Factions act in order (player first). `endTurn(factionId)`:
 1. For the faction that ended: construction progress, building work XP, training ground XP.
 2. Advance to next faction; when the round wraps: `round++`.
 3. At the **start** of a faction's turn: production (+ upkeep), research progress,
-   healing (rest +2 if the unit didn't move or fight last turn; building heals), poison,
+   reactions cleared for every unit (§4.5), healing (rest +3 if the unit didn't move or fight last
+   turn; building heals), poison,
    buff/summon timers, cooldowns −1, `mp = mov`, `acted = false`, recruit sites reset,
    visibility refresh, standing orders (§4.10: a hostile in range or a healed rester ends them),
    level-up queue.
@@ -496,8 +559,8 @@ its vision). Layers:
 * **Feedback**: movement range overlay (reachable hexes tinted), path preview with
   move-cost dots, attackable enemies outlined red, combat forecast tooltip (placed beside the
   target, clear of the attacker's path and the HUD; lists the modifiers behind the numbers:
-  charge, Power Strike, leadership, berserker, bonus vs mounted, poison / drain on hit; names the
-  approach hex), spell and skill target previews (per affected unit: HP before → after, kill
+  charge, Power Strike, leadership, berserker, bonus vs mounted, flanking, poison / drain on hit;
+  a defender with no riposte left reads "Already retaliated this turn"; names the approach hex), spell and skill target previews (per affected unit: HP before → after, kill
   chance; damaging areas drawn fiery, and red-pink when own units are inside — such a cast needs a
   second click), terrain chip on hover with nothing selected (with a unit selected, past this turn's
   reach: the trip length, "too costly this turn" with the MP needed and when it can get there when

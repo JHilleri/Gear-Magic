@@ -6,8 +6,8 @@ import { tileIndex } from '../src/core/hex';
 import { applyAction } from '../src/sim/actions';
 import { killUnit, resolveCombat } from '../src/sim/combat';
 import {
-  BARE_WORKER_MULT, WORKER_MULT, buildingOutput, buildingXpPerTurn, craft, progressConstruction, recruit, startBuilding, workerOf,
-  workerResourceMult,
+  BARE_WORKER_MULT, BUILD_XP, WORKER_MULT, WORK_XP, buildingOutput, buildingXpPerTurn, craft, progressConstruction, recruit, startBuilding,
+  workerOf, workerResourceMult,
 } from '../src/sim/economy';
 import { migrateUnitXp, deserialize, serialize } from '../src/sim/state';
 import { computeVisibility } from '../src/sim/visibility';
@@ -16,7 +16,7 @@ import { XP_CATEGORIES } from '../src/data/skills';
 import { at, makeTestBuilding, makeTestState, makeTestUnit, setTerrain } from './helpers';
 
 const off = (h: Hex, dq: number, dr = 0): Hex => ({ q: h.q + dq, r: h.r + dr });
-const big = () => ({ maxHp: 200, str: 4, dex: 4, int: 3, armor: 0, mov: 5, vis: 4 });
+const big = () => ({ maxHp: 200, str: 4, dex: 4, int: 3, armor: 0, block: 0, mov: 5, vis: 4 });
 
 /** Categories with any lifetime XP. */
 const earned = (u: Unit): XpCategory[] => XP_CATEGORIES.filter((c) => (u.xpByCat[c] ?? 0) > 0);
@@ -63,7 +63,7 @@ describe('building, civic, research & magic, leadership XP', () => {
     const u = makeTestUnit(s, 'valen', off(at(5, 5), 1), { items: ['tools'] });
     startBuilding(s, u, 'farm');
     progressConstruction(s, 'valen');
-    expect(u.xpByCat.building).toBe(3);
+    expect(u.xpByCat.building).toBe(BUILD_XP);
     expect(earned(u)).toEqual(['building']);
 
     const s2 = makeTestState(14, 12);
@@ -85,17 +85,18 @@ describe('building, civic, research & magic, leadership XP', () => {
     const leader = makeTestUnit(s, 'valen', castle.pos, { isLeader: true });
     expect(workerOf(s, farm)).toBe(hand);
     progressConstruction(s, 'valen');
-    expect(hand.xpByCat.civic).toBe(2);
+    expect(hand.xpByCat.civic).toBe(WORK_XP);
     expect(earned(hand)).toEqual(['civic']);
     expect(earned(scholar)).toEqual(['magic']);
-    expect(scholar.xpByCat.magic).toBe(2);
+    expect(scholar.xpByCat.magic).toBe(WORK_XP);
     expect(earned(monk)).toEqual(['magic']);
     expect(earned(leader)).toEqual(['leader']);
-    expect(leader.xpByCat.leader).toBe(2); // 2 × 1.3 = 2.6 → 2, the 0.6 carries
+    expect(leader.xpByCat.leader).toBe(6); // WORK_XP 5 × 1.3 = 6.5 → 6, the 0.5 carries
+    expect(leader.xpFrac).toBeCloseTo(0.5);
     // A worker that acted this turn earns nothing for it.
     hand.acted = true;
     progressConstruction(s, 'valen');
-    expect(hand.xpByCat.civic).toBe(2);
+    expect(hand.xpByCat.civic).toBe(WORK_XP);
   });
 
   it('the castle teaches its leader leadership and anyone else civic, never magic', () => {
@@ -107,7 +108,7 @@ describe('building, civic, research & magic, leadership XP', () => {
     expect(workerOf(s, castle)).toBe(steward);
     progressConstruction(s, 'valen');
     expect(earned(steward)).toEqual(['civic']);
-    expect(steward.xpByCat.civic).toBe(2);
+    expect(steward.xpByCat.civic).toBe(WORK_XP);
     // Other research buildings still teach research & magic.
     expect(earned(lookout)).toEqual(['magic']);
   });
@@ -191,9 +192,9 @@ describe('drill grounds', () => {
     progressConstruction(s, 'valen');
     expect(archer.xpByCat).toMatchObject({ ranged: 5, melee: 0 });
     expect(sword.xpByCat).toMatchObject({ melee: 5, ranged: 0 });
-    // A mage in its tower: drill (3) plus working a mana building (2), all research & magic.
+    // A mage in its tower: drill (3) plus working a mana building (WORK_XP), all research & magic.
     expect(earned(mage)).toEqual(['magic']);
-    expect(mage.xpByCat.magic).toBe(3 + 2);
+    expect(mage.xpByCat.magic).toBe(3 + WORK_XP);
   });
 });
 
@@ -224,29 +225,30 @@ describe('main XP category fallback by kit', () => {
 });
 
 describe('worker output', () => {
-  it('bare-handed ×1.25, Builder\'s Tools ×1.5, both × the worker\'s efficiencies', () => {
-    expect(BARE_WORKER_MULT).toBe(1.25);
-    expect(WORKER_MULT).toBe(1.5);
+  it('bare-handed ×2, Builder\'s Tools ×2.5, both × the worker\'s efficiencies', () => {
+    expect(BARE_WORKER_MULT).toBe(2);
+    expect(WORKER_MULT).toBe(2.5);
     const s = makeTestState(14, 12);
     const farm = makeTestBuilding(s, 'farm', 'valen', at(3, 3));
     expect(buildingOutput(s, farm)).toEqual({ food: 3 });
     const w = makeTestUnit(s, 'valen', farm.pos);
-    expect(buildingOutput(s, farm).food).toBeCloseTo(3 * 1.25, 2);
+    expect(buildingOutput(s, farm).food).toBeCloseTo(3 * 2, 6);
     w.efficiency = { farming: 1.25, building: 1.25 };
-    expect(buildingOutput(s, farm).food).toBeCloseTo(3 * 1.25 * 1.25 * 1.25, 2);
+    // (Outputs keep 2 decimals: 3 × 2 × 1.25 × 1.25 = 9.375 → 9.38.)
+    expect(buildingOutput(s, farm).food).toBeCloseTo(9.38, 6);
     // The tile panel's "worked by" line reads the same multiplier, per resource.
-    expect(workerResourceMult(w, 'food')).toBeCloseTo(1.25 * 1.25 * 1.25, 6);
-    expect(workerResourceMult(w, 'gold')).toBeCloseTo(1.25 * 1.25, 6);
+    expect(workerResourceMult(w, 'food')).toBeCloseTo(2 * 1.25 * 1.25, 6);
+    expect(workerResourceMult(w, 'gold')).toBeCloseTo(2 * 1.25, 6);
     w.equipment.main = 'tools';
-    expect(buildingOutput(s, farm).food).toBeCloseTo(3 * 1.5 * 1.25 * 1.25, 2);
+    expect(buildingOutput(s, farm).food).toBeCloseTo(11.72, 6); // 3 × 2.5 × 1.25 × 1.25 = 11.71875
     w.efficiency = {};
     w.equipment.main = 'sword';
-    expect(buildingOutput(s, farm).food).toBeCloseTo(3.75, 2); // any weapon works it bare-handed
+    expect(buildingOutput(s, farm).food).toBeCloseTo(6, 6); // any weapon works it bare-handed: 3 × 2
     // The leader holding its castle works it (and still gives every building +10%).
     const castle = makeTestBuilding(s, 'castle', 'valen', at(8, 6));
     makeTestUnit(s, 'valen', castle.pos, { isLeader: true });
-    expect(buildingOutput(s, castle).gold).toBeCloseTo(3 * 1.25 * 1.1, 2);
-    expect(buildingOutput(s, farm).food).toBeCloseTo(3 * 1.25 * 1.1, 2);
+    expect(buildingOutput(s, castle).gold).toBeCloseTo(3 * 2 * 1.1, 6);
+    expect(buildingOutput(s, farm).food).toBeCloseTo(3 * 2 * 1.1, 6);
   });
 });
 

@@ -11,6 +11,7 @@ import { SPELLS } from '../../data/spells';
 import { TERRAIN } from '../../data/terrain';
 import { tileDefense } from '../../sim/combat';
 import { mainAttackKind } from '../../sim/units';
+import { skillRange } from '../../sim/skills';
 import { unitsAtWork, unitsAwaitingOrders } from '../../game/duty';
 import { Kbd } from '../common';
 import { useUi } from '../ctx';
@@ -380,7 +381,7 @@ export function ModeHint() {
     const sk = ACTIVES[m.skill];
     const u = unitById(s, m.unit);
     icon = sk.icon; name = sk.name;
-    text = (sk.target === 'enemy' ? 'Choose an enemy' : sk.target === 'ally' ? 'Choose an ally' : 'Choose a hex') + ` within ${sk.range} of ${u?.name ?? 'the unit'} · right-click to cancel`;
+    text = (sk.target === 'enemy' ? 'Choose an enemy' : sk.target === 'ally' ? 'Choose an ally' : 'Choose a hex') + ` within ${u ? safe(() => skillRange(u, m.skill), sk.range) : sk.range} of ${u?.name ?? 'the unit'} · right-click to cancel`;
   }
   return (
     <div class="mode-hint panel">
@@ -418,7 +419,7 @@ function HpDist({ dist, max, current }: { dist: number[]; max: number; current: 
 }
 
 const MOD_ICON: Record<AttackMod['id'], string> = {
-  charge: 'horse', powerstrike: 'sword', leadership: 'star', berserker: 'skull', vsMounted: 'horse', poison: 'poison', vampiric: 'heart',
+  charge: 'horse', powerstrike: 'sword', leadership: 'star', berserker: 'skull', vsMounted: 'horse', poison: 'poison', vampiric: 'heart', flank: 'melee',
 };
 
 function ModChips({ mods, tone }: { mods: AttackMod[] | undefined; tone: 'good' | 'bad' }) {
@@ -434,8 +435,10 @@ function ModChips({ mods, tone }: { mods: AttackMod[] | undefined; tone: 'good' 
   );
 }
 
-function ForecastSide({ u, prof, dist, dealt, killChance, maxHp, label }: {
+function ForecastSide({ u, prof, dist, dealt, killChance, maxHp, label, spent }: {
   u: Unit; prof: CombatForecast['attacker'] | null; dist: number[]; dealt: number; killChance: number; maxHp: number; label: string;
+  /** It could answer, but has already retaliated as often as it may this turn. */
+  spent?: boolean;
 }) {
   const fd = FACTIONS[u.faction];
   const name = u.monster ? (u.name || MONSTERS[u.monster]?.name) : u.name;
@@ -451,7 +454,9 @@ function ForecastSide({ u, prof, dist, dealt, killChance, maxHp, label }: {
           <ModChips mods={prof.mods} tone={label === 'Attacker' ? 'good' : 'bad'} />
         </>
       ) : (
-        <div class="fc-attack fc-none"><span>No retaliation</span></div>
+        <div class="fc-attack fc-none" {...(spent ? tip('A unit retaliates once per turn (twice with Combat Reflexes). This one already has: it takes the blows without answering.') : {})}>
+          <span>{spent ? 'Already retaliated this turn' : 'No retaliation'}</span>
+        </div>
       )}
       <HpDist dist={dist} max={maxHp} current={u.hp} />
       <div class={cls('fc-kill', killChance > 0.0005 && 'has')}><Sym name="skull" />{killChance > 0.0005 ? <>Falls: <b>{pct(killChance)}</b></> : 'Survives'}</div>
@@ -493,7 +498,7 @@ export function ForecastTooltip() {
           killChance={fc.attackerKillChance} maxHp={maxOf(fc.attackerHpDist, att)} />
         <div class="fc-vs">vs</div>
         <ForecastSide u={def} label="Defender" prof={fc.defender} dist={fc.defenderHpDist} dealt={fc.expectedDamageToAttacker}
-          killChance={fc.defenderKillChance} maxHp={maxOf(fc.defenderHpDist, def)} />
+          killChance={fc.defenderKillChance} maxHp={maxOf(fc.defenderHpDist, def)} spent={fc.defenderSpent} />
       </div>
       <div class="fc-foot t-dim">
         {!alt ? 'Click to attack · right-click to cancel'

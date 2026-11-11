@@ -1,6 +1,6 @@
 // Standing orders (DESIGN §4.10): a unit told to rest until healed, or to keep watch, stays where
 // it is (Tab passes it by) until the order is fulfilled, a hostile comes close, or it is attacked.
-// The order itself changes no rule: a still unit already rests (+2 HP) and works its building.
+// The order itself changes no rule: a still unit already rests (+REST_HEAL HP) and works its building.
 import type { FactionId, GameEvent, GameState, OrderEndReason, Unit, UnitOrder } from '../core/types';
 import { hexDistance } from '../core/hex';
 import { aOrAn } from '../core/text';

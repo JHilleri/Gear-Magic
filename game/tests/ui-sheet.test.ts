@@ -7,6 +7,7 @@ import { LEVEL_OPTIONS, XP_CATEGORIES, xpToNext, zeroXp } from '../src/data/skil
 import { getAttackDefs, effectiveStats, statBreakdown } from '../src/sim/units';
 import { techDamageMult } from '../src/sim/research';
 import { FACTIONS } from '../src/data/factions';
+import { COMMONER_STATS } from '../src/data/presets';
 import {
   armoryNames, attackLines, augmentCount, augmentsOf, contributionTone, efficiencyRows, formatContribution, kindSummary, levelHistory,
   optionsFavouredBy, STAT_ORDER, statRows, stockpileRows, XP_SOURCES, xpRows,
@@ -24,6 +25,7 @@ describe('attribute rows', () => {
     const knight = makeTestUnit(s, 'valen', at(2, 2), {
       items: ['sword', 'shield', 'plate', 'amulet', 'horse'], passives: ['ironskin'],
       buffs: [{ id: 'fortify', turns: 1, armor: 20 }, { id: 'bless', turns: 2, damageMult: 1.2, armor: 10 }],
+      base: { ...COMMONER_STATS, armor: 15 }, // a hardened veteran: 15% armor of its own
     });
     const eff = effectiveStats(s, knight);
     const rows = rowsOf(s, knight);
@@ -35,12 +37,17 @@ describe('attribute rows', () => {
     }
     const armor = rows.find((r) => r.key === 'armor')!;
     expect(armor.unit).toBe('%');
-    // Shield, plate, Iron Skin, both buffs, then the 70 cap.
-    expect(armor.parts.map((p) => p.tone)).toEqual(['item', 'item', 'passive', 'buff', 'buff', 'limit']);
+    // Base 15, shield 5, plate 25, both buffs (20 + 10), then the 70 cap.
+    expect(armor.parts.map((p) => p.tone)).toEqual(['item', 'item', 'buff', 'buff', 'limit']);
     expect(armor.total).toBe(70);
+    const block = rows.find((r) => r.key === 'block')!;
+    expect(block.unit).toBe('');
+    // Shield 2, plate 3, Iron Skin 1 (rank 1); no buff gives block (Fortify is armor only).
+    expect(block.parts.map((p) => [p.tone, p.value])).toEqual([['item', 2], ['item', 3], ['passive', 1]]);
+    expect(block.total).toBe(6);
     const mov = rows.find((r) => r.key === 'mov')!;
     expect(mov.parts.map((p) => [p.tone, p.value])).toEqual([['item', -1], ['mount', 3]]);
-    expect(rows.find((r) => r.key === 'maxHp')!.parts.some((p) => p.label === 'Amulet of Vigor' && p.value === 8)).toBe(true);
+    expect(rows.find((r) => r.key === 'maxHp')!.parts.some((p) => p.label === 'Amulet of Vigor' && p.value === 10)).toBe(true);
   });
 
   it('names level-up gains apart from the caps', () => {
@@ -48,7 +55,8 @@ describe('attribute rows', () => {
     expect(contributionTone({ source: 'Level-ups (2 × +4)', kind: 'other', value: 8 })).toBe('level');
     expect(contributionTone({ source: 'Armor cap (70)', kind: 'other', value: -5 })).toBe('limit');
     expect(contributionTone({ source: 'House Valen', kind: 'faction', value: 1 })).toBe('faction');
-    expect(formatContribution('armor', { source: 'Shield', value: 12 })).toBe('+12% Shield');
+    expect(formatContribution('armor', { source: 'Shield', value: 5 })).toBe('+5% Shield');
+    expect(formatContribution('block', { source: 'Shield', value: 2 })).toBe('+2 Shield'); // flat, no %
     expect(formatContribution('mov', { source: 'Plate Armor', value: -1 })).toBe('−1 Plate Armor');
   });
 });

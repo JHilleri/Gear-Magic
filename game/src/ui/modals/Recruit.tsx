@@ -56,6 +56,7 @@ export function RecruitModal() {
           // The recruit's real numbers: commoner + house traits + items, damage as the unit panel shows it.
           const stat = (k: keyof UnitStats) => COMMONER_STATS[k] + (fd.statMods?.[k] ?? 0) + p.items.reduce((a, i) => a + (ITEMS[i].stats?.[k] ?? 0), 0);
           const armor = stat('armor');
+          const block = stat('block');
           const mov = stat('mov');
           const atk = main?.attack;
           const dmg = atk ? (() => {
@@ -83,8 +84,8 @@ export function RecruitModal() {
                 </div>
                 <div class="pc-desc">{p.description}</div>
                 <div class="pc-stats">
-                  <span {...tip('Damage per strike before the target\'s armor × strikes')}>{atk ? `${atk.name} ${dmg}×${atk.strikes}` : 'Fists 3×2'}</span>
-                  <span>Armor {armor}%</span>
+                  <span {...tip('Damage per strike before the target\'s block and armor × strikes')}>{atk ? `${atk.name} ${dmg}×${atk.strikes}` : 'Fists 3×2'}</span>
+                  <span {...tip('Block: damage taken off every strike that hits · Armor: share of the rest taken off')}>Block {block} · Armor {armor}%</span>
                   <span>Move {mov}</span>
                 </div>
                 <div class="pc-foot">

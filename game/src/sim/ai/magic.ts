@@ -3,7 +3,8 @@ import type { Action, Hex, SpellId, Unit } from '../../core/types';
 import { hexDistance, inBounds, spiral, tileIndex } from '../../core/hex';
 import { SPELLS } from '../../data/spells';
 import { TERRAIN } from '../../data/terrain';
-import { knownSpells, manaCap } from '../spells';
+import { fireballDamageAt, HEAL_HP, knownSpells, manaCap, STORM_BOLTS, STORM_DAMAGE } from '../spells';
+import { mendOf } from '../skills';
 import { canBuildWith, effectiveStats, getAttackDefs } from '../units';
 import { isVisible } from '../visibility';
 import { buildingOn, isFunctional, unitOn } from '../ruleutil';
@@ -137,7 +138,7 @@ function bestFor(ctx: Ctx, spell: SpellId): SpellOption | null {
         let v = 0;
         for (const u of unitsWithin(ctx, c, 1)) {
           if (!seen(ctx, u)) continue;
-          v += harm(ctx, u, hexDistance(u.pos, c) === 0 ? 18 : 8);
+          v += harm(ctx, u, fireballDamageAt(hexDistance(u.pos, c)));
         }
         if (v >= 28 * k) take(c, v);
       }
@@ -151,8 +152,8 @@ function bestFor(ctx: Ctx, spell: SpellId): SpellOption | null {
         const n = pool.length;
         let v = 0;
         for (const e of visible) {
-          const pk = binomAtLeast(4, 1 / n, Math.ceil(e.hp / 14));
-          v += harm(ctx, e, Math.min(e.hp, (14 * 4) / n), pk);
+          const pk = binomAtLeast(STORM_BOLTS, 1 / n, Math.ceil(e.hp / STORM_DAMAGE));
+          v += harm(ctx, e, Math.min(e.hp, (STORM_DAMAGE * STORM_BOLTS) / n), pk);
         }
         if (v >= 32 * k) take(c, v);
       }
@@ -165,7 +166,7 @@ function bestFor(ctx: Ctx, spell: SpellId): SpellOption | null {
         for (const u of unitsWithin(ctx, c, 1)) {
           if (u.faction !== ctx.f) continue;
           const mx = maxHp(s, u);
-          v += (Math.min(15, mx - u.hp) / mx) * valueOf(u) * 0.9 * (u.isLeader ? 2 : 1) + (u.poisoned ? 6 : 0);
+          v += (Math.min(HEAL_HP, mx - u.hp) / mx) * valueOf(u) * 0.9 * (u.isLeader ? 2 : 1) + (u.poisoned ? 6 : 0);
         }
         if (v >= 12 * k) take(c, v);
       }
@@ -373,7 +374,7 @@ export function rallyPhase(ctx: Ctx): Action | null {
   return null;
 }
 
-/** Mend (heal an adjacent ally or oneself 12 hp) for units that will not attack this turn. */
+/** Mend (heal an adjacent ally or oneself, mendOf by rank) for units that will not attack this turn. */
 export function mendPhase(ctx: Ctx): Action | null {
   const s = ctx.s;
   for (const u of ctx.units) {
@@ -385,7 +386,7 @@ export function mendPhase(ctx: Ctx): Action | null {
       const mx = maxHp(s, o);
       const missing = mx - o.hp;
       if (missing < 6 && !o.poisoned) continue;
-      const v = (Math.min(12, missing) / mx) * valueOf(o) * (o.isLeader ? 2 : 1) + (o.poisoned ? 5 : 0);
+      const v = (Math.min(mendOf(u), missing) / mx) * valueOf(o) * (o.isLeader ? 2 : 1) + (o.poisoned ? 5 : 0);
       if (v > bv) { bv = v; best = o; }
     }
     if (!best) continue;
@@ -395,7 +396,7 @@ export function mendPhase(ctx: Ctx): Action | null {
   return null;
 }
 
-/** Fortify (+20 armor until next turn; uses the action) for exposed units that are done for the turn. */
+/** Fortify (+7.5% armor per rank until next turn; uses the action) for exposed units that are done for the turn. */
 export function fortifyPhase(ctx: Ctx): Action | null {
   for (const u of ctx.units) {
     if (!ready(u, 'fortify') || u.acted || u.buffs.some((b) => b.id === 'fortify')) continue;

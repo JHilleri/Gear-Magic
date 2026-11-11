@@ -1,0 +1,5 @@
+[
+  {"id": "reflexes", "cat": "icons_skills", "alpha": false, "seed": 51207, "w": 1024, "h": 1024, "steps": 22,
+   "prompt": "A painted fantasy RPG inventory icon of a raised steel sword parrying with motion trails curving back for a second swift riposte, single centered object filling most of the frame, bold clean silhouette, rich saturated colors, soft rim light, dark deep purple radial vignette background, digital painting, crisp details, no text, no border",
+   "negative": "text, letters, watermark, frame, border, multiple objects, photo, blurry"}
+]

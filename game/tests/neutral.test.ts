@@ -67,7 +67,7 @@ describe('runNeutralTurn', () => {
   it('monsters close in on intruders near their lair and attack from reach', () => {
     const s = makeTestState(16, 12);
     const ruin = at(8, 6);
-    const wolf = makeTestUnit(s, 'neutral', ruin, { monster: 'wolf', home: ruin, race: 'monster', base: { maxHp: 20, str: 4, dex: 2, int: 0, armor: 0, mov: 7, vis: 5 } });
+    const wolf = makeTestUnit(s, 'neutral', ruin, { monster: 'wolf', home: ruin, race: 'monster', base: { maxHp: 20, str: 4, dex: 2, int: 0, armor: 0, block: 0, mov: 7, vis: 5 } });
     makeTestUnit(s, 'valen', off(ruin, 3), { hp: 8 });
     const evs = runNeutralTurn(s);
     expect(evs.some((e) => e.type === 'unitMoved' && e.unit === wolf.id)).toBe(true);
@@ -93,7 +93,7 @@ describe('runNeutralTurn', () => {
     const ruin = off(castle.pos, 6);
     setTerrain(s, ruin, 'ruins');
     const wolf = makeTestUnit(s, 'neutral', off(ruin, -1), {
-      monster: 'wolf', home: ruin, race: 'monster', base: { maxHp: 20, str: 4, dex: 2, int: 0, armor: 0, mov: 7, vis: 5 },
+      monster: 'wolf', home: ruin, race: 'monster', base: { maxHp: 20, str: 4, dex: 2, int: 0, armor: 0, block: 0, mov: 7, vis: 5 },
     });
     const worker = makeTestUnit(s, 'valen', off(castle.pos, 1), { hp: 4 });
     for (let i = 0; i < 6; i++) {
@@ -112,7 +112,7 @@ describe('runNeutralTurn', () => {
     const s = makeTestState(24, 16);
     const ruin = at(12, 8);
     const wolf = makeTestUnit(s, 'neutral', ruin, {
-      monster: 'wolf', home: ruin, race: 'monster', base: { maxHp: 20, str: 4, dex: 2, int: 0, armor: 0, mov: 7, vis: 5 },
+      monster: 'wolf', home: ruin, race: 'monster', base: { maxHp: 20, str: 4, dex: 2, int: 0, armor: 0, block: 0, mov: 7, vis: 5 },
     });
     // 5 hexes out: reachable from the leash edge, but outside the lair's guard area.
     const worker = makeTestUnit(s, 'valen', off(ruin, 5), { hp: 4 });
@@ -139,7 +139,7 @@ describe('runNeutralTurn', () => {
     const s = makeTestState(16, 12);
     const golem = makeTestUnit(s, 'neutral', at(8, 6), { monster: 'golem', home: at(8, 6), race: 'monster', passives: ['regeneration'], hp: 10, mp: 0 });
     runNeutralTurn(s);
-    expect(golem.hp).toBeGreaterThanOrEqual(14);
+    expect(golem.hp).toBeGreaterThanOrEqual(12); // Regeneration (rank 1): +2
   });
 
   it('respawns at unguarded ruins every 12 rounds', () => {

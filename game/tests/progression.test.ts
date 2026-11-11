@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { makeTestState, makeTestUnit, at } from './helpers';
 import { grantXp, rollLevelOptions, applyLevelOption, aiChooseLevelOption, canApplyLevelOption, optionEligible, unitRole } from '../src/sim/progression';
 import { createUnit, effectiveStats } from '../src/sim/units';
-import { LEVEL_OPTIONS, LEVEL_OPTION_BY_ID, MAX_LEVEL, xpToNext } from '../src/data/skills';
+import { reactionsPerTurn } from '../src/sim/combat';
+import { LEVEL_OPTIONS, LEVEL_OPTION_BY_ID, xpToNext } from '../src/data/skills';
+import { augmentRank } from '../src/data/ranks';
 import { COMMONER_STATS } from '../src/data/presets';
 import { buildingUnlocked } from '../src/sim/research';
 import type { GameState, Unit } from '../src/core/types';
@@ -92,15 +94,63 @@ describe('grantXp', () => {
     expect(u.xp).toBe(1);
   });
 
-  it('stops at the level cap', () => {
+  it('has no level cap: XP keeps buying levels past 10', () => {
     const s = makeTestState();
-    const u = makeTestUnit(s, 'valen', at(1, 1), { level: MAX_LEVEL - 1 });
+    const u = makeTestUnit(s, 'valen', at(1, 1), { level: 9 });
     grantXp(s, u, 'melee', 10_000);
-    expect(u.level).toBe(MAX_LEVEL);
-    expect(u.xp).toBe(0);
-    expect(grantXp(s, u, 'melee', 100)).toEqual([]);
-    expect(u.level).toBe(MAX_LEVEL);
-    expect(u.xpByCat.melee).toBe(10_100);
+    // 110 + 120 + … per level from level 9: 10 000 XP buys 35 levels (to 44) with 200 left over.
+    expect(u.level).toBe(44);
+    expect(u.xp).toBe(200);
+    let spent = 0;
+    for (let l = 9; l < u.level; l++) spent += xpToNext(l);
+    expect(spent + u.xp).toBe(10_000);
+    expect(u.pendingLevelUps).toBe(35);
+    expect(u.levelUpOptions).toHaveLength(35);
+    expect(u.levelUpOptions.every((o) => o.length === 3)).toBe(true); // never runs out of rewards
+    const before = u.level;
+    expect(grantXp(s, u, 'melee', xpToNext(u.level) - u.xp).some((e) => e.type === 'unitLeveled')).toBe(true);
+    expect(u.level).toBe(before + 1);
+    expect(u.xpByCat.melee).toBe(10_000 + xpToNext(before) - 200);
+  });
+
+  it('every augment can be learned again: each pick is one more rank (Combat Reflexes: one more riposte)', () => {
+    const s = makeTestState();
+    const u = makeTestUnit(s, 'valen', at(1, 1), {
+      passives: ['reflexes'], actives: ['firebolt'], pendingLevelUps: 3,
+      levelUpOptions: [['passive_reflexes', 'stat_hp', 'stat_str'], ['passive_reflexes', 'active_firebolt', 'stat_str'], ['active_firebolt', 'stat_hp', 'stat_str']],
+    });
+    expect(optionEligible(u, LEVEL_OPTION_BY_ID.passive_reflexes)).toBe(true); // owned, still on offer
+    expect(optionEligible(u, LEVEL_OPTION_BY_ID.active_firebolt)).toBe(true);
+    applyLevelOption(s, u, 'passive_reflexes');
+    expect(augmentRank(u, 'reflexes')).toBe(2);
+    expect(u.passives).toEqual(['reflexes']); // one entry; the rank lives in u.ranks
+    expect(u.ranks).toEqual({ reflexes: 2 });
+    // The queued offers keep the augments just learned (an upgrade is not stale).
+    expect(u.levelUpOptions[0]).toContain('passive_reflexes');
+    applyLevelOption(s, u, 'passive_reflexes');
+    applyLevelOption(s, u, 'active_firebolt');
+    expect(augmentRank(u, 'reflexes')).toBe(3);
+    expect(augmentRank(u, 'firebolt')).toBe(2);
+    expect(u.actives).toEqual(['firebolt']);
+    expect(reactionsPerTurn(u)).toBe(4);
+    expect(u.learned!.map((l) => l.option)).toEqual(['passive_reflexes', 'passive_reflexes', 'active_firebolt']);
+  });
+
+  it('building unlocks (Masonry, Devotion) are learned once; owned augments are offered a little less per rank', () => {
+    const s = makeTestState();
+    const mason = makeTestUnit(s, 'valen', at(1, 1), { actives: ['masonry', 'devotion'] });
+    expect(optionEligible(mason, LEVEL_OPTION_BY_ID.active_masonry)).toBe(false);
+    expect(optionEligible(mason, LEVEL_OPTION_BY_ID.active_devotion)).toBe(false);
+    // A fifth-rank Iron Skin turns up less often than a fresh one would.
+    const fresh = makeTestUnit(s, 'valen', at(2, 2));
+    const veteran = makeTestUnit(s, 'valen', at(3, 3), { passives: ['ironskin'], ranks: { ironskin: 5 } });
+    const count = (u: Unit) => {
+      let n = 0;
+      for (let i = 0; i < 400; i++) if (rollLevelOptions(s, u).includes('passive_ironskin')) n++;
+      return n;
+    };
+    expect(count(veteran)).toBeLessThan(count(fresh));
+    expect(count(veteran)).toBeGreaterThan(0);
   });
 
   it('ignores dead units', () => {
@@ -129,17 +179,19 @@ describe('rollLevelOptions', () => {
     expect(a.rngState).toBe(b.rngState);
   });
 
-  it('excludes owned passives and actives', () => {
+  it('keeps owned passives and actives on offer (their next rank), never the building unlocks', () => {
     const s = makeTestState();
     const owned = LEVEL_OPTIONS.filter((o) => o.kind === 'passive').map((o) => o.passive!);
     const acts = LEVEL_OPTIONS.filter((o) => o.kind === 'active').map((o) => o.active!);
     const u = makeTestUnit(s, 'valen', at(1, 1), { passives: owned, actives: acts });
-    for (let i = 0; i < 100; i++) {
+    const seen = new Set<string>();
+    for (let i = 0; i < 200; i++) {
       for (const id of rollLevelOptions(s, u)) {
-        const k = LEVEL_OPTION_BY_ID[id].kind;
-        expect(k === 'stat' || k === 'efficiency').toBe(true);
+        expect(id === 'active_masonry' || id === 'active_devotion').toBe(false);
+        seen.add(LEVEL_OPTION_BY_ID[id].kind);
       }
     }
+    expect(seen.has('passive') && seen.has('active')).toBe(true);
   });
 
   it('biases toward the categories the unit earned XP in', () => {
@@ -259,13 +311,19 @@ describe('applyLevelOption', () => {
     expect(canApplyLevelOption(s, u, 'stat_int')).toMatch(/offered/);
     expect(applyLevelOption(s, u, 'stat_int')).toEqual([]);
     applyLevelOption(s, u, 'stat_hp');
-    expect(u.base.maxHp).toBe(COMMONER_STATS.maxHp + 6);
-    expect(u.hp).toBe(16);
+    expect(u.base.maxHp).toBe(COMMONER_STATS.maxHp + 8);
+    expect(u.hp).toBe(18); // 10 + 8
     expect(u.pendingLevelUps).toBe(0);
     expect(u.levelUpOptions).toEqual([]);
     // The pick leaves the tally alone: it already counts toward the next level.
     expect(u.levelXpByCat).toEqual({ melee: 20, ranged: 0, building: 0, civic: 5, explore: 3, leader: 0, magic: 0 });
     expect(canApplyLevelOption(s, u, 'stat_hp')).toMatch(/pending/);
+    // +Armor is +1 block and +5% armor.
+    const s2 = makeTestState();
+    const v = pending(s2, ['stat_armor', 'stat_str', 'stat_dex']);
+    applyLevelOption(s2, v, 'stat_armor');
+    expect(v.base.block).toBe(COMMONER_STATS.block + 1);
+    expect(v.base.armor).toBe(COMMONER_STATS.armor + 5);
   });
 
   it('multiplies efficiencies by 1.25 each time', () => {
@@ -284,7 +342,8 @@ describe('applyLevelOption', () => {
     const u = pending(s, ['passive_ironskin', 'active_masonry', 'stat_dex']);
     applyLevelOption(s, u, 'passive_ironskin');
     expect(u.passives).toContain('ironskin');
-    expect(effectiveStats(s, u).armor).toBe(8);
+    expect(effectiveStats(s, u).block).toBe(1); // Iron Skin: +1 block per rank, no armor
+    expect(effectiveStats(s, u).armor).toBe(0);
     expect(buildingUnlocked(s, 'valen', 'watchtower', u)).toBe(false);
     u.pendingLevelUps = 1;
     u.levelUpOptions = [['active_masonry', 'active_devotion', 'stat_dex']];
@@ -296,17 +355,21 @@ describe('applyLevelOption', () => {
 
   it('consumes queued level-ups in order and refreshes stale later offers', () => {
     const s = makeTestState();
-    const u = pending(s, ['passive_poison', 'stat_str', 'stat_dex']);
-    u.pendingLevelUps = 2;
-    u.levelUpOptions = [['passive_poison', 'stat_str', 'stat_dex'], ['passive_poison', 'stat_hp', 'stat_mov']];
-    applyLevelOption(s, u, 'passive_poison');
-    expect(u.pendingLevelUps).toBe(1);
-    expect(u.levelUpOptions).toHaveLength(1);
+    const u = pending(s, ['active_masonry', 'stat_str', 'stat_dex']);
+    u.pendingLevelUps = 3;
+    u.levelUpOptions = [['active_masonry', 'stat_str', 'stat_dex'], ['active_masonry', 'stat_hp', 'stat_mov'], ['passive_poison', 'stat_hp', 'stat_mov']];
+    applyLevelOption(s, u, 'active_masonry');
+    expect(u.pendingLevelUps).toBe(2);
+    expect(u.levelUpOptions).toHaveLength(2);
+    // Masonry is learned once: the later offer that held it gets a fresh option instead.
     const next = u.levelUpOptions[0];
     expect(next).toHaveLength(3);
-    expect(next).not.toContain('passive_poison');
+    expect(next).not.toContain('active_masonry');
     expect(next).toContain('stat_hp');
     expect(new Set(next).size).toBe(3);
+    // An augment just learned is not stale: offered again, it is the next rank.
+    applyLevelOption(s, u, next[0] === 'passive_poison' ? next[0] : 'stat_hp');
+    expect(u.levelUpOptions[0]).toContain('passive_poison');
     // levelXpByCat is kept until the queue empties.
     expect(u.levelXpByCat.melee).toBe(20);
   });

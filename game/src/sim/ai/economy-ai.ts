@@ -10,7 +10,7 @@ import { COMMONER_COST, PRESETS } from '../../data/presets';
 import { TERRAIN } from '../../data/terrain';
 import { FACTIONS } from '../../data/factions';
 import {
-  canAfford, computeTerritory, forgeCapacity, maxBuildingLevel, presetCost, recruitSpawnHex, upgradeCost,
+  buildingCost, canAfford, computeTerritory, forgeCapacity, maxBuildingLevel, presetCost, recruitSpawnHex, upgradeCost,
 } from '../economy';
 import { buildingUnlocked, hasTech, itemUnlocked, presetUnlocked } from '../research';
 import { canBuildWith, costValue } from '../units';
@@ -289,8 +289,11 @@ export function planTasks(ctx: Ctx): BuildTask[] {
   if (!ctx.castle) subtract(avail, BUILDINGS.castle.cost);
   const queue = desiredQueue(ctx);
   const entries: { type: BuildingId; aff: boolean }[] = [];
+  const queued: Partial<Record<BuildingId, number>> = {};
   for (const type of queue) {
-    const cost = BUILDINGS[type].cost;
+    // Each one queued before makes this one dearer, as it will be when its turn comes.
+    const cost = buildingCost(s, ctx.f, type, queued[type] ?? 0);
+    queued[type] = (queued[type] ?? 0) + 1;
     if (canAfford(avail, cost)) { entries.push({ type, aff: true }); subtract(avail, cost); continue; }
     // Only save up for what income will deliver soon (no iron income → no forge yet).
     const wait = turnsToAfford(avail, cost, inc);
@@ -348,7 +351,7 @@ export function planTasks(ctx: Ctx): BuildTask[] {
     let best: { idx: number; b: Unit; v: number; kind: BuildingId } | null = null;
     const curD = Math.min(...cands.map((i) => hexDistance(indexToHex(i, s.width), goal)));
     for (const ex of ['farm', 'house', 'lumber', 'quarry'] as BuildingId[]) {
-      if (ex === type || !canAfford(ctx.fs.resources, BUILDINGS[ex].cost)) continue;
+      if (ex === type || !canAfford(ctx.fs.resources, buildingCost(s, ctx.f, ex))) continue;
       for (const idx of cands) {
         if (used.has(idx)) continue;
         const sc = siteScore(ctx, ex, idx, owners);
@@ -409,10 +412,13 @@ export function planTasks(ctx: Ctx): BuildTask[] {
 export function buildReserve(ctx: Ctx): ResourceCost {
   const r: ResourceCost = {};
   if (!ctx.castle) addTo(r, BUILDINGS.castle.cost);
+  const planned: Partial<Record<BuildingId, number>> = {};
   for (const t of planTasks(ctx)) {
     if (t.kind === 'resume') continue;
-    if (t.kind === 'build') addTo(r, BUILDINGS[t.type].cost);
-    else {
+    if (t.kind === 'build') {
+      addTo(r, buildingCost(ctx.s, ctx.f, t.type, planned[t.type] ?? 0));
+      planned[t.type] = (planned[t.type] ?? 0) + 1;
+    } else {
       const b = buildingOn(ctx.s, t.site);
       if (b) addTo(r, upgradeCost(b));
     }

@@ -56,8 +56,9 @@ Notes from production:
 ```bash
 cd game
 npx tsc --noEmit
-npx vitest run                      # 448 tests (+2 skipped) incl. AI-vs-AI games
+npx vitest run                      # 479 tests (+3 skipped) incl. AI-vs-AI games
 AI_METRICS=1 npx vitest run tests/ai-metrics.test.ts   # optional: AI behaviour numbers over many seeds
+BALANCE_TABLE=1 npx vitest run tests/balance-table.test.ts   # optional: damage table between level-1 recruits
 npm run build
 ```
 

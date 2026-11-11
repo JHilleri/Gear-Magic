@@ -154,7 +154,7 @@ function symbolFor(cat: string, name: string): Sym | null {
   if (SYMBOLS[name]) return SYMBOLS[name];
   const stem = name.replace(/^(stat|eff|passive|active)_/, '');
   const byStem: Record<string, string> = {
-    str: 'fist', dex: 'ranged', int: 'magic', hp: 'heart', armor: 'shield', mov: 'boot', vis: 'eye',
+    str: 'fist', dex: 'ranged', int: 'magic', hp: 'heart', armor: 'shield', block: 'shield', mov: 'boot', vis: 'eye', reflexes: 'sword',
     attack: 'melee', ranged: 'ranged', magic: 'magic', farming: 'farm', building: 'hammer', mining: 'mine', gathering: 'lumber',
     trade: 'gold', regeneration: 'heart', poison: 'poison', ironskin: 'shield', fortify: 'shield', heal: 'heart',
     firebolt: 'magic', fireball: 'magic', volley: 'ranged', powerstrike: 'sword', marksman: 'ranged', berserker: 'axe',

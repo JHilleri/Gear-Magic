@@ -58,7 +58,7 @@ export function EquipModal() {
               <div class="eu-name">{u.name}</div>
               <div class="t-dim">{unitRole(u)} · Level {u.level}</div>
               <div class="eu-stats">
-                {(['maxHp', 'str', 'dex', 'int', 'armor', 'mov'] as (keyof UnitStats)[]).map((k) => (
+                {(['maxHp', 'str', 'dex', 'int', 'block', 'armor', 'mov'] as (keyof UnitStats)[]).map((k) => (
                   <span key={k}><small>{STAT_LABELS[k]}</small><b>{fmt(stats[k])}{k === 'armor' ? '%' : ''}</b></span>
                 ))}
               </div>

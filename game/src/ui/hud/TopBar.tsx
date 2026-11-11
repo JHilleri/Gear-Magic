@@ -3,7 +3,7 @@ import type { FactionId, GameState, ResourceId, Resources } from '../../core/typ
 import { BUILDINGS } from '../../data/buildings';
 import { FACTIONS } from '../../data/factions';
 import { TECHS } from '../../data/research';
-import { buildingOutput, factionIncome } from '../../sim/economy';
+import { buildingOutput, factionIncome, STARVATION_DAMAGE } from '../../sim/economy';
 import { manaCap } from '../../sim/spells';
 import { Kbd, TipCard } from '../common';
 import { useUi } from '../ctx';
@@ -76,7 +76,7 @@ function ResourceChip({ r, res, income, cap }: { r: ResourceId; res: Resources; 
           </tbody>
           <tfoot><tr><td>Per turn</td><td class={inc < 0 ? 't-bad' : 't-good'}>{signed(inc)}</td></tr></tfoot>
         </table>
-        {r === 'food' && inc < 0 && <div class="t-bad tip-note">Starvation: when food runs out, every unit loses 3 HP per turn.</div>}
+        {r === 'food' && inc < 0 && <div class="t-bad tip-note">Starvation: when food runs out, every unit loses {STARVATION_DAMAGE} HP per turn.</div>}
         {r === 'mana' && res.mana >= cap && <div class="t-warn tip-note">Mana is at its cap. Build Mage Towers to raise it.</div>}
       </TipCard>
     );

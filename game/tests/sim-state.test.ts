@@ -10,14 +10,17 @@ vi.mock('../src/sim/neutral', () => ({
 import { spawnInitialMonsters } from '../src/sim/neutral';
 import {
   createGame, getTile, unitAt, buildingAt, getUnit, getBuilding, unitsOf, buildingsOf, faction, currentFaction,
-  humanFaction, newId, addLog, isEnemy, cloneState, serialize, deserialize, STARTING_RESOURCES, LOG_CAP,
+  humanFaction, newId, addLog, isEnemy, cloneState, serialize, deserialize, STARTING_RESOURCES, LOG_CAP, migrateUnitBalance,
 } from '../src/sim/state';
+import { COMMONER_STATS, LEADER_STATS } from '../src/data/presets';
+import { MONSTERS } from '../src/data/factions';
+import { at, makeTestState, makeTestUnit } from './helpers';
 import { effectiveStats } from '../src/sim/units';
 import { buildingUnlocked, itemUnlocked, presetUnlocked } from '../src/sim/research';
 import { hexDistance, hexEq, tileIndex } from '../src/core/hex';
 import { BUILDINGS } from '../src/data/buildings';
 import { FACTIONS } from '../src/data/factions';
-import type { GameSettings, GameState } from '../src/core/types';
+import type { GameSettings, GameState, Unit, UnitStats } from '../src/core/types';
 
 const settings = (over: Partial<GameSettings> = {}): GameSettings =>
   ({ mapSize: 'normal', seed: 42, playerFaction: 'valen', aiCount: 2, difficulty: 'normal', ...over });
@@ -225,5 +228,70 @@ describe('queries', () => {
     const r = deserialize(JSON.stringify(raw));
     expect(r.factions.valen.farsight).toEqual([]);
     expect(r.factions.valen.visible).toHaveLength(s.width * s.height);
+  });
+});
+
+describe('save migration: the block stat', () => {
+  /** Turn `u` into a unit from a save made before block existed: no block on its base. */
+  const preBlock = (u: Unit, base: Omit<UnitStats, 'block'>, hp: number): Unit => {
+    u.base = { ...base } as UnitStats;
+    u.hp = hp;
+    return u;
+  };
+
+  it('gives an old commoner the new base hit points, keeping its wounds', () => {
+    const s = makeTestState();
+    const u = preBlock(makeTestUnit(s, 'valen', at(1, 1)), { maxHp: 22, str: 4, dex: 4, int: 3, armor: 0, mov: 5, vis: 4 }, 15);
+    migrateUnitBalance(u);
+    expect(u.base).toEqual(COMMONER_STATS); // maxHp 22 → 30, block 0
+    expect(u.hp).toBe(23); // 15 + 8: the wound stays the same size
+    migrateUnitBalance(u); // already on the current numbers: left alone
+    expect(u.base.maxHp).toBe(30);
+    expect(u.hp).toBe(23);
+  });
+
+  it('leaders, the Thornwild\'s +5 HP, reworked level picks and monsters', () => {
+    const s = makeTestState();
+    // An old thorn leader: 34 + 4 (house) + 4 (level 2) + 6 (+Max HP pick) hp; armor 10 + 6 (+Armor pick).
+    const leader = preBlock(makeTestUnit(s, 'thorn', at(1, 1), {
+      isLeader: true, level: 3, learned: [{ level: 2, option: 'stat_hp' }, { level: 3, option: 'stat_armor' }],
+    }), { maxHp: 34 + 4 + 4 + 6, str: 7, dex: 5, int: 4, armor: 16, mov: 5, vis: 5 }, 40);
+    migrateUnitBalance(leader);
+    // 46 + 5 (house) + 4 (level) + 8 (pick); armor 10 + 5 and block 1 + 1.
+    expect(leader.base).toMatchObject({ maxHp: 46 + 5 + 4 + 8, armor: 15, block: LEADER_STATS.block + 1 });
+    expect(leader.hp).toBe(40 + 15);
+    // An old golem: 48 hp, 30 armor → 64, 20 armor, 3 block.
+    const golem = preBlock(makeTestUnit(s, 'neutral', at(3, 3), { monster: 'golem', race: 'monster' }),
+      { maxHp: 48, str: 8, dex: 0, int: 0, armor: 30, mov: 3, vis: 3 }, 10);
+    migrateUnitBalance(golem);
+    expect(golem.base).toEqual(MONSTERS.golem.stats);
+    expect(golem.hp).toBe(26);
+  });
+
+  it('deserialize grants the levels an old save\'s XP already pays for under the lower thresholds', () => {
+    const s = makeTestState();
+    // Saved at level 2 with 45 XP: short of the old 25 + 15 × 2 = 55, past the new 20 + 10 × 2 = 40.
+    const u = preBlock(makeTestUnit(s, 'valen', at(1, 1), { level: 2, xp: 45 }), { maxHp: 26, str: 4, dex: 4, int: 3, armor: 0, mov: 5, vis: 4 }, 26);
+    u.levelXpByCat.melee = 45;
+    const fresh = makeTestUnit(s, 'valen', at(2, 2), { level: 2, xp: 45 }); // already on the new numbers: left alone
+    const r = deserialize(serialize(s));
+    const v = r.units[String(u.id)];
+    expect(v.level).toBe(3);
+    expect(v.xp).toBe(5);
+    expect(v.pendingLevelUps).toBe(1);
+    expect(v.levelUpOptions).toHaveLength(1);
+    expect(v.levelUpOptions[0]).toHaveLength(3);
+    expect(v.base.maxHp).toBe(30 + 4 + 4); // new base (level 2 kept) + the new level's 4
+    expect(v.levelXpByCat.melee).toBe(5); // the overflow starts the next level's tally
+    const f = r.units[String(fresh.id)];
+    expect([f.level, f.xp, f.pendingLevelUps]).toEqual([2, 45, 0]);
+  });
+
+  it('deserialize brings old units up to date', () => {
+    const s = makeTestState();
+    const u = preBlock(makeTestUnit(s, 'valen', at(1, 1)), { maxHp: 22, str: 4, dex: 4, int: 3, armor: 0, mov: 5, vis: 4 }, 22);
+    const r = deserialize(serialize(s));
+    expect(r.units[String(u.id)].base).toEqual(COMMONER_STATS);
+    expect(r.units[String(u.id)].hp).toBe(30);
   });
 });

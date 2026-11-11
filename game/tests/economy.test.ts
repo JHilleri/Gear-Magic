@@ -4,8 +4,9 @@ import { hexDistance, neighbors, spiral, tileIndex } from '../src/core/hex';
 import {
   buildingOutput, buildingXpPerTurn, canAfford, canBuildAt, canCraft, canRecruit, canUpgrade, captureBuildings, computeTerritory, craft,
   emptyResources, factionIncome, formatCost, maxBuildingLevel, pay, presetCost, progressConstruction, recruit, scaleCost,
-  startBuilding, startUpgrade, territoryOwner, applyProduction, upgradeCost,
+  startBuilding, startUpgrade, territoryOwner, applyProduction, upgradeCost, BUILD_XP, WORK_XP, buildingCost, BUILDING_COST_STEP,
 } from '../src/sim/economy';
+import { BUILDINGS } from '../src/data/buildings';
 import { at, makeTestBuilding, makeTestState, makeTestUnit, res, setTerrain } from './helpers';
 
 const C = at(5, 5);
@@ -130,25 +131,28 @@ describe('building rules', () => {
   it('checks cost', () => {
     const { s } = base();
     const u = makeTestUnit(s, 'valen', step(C, 1, 0), { items: ['tools'] });
-    s.factions.valen.resources = res({ wood: 7, stone: 4 });
-    expect(canBuildAt(s, u, 'house')).toMatch(/Not enough.*1 wood/);
+    s.factions.valen.resources = res({ wood: 9, stone: 6, gold: 6 }); // a house costs 10 wood, 6 stone, 6 gold
+    expect(canBuildAt(s, u, 'house')).toMatch(/Not enough.*need 1 wood more/);
   });
 
   it('startBuilding pays and places a site; progress at end of turn completes it', () => {
     const { s } = base();
     const u = makeTestUnit(s, 'valen', step(C, 1, 0), { items: ['tools'] });
-    const wood0 = s.factions.valen.resources.wood;
+    const { wood: wood0, gold: gold0 } = s.factions.valen.resources;
     const evs = startBuilding(s, u, 'farm');
     const b = Object.values(s.buildings).find((x) => x.type === 'farm')!;
     expect(evs[0]).toEqual({ type: 'buildingStarted', building: b.id });
-    expect(s.factions.valen.resources.wood).toBe(wood0 - 6);
+    // The house's first farm: its base cost, 8 wood and 6 gold.
+    expect(s.factions.valen.resources.wood).toBe(wood0 - 8);
+    expect(s.factions.valen.resources.gold).toBe(gold0 - 6);
     expect(b.buildLeft).toBe(2);
     expect(u.mp).toBe(0);
     // Level 1 builder: 1 × (1 + 0.1) = 1.1 per turn.
     let ev = progressConstruction(s, 'valen');
     expect(b.buildLeft).toBeCloseTo(0.9);
     expect(ev.some((e) => e.type === 'buildingProgress')).toBe(true);
-    expect(u.xpByCat.building).toBe(3);
+    expect(BUILD_XP).toBe(5); // the rule's number (DESIGN §5), pinned once
+    expect(u.xpByCat.building).toBe(BUILD_XP);
     // A builder that acted does not work.
     u.acted = true;
     progressConstruction(s, 'valen');
@@ -158,10 +162,10 @@ describe('building rules', () => {
     expect(b.buildLeft).toBe(0);
     expect(ev.some((e) => e.type === 'buildingCompleted')).toBe(true);
     expect(s.factions.valen.stats.built).toBe(1);
-    // Working a complete building: +2 civic (a farm), building XP stays with the construction.
+    // Working a complete building: +WORK_XP civic (a farm), building XP stays with the construction.
     progressConstruction(s, 'valen');
-    expect(u.xpByCat.building).toBe(3 + 3);
-    expect(u.xpByCat.civic).toBe(2);
+    expect(u.xpByCat.building).toBe(2 * BUILD_XP);
+    expect(u.xpByCat.civic).toBe(WORK_XP);
   });
 
   it('building efficiency speeds construction', () => {
@@ -228,6 +232,45 @@ describe('building rules', () => {
   });
 });
 
+describe('building cost escalation', () => {
+  it('each building of a producing type the house owns (sites too) makes the next 25% dearer, rounded up', () => {
+    const { s } = base();
+    expect(BUILDING_COST_STEP).toBe(0.25);
+    expect(buildingCost(s, 'valen', 'farm')).toEqual({ wood: 8, gold: 6 });
+    makeTestBuilding(s, 'farm', 'valen', step(C, 1, 0));
+    expect(buildingCost(s, 'valen', 'farm')).toEqual({ wood: 10, gold: 8 }); // ×1.25: 10, 7.5 → 8
+    makeTestBuilding(s, 'farm', 'valen', step(C, -1, 0), { buildLeft: 2 }); // a site counts as well
+    expect(buildingCost(s, 'valen', 'farm')).toEqual({ wood: 12, gold: 9 }); // ×1.5
+    expect(buildingCost(s, 'valen', 'farm', 1)).toEqual({ wood: 14, gold: 11 }); // one more planned: ×1.75, 10.5 → 11
+    // Another house's farms and other types do not count.
+    makeTestBuilding(s, 'farm', 'thorn', at(11, 9));
+    expect(buildingCost(s, 'valen', 'farm')).toEqual({ wood: 12, gold: 9 });
+    expect(buildingCost(s, 'thorn', 'farm')).toEqual({ wood: 10, gold: 8 });
+    expect(buildingCost(s, 'valen', 'house')).toEqual(BUILDINGS.house.cost);
+  });
+
+  it('the castle, forge, training ground and wall keep their base cost', () => {
+    const { s } = base(); // already holds a castle
+    makeTestBuilding(s, 'forge', 'valen', step(C, 1, 0));
+    makeTestBuilding(s, 'forge', 'valen', step(C, -1, 0));
+    makeTestBuilding(s, 'training', 'valen', step(C, 0, 1));
+    makeTestBuilding(s, 'wall', 'valen', step(C, 0, -1));
+    for (const t of ['castle', 'forge', 'training', 'wall'] as const) expect(buildingCost(s, 'valen', t)).toEqual(BUILDINGS[t].cost);
+  });
+
+  it('canBuildAt asks for and startBuilding pays the escalated price', () => {
+    const { s } = base();
+    makeTestBuilding(s, 'farm', 'valen', step(C, 2, 0));
+    const u = makeTestUnit(s, 'valen', step(C, 1, 0), { items: ['tools'] });
+    s.factions.valen.resources = res({ wood: 10, gold: 7 });
+    expect(canBuildAt(s, u, 'farm')).toMatch(/Not enough.*need 1 gold more/);
+    s.factions.valen.resources.gold = 8;
+    expect(canBuildAt(s, u, 'farm')).toBeNull();
+    startBuilding(s, u, 'farm');
+    expect(s.factions.valen.resources).toEqual(res()); // paid 10 wood, 8 gold
+  });
+});
+
 describe('drill grounds', () => {
   it('Training Ground XP grows with its level (5/8/10); Mage Tower 3/5/6', () => {
     const { s } = base();
@@ -258,21 +301,22 @@ describe('upgrades', () => {
     s.factions.valen.techs.push('mining', 'masonry', 'architecture');
     expect(maxBuildingLevel(s, 'valen')).toBe(2);
     expect(canUpgrade(s, u)).toBeNull();
-    expect(upgradeCost(farm)).toEqual({ wood: 6 });
-    const wood0 = s.factions.valen.resources.wood;
+    expect(upgradeCost(farm)).toEqual({ wood: 8, gold: 6 }); // the farm's base cost × level 1
+    const { wood: wood0, gold: gold0 } = s.factions.valen.resources;
     startUpgrade(s, u);
-    expect(s.factions.valen.resources.wood).toBe(wood0 - 6);
+    expect(s.factions.valen.resources.wood).toBe(wood0 - 8);
+    expect(s.factions.valen.resources.gold).toBe(gold0 - 6);
     expect(farm.upgrading).toBe(true);
     expect(farm.buildLeft).toBe(2);
     expect(canUpgrade(s, u)).toMatch(/Already/);
-    // Still producing at level 1 (with the worker bonus) during the upgrade.
-    expect(buildingOutput(s, farm).food).toBe(4.5);
+    // Still producing at level 1 (with the worker bonus: 3 × 2.5 Builder's Tools) during the upgrade.
+    expect(buildingOutput(s, farm).food).toBe(7.5);
     progressConstruction(s, 'valen');
     progressConstruction(s, 'valen');
     expect(farm.level).toBe(2);
     expect(farm.upgrading).toBe(false);
     expect(canUpgrade(s, u)).toMatch(/Grand Architecture/);
-    expect(upgradeCost(farm)).toEqual({ wood: 12 });
+    expect(upgradeCost(farm)).toEqual({ wood: 16, gold: 12 }); // × level 2
   });
 });
 
@@ -289,12 +333,13 @@ describe('production', () => {
     expect(buildingOutput(s, farm)).toEqual({ food: 4.5 });
     farm.level = 1;
     const w = makeTestUnit(s, 'valen', h, { items: ['tools'] });
-    expect(buildingOutput(s, farm)).toEqual({ food: 4.5 });
+    expect(buildingOutput(s, farm)).toEqual({ food: 7.5 }); // 3 × 2.5 (worked with Builder's Tools)
     w.efficiency.farming = 1.25;
     // Each efficiency pick is a clean +25% of the worked building's whole output.
-    expect(buildingOutput(s, farm).food).toBeCloseTo(3 * 1.5 * 1.25, 2);
+    // (Outputs keep 2 decimals: 3 × 2.5 × 1.25 = 9.375 → 9.38.)
+    expect(buildingOutput(s, farm).food).toBeCloseTo(9.38, 6);
     w.efficiency.building = 1.25;
-    expect(buildingOutput(s, farm).food).toBeCloseTo(3 * 1.5 * 1.25 * 1.25, 2);
+    expect(buildingOutput(s, farm).food).toBeCloseTo(11.72, 6); // 3 × 2.5 × 1.25 × 1.25 = 11.71875
     w.efficiency = {};
     w.pos = step(C, -3, 0);
     makeTestUnit(s, 'valen', C, { isLeader: true });
@@ -325,12 +370,12 @@ describe('production', () => {
     makeTestUnit(s, 'valen', step(C, -1, 0), { items: ['wand', 'robe'], passives: ['scholar', 'harvester'] });
     makeTestUnit(s, 'valen', step(C, 0, -1));
     const inc = factionIncome(s, 'valen');
-    // castle 3g 1f 3r ×1.25 (the leader works it bare-handed) ×1.1 (leader on it); farm 3 ×1.1;
+    // castle 3g 1f 3r ×2 (the leader works it bare-handed) ×1.1 (leader on it); farm 3 ×1.1;
     // mana 2; research +1; food +1 − 2
-    expect(inc.gold).toBeCloseTo(3 * 1.25 * 1.1);
-    expect(inc.food).toBeCloseTo(1.38 + 3.3 + 1 - 2); // the castle's 1.375 food rounds to 1.38
+    expect(inc.gold).toBeCloseTo(3 * 2 * 1.1);
+    expect(inc.food).toBeCloseTo(1 * 2 * 1.1 + 3.3 + 1 - 2);
     expect(inc.mana).toBe(2);
-    expect(inc.research).toBeCloseTo(3 * 1.25 * 1.1 + 1);
+    expect(inc.research).toBeCloseTo(3 * 2 * 1.1 + 1);
 
     const s2 = makeTestState(10, 8) as GameState;
     s2.factions.ashen = { ...structuredClone(s2.factions.thorn), id: 'ashen' };
@@ -351,7 +396,7 @@ describe('production', () => {
     expect(s.factions.valen.resources.gold).toBe(13);
     expect(s.factions.valen.resources.food).toBe(0); // 1 − 5 < 0 → starvation, reset to 0
     expect(u.hp).toBe(1);
-    expect(v.hp).toBe(19);
+    expect(v.hp).toBe(26); // 30 − 4 (starvation)
     expect(evs.filter((e) => e.type === 'unitDamaged' && e.source === 'starvation').length).toBe(5);
     expect(s.factions.valen.resources.mana).toBe(100);
     expect(s.factions.valen.income.food).toBe(1 - 5);

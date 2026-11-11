@@ -5,7 +5,8 @@ import { TERRAIN } from '../../data/terrain';
 import { FACTIONS } from '../../data/factions';
 import { validateAction } from '../actions';
 import { reachable } from '../pathfinding';
-import { forecastFrom } from '../combat';
+import { forecastFrom, oppositeHex } from '../combat';
+import { unitOn } from '../ruleutil';
 import { factionIncome } from '../economy';
 import { isVisible } from '../visibility';
 import { effectiveStats, getAttackDefs, isMounted, unitValue } from '../units';
@@ -213,6 +214,12 @@ export function armorOf(ctx: Ctx, u: Unit): number {
   if (v === undefined) { v = effectiveStats(ctx.s, u).armor; ctx.memo.set(k, v); }
   return v;
 }
+export function blockOf(ctx: Ctx, u: Unit): number {
+  const k = `blk:${u.id}`;
+  let v = ctx.memo.get(k);
+  if (v === undefined) { v = effectiveStats(ctx.s, u).block; ctx.memo.set(k, v); }
+  return v;
+}
 
 /** Units standing within `r` of `c` (spatial index; any faction). */
 export function unitsNear(ctx: Ctx, c: Hex, r: number): Unit[] {
@@ -234,15 +241,38 @@ function equipSig(u: Unit): string {
   return `${e.main ?? ''}.${e.off ?? ''}.${e.body ?? ''}.${e.trinket ?? ''}.${e.mount ?? ''}`;
 }
 
-function leadAdj(ctx: Ctx, u: Unit, h: Hex): boolean {
-  if (!ctx.leadHexes.size) return false;
-  for (const d of DIRS) if (ctx.leadHexes.has(`${u.faction}@${h.q + d.q},${h.r + d.r}`)) return true;
-  return false;
+/**
+ * Best Leadership rank of `u`'s house next to `h` (0: none), as the combat rules see it with `u`
+ * standing on `h`: `u`'s own hex does not count (it has left it, and its own aura never lifts itself).
+ */
+function leadAdj(ctx: Ctx, u: Unit, h: Hex): number {
+  if (!ctx.leadHexes.size) return 0;
+  let best = 0;
+  for (const d of DIRS) {
+    const q = h.q + d.q, r = h.r + d.r;
+    if (q === u.pos.q && r === u.pos.r) continue;
+    best = Math.max(best, ctx.leadHexes.get(`${u.faction}@${q},${r}`) ?? 0);
+  }
+  return best;
+}
+
+/** A unit's passives and actives with their ranks: what its augments change in a fight. */
+function augSig(u: Unit): string {
+  const r = u.ranks ? Object.entries(u.ranks).map(([k, v]) => `${k}${v}`).join('') : '';
+  return `${u.passives.join('.')}/${r}`;
+}
+
+/** Whether a unit of `side` other than `self` stands on the hex opposite `at` around `target` (a flank, DESIGN §4.5). */
+export function flankAt(s: GameState, side: Unit['faction'], self: Unit, target: Hex, at: Hex): 0 | 1 {
+  if (hexDistance(target, at) !== 1) return 0;
+  const o = unitOn(s, oppositeHex(target, at));
+  return o && o.id !== self.id && o.faction === side ? 1 : 0;
 }
 
 /**
  * forecastFrom with a turn-wide cache keyed by everything the forecast depends on: both units'
- * hp, kit, level and buffs, the attacker's hex (cover, charge, distance) and leadership auras.
+ * hp, kit, level and buffs, the attacker's hex (cover, charge, distance), leadership auras,
+ * flanks either way and the reactions the target has left.
  */
 export function forecastCached(ctx: Ctx, u: Unit, from: Hex, t: Unit, kind: AttackKind): CombatForecast | null {
   const s = ctx.s;
@@ -250,10 +280,11 @@ export function forecastCached(ctx: Ctx, u: Unit, from: Hex, t: Unit, kind: Atta
   const tt = s.tiles[tileIndex(t.pos, s.width)];
   const bf = tf.building != null ? s.buildings[String(tf.building)] : undefined;
   const bt = tt.building != null ? s.buildings[String(tt.building)] : undefined;
-  const key = `${u.id}:${u.hp}:${u.level}:${equipSig(u)}:${u.buffs.map((b) => b.id).join('')}:${u.passives.length}`
-    + `|${from.q},${from.r}:${tf.terrain}:${bf ? `${bf.owner}${bf.level}${bf.buildLeft > 0 ? 'u' : ''}` : ''}:${leadAdj(ctx, u, from) ? 1 : 0}`
-    + `|${t.id}:${t.hp}:${t.level}:${equipSig(t)}:${t.buffs.map((b) => b.id).join('')}:${t.passives.length}`
-    + `|${t.pos.q},${t.pos.r}:${tt.terrain}:${bt ? `${bt.owner}${bt.level}${bt.buildLeft > 0 ? 'u' : ''}` : ''}:${leadAdj(ctx, t, t.pos) ? 1 : 0}|${kind}`;
+  const key = `${u.id}:${u.hp}:${u.level}:${equipSig(u)}:${u.buffs.map((b) => b.id).join('')}:${augSig(u)}`
+    + `|${from.q},${from.r}:${tf.terrain}:${bf ? `${bf.owner}${bf.level}${bf.buildLeft > 0 ? 'u' : ''}` : ''}:${leadAdj(ctx, u, from)}`
+    + `|${t.id}:${t.hp}:${t.level}:${equipSig(t)}:${t.buffs.map((b) => b.id).join('')}:${augSig(t)}`
+    + `|${t.pos.q},${t.pos.r}:${tt.terrain}:${bt ? `${bt.owner}${bt.level}${bt.buildLeft > 0 ? 'u' : ''}` : ''}:${leadAdj(ctx, t, t.pos)}|${kind}`
+    + `|${t.reacted ?? 0}:${flankAt(s, u.faction, u, t.pos, from)}${flankAt(s, t.faction, u, from, t.pos)}`;
   if (ctx.t.forecasts.has(key)) return ctx.t.forecasts.get(key)!;
   const fc = forecastFrom(s, u, from, t, kind);
   ctx.t.forecasts.set(key, fc);
@@ -271,7 +302,7 @@ export function maxHp(s: GameState, u: Unit): number {
   return Math.max(1, effectiveStats(s, u).maxHp);
 }
 
-/** Rough fighting strength (hp × best damage output × armor), for force comparisons. */
+/** Rough fighting strength (hp × best damage output × protection), for force comparisons. */
 export function powerOf(s: GameState, u: Unit): number {
   const st = effectiveStats(s, u);
   let best = 0;
@@ -284,7 +315,8 @@ export function powerOf(s: GameState, u: Unit): number {
     dmg *= (d.kind === 'melee' ? fdef?.meleeMult : d.kind === 'ranged' ? fdef?.rangedMult : fdef?.magicMult) ?? 1;
     if (dmg > best) best = dmg;
   }
-  return (Math.max(1, u.hp) * best * (1 + st.armor / 100)) / 10;
+  // Block counts like ~10% armor per point against the 8–12 damage strikes of the early armies.
+  return (Math.max(1, u.hp) * best * (1 + st.armor / 100 + (st.block ?? 0) / 10)) / 10;
 }
 
 /** True if the unit carries a real weapon (or is a creature that fights natively). */

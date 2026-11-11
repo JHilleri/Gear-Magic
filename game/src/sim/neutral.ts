@@ -6,7 +6,7 @@ import { ITEMS, ITEM_LIST } from '../data/items';
 import { MONSTERS } from '../data/factions';
 import { createUnit, unitValue } from './units';
 import { reachable } from './pathfinding';
-import { forecastCombat, resolveCombat } from './combat';
+import { clearReactions, forecastCombat, resolveCombat } from './combat';
 import { itemUnlocked, progressResearch } from './research';
 import { computeVisibility } from './visibility';
 import { manaCap } from './spells';
@@ -256,6 +256,7 @@ function actMonster(state: GameState, m: Unit, castles: Hex[]): GameEvent[] {
 export function runNeutralTurn(state: GameState): GameEvent[] {
   const events: GameEvent[] = [];
   if (state.gameOver) return events;
+  clearReactions(state); // the wilds' turn: everyone may retaliate again
   const list = () => Object.values(state.units).filter((u) => u.faction === 'neutral').sort((a, b) => a.id - b.id);
   for (const m of list()) events.push(...unitTurnUpkeep(state, m));
   if (state.round > 0 && state.round % RESPAWN_EVERY === 0) events.push(...respawn(state));

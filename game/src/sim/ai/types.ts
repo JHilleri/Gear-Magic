@@ -133,5 +133,6 @@ export interface Ctx {
   /** Tile index → unit standing there (all factions), for fast area queries. */
   at: Map<number, Unit>;
   /** Hexes of own and enemy units with the Leadership passive (forecast cache keys). */
-  leadHexes: Set<string>;
+  /** Hexes of Leadership units (`faction@q,r`) → their Leadership rank. */
+  leadHexes: Map<string, number>;
 }

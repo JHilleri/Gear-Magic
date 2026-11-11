@@ -56,14 +56,14 @@ describe('startTurn', () => {
     const sick = makeTestUnit(s, 'valen', at(6, 8), { hp: 3, poisoned: true });
     const sicker = makeTestUnit(s, 'valen', at(8, 8), { hp: 1, poisoned: true });
     const evs = startTurn(s, 'valen');
-    expect(onCastle.hp).toBe(13);
+    expect(onCastle.hp).toBe(15); // cured, +10 castle
     expect(onCastle.poisoned).toBe(false);
-    expect(onHouse.hp).toBe(5); // −4 poison +4 house
+    expect(onHouse.hp).toBe(7); // poison bites first: 5 − 5 stops at 1 (never fatal), then +6 house
     expect(onHouse.poisoned).toBe(true);
-    expect(onShrine.hp).toBe(13);
+    expect(onShrine.hp).toBe(15); // cured, +10 shrine
     expect(onShrine.poisoned).toBe(false);
-    expect(rested.hp).toBe(7);
-    expect(regen.hp).toBe(11);
+    expect(rested.hp).toBe(8); // +3 rest
+    expect(regen.hp).toBe(10); // +2 regeneration +3 amulet
     expect(sick.hp).toBe(1);
     expect(sicker.hp).toBe(1);
     expect(evs.some((e) => e.type === 'unitDamaged' && e.source === 'poison')).toBe(true);
@@ -105,11 +105,12 @@ describe('startTurn', () => {
     const sw = makeTestUnit(s, 'valen', off(c, -1), { items: ['sword'], levelXpByCat: { melee: 9, ranged: 0, building: 0, civic: 2, explore: 0, leader: 0, magic: 0 } });
     const ar = makeTestUnit(s, 'valen', off(c, 0, 1), { items: ['bow'] });
     startTurn(s, 'valen');
-    expect(n.xpByCat.building).toBe(1); // a bare-handed commoner is a builder by kit
+    // Inspiring (rank 1) teaches 3 XP a turn.
+    expect(n.xpByCat.building).toBe(3); // a bare-handed commoner is a builder by kit
     expect(f.xpByCat.building).toBe(0);
-    expect(sw.xpByCat.melee).toBe(1);
+    expect(sw.xpByCat.melee).toBe(3);
     expect(sw.xpByCat.civic).toBe(0);
-    expect(ar.xpByCat.ranged).toBe(1);
+    expect(ar.xpByCat.ranged).toBe(3);
   });
 
   it('level-up queue: human gets options, AI picks automatically', () => {

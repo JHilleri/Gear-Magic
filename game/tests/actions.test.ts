@@ -7,6 +7,7 @@ import {
 import { computeVisibility } from '../src/sim/visibility';
 import { canUseSkill, skillBlocker, skillTargets } from '../src/sim/skills';
 import { unitTurnUpkeep } from '../src/sim/turn';
+import { COMMONER_STATS } from '../src/data/presets';
 import { at, makeTestBuilding, makeTestState, makeTestUnit, setTerrain } from './helpers';
 
 const off = (h: Hex, dq: number, dr = 0): Hex => ({ q: h.q + dq, r: h.r + dr });
@@ -72,7 +73,7 @@ describe('move', () => {
 
   it('entering the zone of control of a newly seen enemy stops the move', () => {
     const { s, S } = corridor();
-    const u = makeTestUnit(s, 'valen', S, { base: { maxHp: 22, str: 4, dex: 4, int: 3, armor: 0, mov: 6, vis: 1 }, mp: 6 });
+    const u = makeTestUnit(s, 'valen', S, { base: { maxHp: 22, str: 4, dex: 4, int: 3, armor: 0, block: 0, mov: 6, vis: 1 }, mp: 6 });
     setTerrain(s, off(S, 3, -1), 'grass');
     makeTestUnit(s, 'thorn', off(S, 3, -1));
     computeVisibility(s, 'valen');
@@ -85,7 +86,7 @@ describe('move', () => {
   it('a hidden enemy on the path stops a skirmisher just before it (ambush)', () => {
     const { s, S } = corridor();
     const u = makeTestUnit(s, 'valen', S, {
-      base: { maxHp: 22, str: 4, dex: 4, int: 3, armor: 0, mov: 6, vis: 1 }, mp: 6, passives: ['skirmisher'],
+      base: { maxHp: 22, str: 4, dex: 4, int: 3, armor: 0, block: 0, mov: 6, vis: 1 }, mp: 6, passives: ['skirmisher'],
     });
     makeTestUnit(s, 'thorn', off(S, 4));
     computeVisibility(s, 'valen');
@@ -100,7 +101,7 @@ describe('move', () => {
   it('never stops on a friend when interrupted while passing through', () => {
     const { s, S } = corridor();
     const u = makeTestUnit(s, 'valen', S, {
-      base: { maxHp: 22, str: 4, dex: 4, int: 3, armor: 0, mov: 6, vis: 1 }, mp: 6, passives: ['skirmisher'],
+      base: { maxHp: 22, str: 4, dex: 4, int: 3, armor: 0, block: 0, mov: 6, vis: 1 }, mp: 6, passives: ['skirmisher'],
     });
     makeTestUnit(s, 'valen', off(S, 3));
     const foe = makeTestUnit(s, 'thorn', off(S, 4));
@@ -228,7 +229,7 @@ describe('attack, build, recruit, craft, equip, research, levelup', () => {
 });
 
 describe('skills', () => {
-  const big = () => ({ maxHp: 200, str: 4, dex: 4, int: 3, armor: 0, mov: 5, vis: 4 });
+  const big = () => ({ maxHp: 200, str: 4, dex: 4, int: 3, armor: 0, block: 0, mov: 5, vis: 4 });
 
   it('Power Strike is a free buff; Fortify uses the action but keeps movement', () => {
     const s = makeTestState();
@@ -236,14 +237,14 @@ describe('skills', () => {
     const foe = makeTestUnit(s, 'thorn', at(4, 3));
     let r = applyAction(s, { type: 'skill', unit: u.id, skill: 'powerstrike' });
     expect(r.ok).toBe(true);
-    expect(u.buffs).toContainEqual({ id: 'powerstrike', turns: 1, damageMult: 1.5 });
+    expect(u.buffs).toContainEqual({ id: 'powerstrike', turns: 1, damageMult: 1.15 }); // +15% at rank 1
     expect(u.cooldowns.powerstrike).toBe(3);
     expect(u.acted).toBe(false);
     r = applyAction(s, { type: 'skill', unit: u.id, skill: 'powerstrike' });
     expect(r.error).toMatch(/recharging/);
     r = applyAction(s, { type: 'skill', unit: u.id, skill: 'fortify' });
     expect(r.ok).toBe(true);
-    expect(u.buffs).toContainEqual({ id: 'fortify', turns: 1, armor: 20 });
+    expect(u.buffs).toContainEqual({ id: 'fortify', turns: 1, armor: 7.5 }); // +7.5% armor at rank 1, no block
     expect(u.acted).toBe(true);
     expect(u.mp).toBe(u.base.mov);
     expect(validateAction(s, { type: 'attack', unit: u.id, target: foe.id, kind: 'melee' })).toMatch(/already acted/);
@@ -342,7 +343,7 @@ describe('skills', () => {
     expect(validateAction(s, { type: 'move', unit: u.id, to: off(u.pos, 1) })).toBeNull();
   });
 
-  it('Mend heals an adjacent ally 12 and cures poison', () => {
+  it('Mend heals an adjacent ally 15 and cures poison', () => {
     const s = makeTestState();
     const c = at(5, 5);
     const u = makeTestUnit(s, 'valen', c, { actives: ['heal'] });
@@ -350,11 +351,11 @@ describe('skills', () => {
     expect(skillTargets(s, u, 'heal')).toEqual([ally.pos]);
     const r = applyAction(s, { type: 'skill', unit: u.id, skill: 'heal', target: ally.pos });
     expect(r.ok).toBe(true);
-    expect(ally.hp).toBe(17);
+    expect(ally.hp).toBe(20); // 5 + 15
     expect(ally.poisoned).toBe(false);
     expect(u.acted).toBe(true);
     expect(u.cooldowns.heal).toBe(2);
-    expect(r.events).toContainEqual({ type: 'unitHealed', unit: ally.id, amount: 12 });
+    expect(r.events).toContainEqual({ type: 'unitHealed', unit: ally.id, amount: 15 });
   });
 
   it('skillBlocker says what stops a skill before any target: no "Choose an ally" for a missing target', () => {
@@ -373,7 +374,7 @@ describe('skills', () => {
     expect(skillBlocker(s, u, 'firebolt')).toMatch(/does not know/);
   });
 
-  it('Firebolt: 14 damage at range 3, no retaliation', () => {
+  it('Firebolt: 18 damage at range 3, no retaliation', () => {
     const s = makeTestState();
     const c = at(3, 5);
     const u = makeTestUnit(s, 'valen', c, { actives: ['firebolt'] });
@@ -381,8 +382,8 @@ describe('skills', () => {
     expect(validateAction(s, { type: 'skill', unit: u.id, skill: 'firebolt', target: off(c, 2) })).toMatch(/visible enemy/);
     const r = applyAction(s, { type: 'skill', unit: u.id, skill: 'firebolt', target: foe.pos });
     expect(r.ok).toBe(true);
-    expect(foe.hp).toBe(36);
-    expect(u.hp).toBe(22);
+    expect(foe.hp).toBe(32); // 50 − 18
+    expect(u.hp).toBe(COMMONER_STATS.maxHp); // untouched: no retaliation
     expect(u.acted).toBe(true);
     expect(u.mp).toBe(0);
   });
@@ -421,7 +422,7 @@ describe('skills', () => {
       total += dmgA + dmgB;
     }
     expect(total).toBeGreaterThan(0);
-    expect(friend.hp).toBe(22);
+    expect(friend.hp).toBe(COMMONER_STATS.maxHp); // friends under the arrows are spared
     expect(u.acted).toBe(true);
   });
 

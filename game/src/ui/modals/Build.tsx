@@ -7,11 +7,12 @@ import { TECHS } from '../../data/research';
 import { ACTIVES } from '../../data/skills';
 import { TERRAIN } from '../../data/terrain';
 import { buildOptions } from '../../sim/actions';
+import { BUILDING_COST_STEP, buildingCost } from '../../sim/economy';
 import { Cost, Output, TipCard } from '../common';
 import { act, useUi } from '../ctx';
 import { Icon, Sym } from '../icons';
 import { tip } from '../tooltip';
-import { cls, isMyTurn, optionError, presetTechs, safe, selectedUnitId, tileAt, unitById, viewerOf } from '../util';
+import { cls, isMyTurn, optionError, plural, presetTechs, safe, selectedUnitId, tileAt, unitById, viewerOf } from '../util';
 import { Modal } from './Modal';
 
 const GROUPS: { name: string; ids: BuildingId[] }[] = [
@@ -62,6 +63,9 @@ export function BuildModal() {
               {g.ids.map((id) => {
                 const d = BUILDINGS[id];
                 const err = errOf(id);
+                const cost = safe(() => buildingCost(s, f, id), d.cost);
+                const owned = Object.values(s.buildings).filter((b) => b.owner === f && b.type === id).length;
+                const dearer = Object.keys(cost).some((k) => (cost as Record<string, number>)[k] !== (d.cost as Record<string, number>)[k]);
                 const locked = (d.unlock && !fs.techs.includes(d.unlock)) || (!!d.unlockSkill && !u.actives.includes(d.unlockSkill));
                 const req = d.unlock ? TECHS[d.unlock].name : d.unlockSkill ? `${ACTIVES[d.unlockSkill].name} skill` : null;
                 return (
@@ -69,6 +73,7 @@ export function BuildModal() {
                     onClick={err ? undefined : () => void build(id)}
                     {...tip(<TipCard icon={<Icon k={d.icon} size={40} />} title={d.name} sub={`Terrain: ${d.terrains.map((t) => TERRAIN[t].name).join(', ')}${d.deposit ? ` · needs ${d.deposit} deposit` : ''}`}>
                       {d.description}
+                      {dearer && <div class="tip-note t-dim">You own {plural(owned, d.name.toLowerCase(), d.name.toLowerCase().replace(/y$/, 'ie') + 's')}: each one makes the next {Math.round(BUILDING_COST_STEP * 100)}% dearer.</div>}
                       {req && <div class={cls('tip-note', locked ? 't-bad' : 't-good')}>Requires {req}</div>}
                       {d.recruits && (
                         <div class="tip-note">Recruits: {d.recruits.map((p, i) => {
@@ -83,7 +88,7 @@ export function BuildModal() {
                     <span class="bc-icon"><Icon k={d.icon} size={52} dim={!!locked} />{locked && <span class="bc-lock"><Sym name="lock" /></span>}</span>
                     <span class="bc-main">
                       <span class="bc-name">{d.name}</span>
-                      <Cost cost={d.cost} have={fs.resources} compact />
+                      <Cost cost={cost} have={fs.resources} compact />
                       <span class="bc-row"><Output out={d.output} empty={d.armory ? 'Armory' : d.defense ? `+${d.defense[0]}% def` : '—'} /><span class="bc-pts" {...tip('Build points (one builder adds ~1 per turn)')}><Sym name="hammer" />{d.buildPoints}</span></span>
                       {err && <span class="bc-err">{err}</span>}
                       {!err && id === 'castle' && confirmCastle && moveWarning && <span class="bc-err">{moveWarning} Click again to confirm.</span>}

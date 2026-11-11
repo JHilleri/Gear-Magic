@@ -4,7 +4,9 @@ import type { Action, ActiveId, Building, BuildingId, CombatForecast, Hex, Unit 
 import { hexDistance, hexEq, inBounds, spiral, tileIndex } from '../../core/hex';
 import { BUILDINGS } from '../../data/buildings';
 import { FLAT_TERRAIN } from '../../data/terrain';
-import { attackProfile, tileDefense } from '../combat';
+import { tileDefense } from '../combat';
+import { fireboltOf, volleyProfile } from '../skills';
+import { augmentRank } from '../../data/ranks';
 import { canBuildAt, computeTerritory } from '../economy';
 import { canBuildWith, getAttackDefs } from '../units';
 import { isExplored, isVisible } from '../visibility';
@@ -16,7 +18,7 @@ import { moveToward, safestHex } from './movement';
 import { getStrategy } from './strategy';
 import { attackersOn, exposureAt, threatens } from './threat';
 import type { Ctx, PendingAttack, PlanKind, Strategy } from './types';
-import { attempt, claim, claimedByOther, forecastCached, idxOf, isArmed, isHeldSite, maxHp, mhp, powerOf, reachOf, unitsNear, val } from './util';
+import { attempt, claim, claimedByOther, flankAt, forecastCached, idxOf, isArmed, isHeldSite, maxHp, mhp, powerOf, reachOf, unitsNear, val } from './util';
 
 const FLAT = new Set<string>(FLAT_TERRAIN);
 const LEADER_KILL_BONUS = 700;
@@ -124,9 +126,11 @@ function adjacentEnemies(ctx: Ctx, u: Unit, h: Hex): number {
   return n;
 }
 
-function leadershipNear(ctx: Ctx, u: Unit, h: Hex, leaders: Unit[]): boolean {
-  for (const l of leaders) if (l.id !== u.id && hexDistance(l.pos, h) === 1) return true;
-  return false;
+/** Best Leadership rank among `leaders` (other than `u`) next to `h`; 0 if none. */
+function leadershipNear(ctx: Ctx, u: Unit, h: Hex, leaders: Unit[]): number {
+  let best = 0;
+  for (const l of leaders) if (l.id !== u.id && hexDistance(l.pos, h) === 1) best = Math.max(best, augmentRank(l, 'leadership'));
+  return best;
 }
 
 /**
@@ -141,7 +145,7 @@ function targetBound(ctx: Ctx, t: Unit): number {
  * Best attack plan for one unit over every hex it can reach this turn (and its own hex).
  * `zone` restricts where it may attack from; plans scoring `floor` or less are not wanted, so
  * targets that cannot beat it are skipped. Forecasts are shared between hexes that give
- * identical fights (same cover, distance, charge and leadership).
+ * identical fights (same cover, distance, charge, leadership and flanks either way).
  */
 export function planFor(ctx: Ctx, u: Unit, zone?: (h: Hex) => boolean, floor = -Infinity): Plan | null {
   const s = ctx.s;
@@ -179,7 +183,10 @@ export function planFor(ctx: Ctx, u: Unit, zone?: (h: Hex) => boolean, floor = -
         const o = origins.get(idxOf(s, h));
         if (!o || (zone && !zone(o))) continue;
         const terr = s.tiles[tileIndex(o, s.width)].terrain;
-        const key = `${t.id}|${d.kind}|${tileDefense(s, u, o)}|${dist}|${FLAT.has(terr) ? 1 : 0}|${leadershipNear(ctx, u, o, leaders) ? 1 : 0}`;
+        // A melee blow from `o` may flank `t` (an ally opposite `o`), and `t`'s riposte may flank `u`
+        // (one of `t`'s units behind `o`): both change the fight, so both are in the key.
+        const flank = d.kind === 'melee' ? `${flankAt(s, u.faction, u, t.pos, o)}${flankAt(s, t.faction, u, o, t.pos)}` : '';
+        const key = `${t.id}|${d.kind}|${tileDefense(s, u, o)}|${dist}|${FLAT.has(terr) ? 1 : 0}|${leadershipNear(ctx, u, o, leaders)}|${flank}`;
         let fc = fcCache.get(key);
         if (fc === undefined) { fc = forecastCached(ctx, u, o, t, d.kind); fcCache.set(key, fc); }
         if (!fc) continue;
@@ -193,10 +200,11 @@ export function planFor(ctx: Ctx, u: Unit, zone?: (h: Hex) => boolean, floor = -
         consider({ unit: u, hex: o, target: t, kind: d.kind, score: sc, retaliates: !!fc.defender, pk: fc.defenderKillChance });
       }
     }
-    // Firebolt: 14 unblockable damage at range 3, no retaliation.
+    // Firebolt: fixed damage (no block, no armor) at range 3, no retaliation.
     if (fire && d0 <= reachR + 3) {
-      const dmg = Math.min(14, t.hp);
-      const pk = t.hp <= 14 ? 1 : 0;
+      const fb = fireboltOf(u);
+      const dmg = Math.min(fb, t.hp);
+      const pk = t.hp <= fb ? 1 : 0;
       for (const h of spiral(t.pos, 3)) {
         if (hexDistance(h, t.pos) < 1 || !inBounds(h, s.width, s.height)) continue;
         const o = origins.get(idxOf(s, h));
@@ -209,7 +217,7 @@ export function planFor(ctx: Ctx, u: Unit, zone?: (h: Hex) => boolean, floor = -
 
   // Volley: 60% damage on every enemy around a hex in bow range, no retaliation.
   const bow = defs.find((d) => d.kind === 'ranged');
-  const volleyProfiles = new Map<string, ReturnType<typeof attackProfile>>();
+  const volleyProfiles = new Map<string, ReturnType<typeof volleyProfile>>();
   if (bow && ready(u, 'volley')) {
     const centers = new Map<number, Hex>();
     for (const t of ctx.enemies) {
@@ -223,9 +231,9 @@ export function planFor(ctx: Ctx, u: Unit, zone?: (h: Hex) => boolean, floor = -
       for (const v of victims) {
         const pk0 = `vp:${u.id}:${v.id}`;
         let p = volleyProfiles.get(pk0);
-        if (p === undefined) { p = attackProfile(s, u, v, 'ranged'); volleyProfiles.set(pk0, p); }
+        if (p === undefined) { p = volleyProfile(s, u, v); volleyProfiles.set(pk0, p); }
         if (!p) continue;
-        const per = Math.max(1, Math.round(p.damage * 0.6));
+        const per = p.damage; // one arrow: 60% before block and armor
         const exp = per * p.strikes * p.hitChance;
         const need = Math.ceil(v.hp / per);
         // P(at least `need` hits out of `strikes`) for the kill chance.
@@ -316,8 +324,8 @@ function frontDist(ctx: Ctx, o: Unit): number {
 
 /**
  * Everything a unit's best attack depends on, cheaply: its own state, friends close enough to
- * hold a hex it could strike from (or lend Leadership), every other unit it could strike or
- * splash (position, hp, seen), the enemies whose threat can reach those hexes (exposure) and
+ * hold a hex it could strike from (or lend Leadership) or flank a target from, every other unit it
+ * could strike or splash (position, hp, ripostes left, seen), the enemies whose threat can reach those hexes (exposure) and
  * our leader (target values, aggression). Same signature → same plan; friends shuffling behind
  * the front and changes further away do not invalidate it (friends never block movement).
  */
@@ -331,6 +339,7 @@ function planSig(ctx: Ctx, u: Unit, extraMp = 0): string {
   for (const d of getAttackDefs(u)) range = Math.max(range, d.range);
   if (ready(u, 'firebolt')) range = Math.max(range, 3);
   const rFriend = mp + 1;                                       // blocking, Leadership
+  const rFlank = mp + 2;                                        // a friend opposite a reachable target flanks it
   const rStrike = mp + range + (ready(u, 'volley') ? 3 : 1);    // targets, volley splash, ZOC
   const rThreat = mp + 10;                                      // enemy movement + range
   for (const k in s.units) {
@@ -338,10 +347,13 @@ function planSig(ctx: Ctx, u: Unit, extraMp = 0): string {
     if (o.id === u.id || o.hp <= 0) continue;
     const d = hexDistance(o.pos, u.pos);
     if (o.faction === u.faction) {
-      if (d <= rFriend && (frontDist(ctx, o) <= range || o.passives.includes('leadership'))) sig += `${o.id}@${o.pos.q},${o.pos.r};`;
+      const near = d <= rFriend && (frontDist(ctx, o) <= range || o.passives.includes('leadership'));
+      const flanker = d <= rFlank && frontDist(ctx, o) <= 1;
+      if (near || flanker) sig += `${o.id}@${o.pos.q},${o.pos.r};`;
     } else if (d <= rThreat) {
       const seen = isVisible(s, ctx.f, o.pos) ? '' : '?';
-      sig += d <= rStrike ? `${o.id}@${o.pos.q},${o.pos.r}:${o.hp}${seen};` : `${o.id}${seen};`;
+      // Within strike range the target's ripostes left this turn change the fight too.
+      sig += d <= rStrike ? `${o.id}@${o.pos.q},${o.pos.r}:${o.hp}:${o.reacted ?? 0}${seen};` : `${o.id}${seen};`;
     }
   }
   return sig;

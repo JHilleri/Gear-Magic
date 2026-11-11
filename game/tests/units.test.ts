@@ -14,7 +14,7 @@ describe('createUnit', () => {
     const u = createUnit(s, { faction: 'thorn', pos: at(2, 2) });
     expect(s.units[String(u.id)]).toBe(u);
     expect(u.race).toBe('orc');
-    expect(u.base).toEqual({ ...COMMONER_STATS, maxHp: COMMONER_STATS.maxHp + 4, str: COMMONER_STATS.str + 1, int: COMMONER_STATS.int - 1 });
+    expect(u.base).toEqual({ ...COMMONER_STATS, maxHp: COMMONER_STATS.maxHp + 5, str: COMMONER_STATS.str + 1, int: COMMONER_STATS.int - 1 });
     expect(u.hp).toBe(u.base.maxHp);
     expect(u.level).toBe(1);
     expect(u.mp).toBe(COMMONER_STATS.mov);
@@ -136,22 +136,31 @@ describe('createUnit', () => {
 });
 
 describe('effectiveStats', () => {
-  it('sums items, ironskin and buffs; clamps armor and mov', () => {
+  it('sums items, ironskin and buffs; clamps armor, block and mov', () => {
     const s = makeTestState();
     const u = makeTestUnit(s, 'valen', at(1, 1), { items: ['shield', 'plate', 'amulet', 'horse'] });
     const st = effectiveStats(s, u);
-    expect(st.armor).toBe(42);
-    expect(st.maxHp).toBe(COMMONER_STATS.maxHp + 8);
+    expect(st.armor).toBe(30); // shield 5 + plate 25
+    expect(st.block).toBe(5); // shield 2 + plate 3
+    expect(st.maxHp).toBe(COMMONER_STATS.maxHp + 10);
     expect(st.mov).toBe(COMMONER_STATS.mov - 1 + 3);
     u.passives.push('ironskin');
     u.buffs.push({ id: 'fortify', turns: 1, armor: 20 }, { id: 'bless', turns: 2, armor: 10, damageMult: 1.2 });
-    expect(effectiveStats(s, u).armor).toBe(70); // 42 + 8 + 30 = 80 → clamp 70 (DESIGN §4.1)
+    expect(effectiveStats(s, u).armor).toBe(60); // 30 + 20 + 10
+    expect(effectiveStats(s, u).block).toBe(6); // 5 + Iron Skin 1 (Fortify adds armor only)
+    u.base.armor = 20; // a veteran's own 20%: 80 → clamp 70 (DESIGN §4.1)
+    expect(effectiveStats(s, u).armor).toBe(70);
+    u.base.armor = 0;
     u.buffs = [{ id: 'fortify', turns: 0, armor: 20 }]; // expired buffs don't count
-    expect(effectiveStats(s, u).armor).toBe(50);
+    expect(effectiveStats(s, u).armor).toBe(30);
+    expect(effectiveStats(s, u).block).toBe(6); // 5 + Iron Skin 1
     const slow = makeTestUnit(s, 'valen', at(2, 1), { base: { ...COMMONER_STATS, mov: 1 }, items: ['plate'] });
     expect(effectiveStats(s, slow).mov).toBe(1);
+    const frail = makeTestUnit(s, 'valen', at(3, 1), { base: { ...COMMONER_STATS, block: -3 } });
+    expect(effectiveStats(s, frail).block).toBe(0); // never below 0
     // Base stays untouched.
     expect(u.base.armor).toBe(0);
+    expect(u.base.block).toBe(0);
   });
 
   it('adds staff/robe/ring intellect', () => {

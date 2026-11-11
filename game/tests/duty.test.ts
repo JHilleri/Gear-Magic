@@ -30,7 +30,7 @@ describe('units awaiting orders', () => {
     expect(idleUnits(s)).toHaveLength(7); // the sim's "can still act" list is unchanged
     expect(unitsAtWork(s)).toBe(4);
 
-    // a commoner without tools works a farm too (bare-handed, ×1.25)
+    // a commoner without tools works a farm too (bare-handed, ×2)
     farmHand.pos = farm.pos;
     onFarm.pos = at(6, 8);
     expect(onDuty(s, farmHand)).toBe(true);

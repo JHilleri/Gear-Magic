@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import type { SkillOptionDef, Unit, XpCategory } from '../../core/types';
 import { FACTIONS } from '../../data/factions';
 import { ACTIVES, LEVEL_OPTION_BY_ID, PASSIVES } from '../../data/skills';
+import { augmentRank, augmentText, rankedName, type AugmentId } from '../../data/ranks';
 import { bodyVariant } from '../../sim/units';
 import { Btn } from '../common';
 import { act, useUi } from '../ctx';
@@ -25,14 +26,30 @@ export function optionIcon(o: SkillOptionDef): string {
   return o.icon;
 }
 
-function optionDetail(o: SkillOptionDef): string {
-  if (o.kind === 'passive' && o.passive) return PASSIVES[o.passive]?.description ?? o.description;
+/** The augment an option teaches, if it is a passive or an active skill. */
+const augmentOf = (o: SkillOptionDef): AugmentId | undefined => (o.kind === 'passive' ? o.passive : o.kind === 'active' ? o.active : undefined);
+
+/** The rank `u` would reach by taking `o` (1: learns it; 2+: an upgrade of an augment it has). */
+function nextRank(o: SkillOptionDef, u: Unit): number {
+  const id = augmentOf(o);
+  return id ? augmentRank(u, id) + 1 : 1;
+}
+
+/** The option's name; an augment the unit already has names the rank it would reach ("Firebolt II"). */
+function optionName(o: SkillOptionDef, u: Unit): string {
+  return augmentOf(o) ? rankedName(o.name, nextRank(o, u)) : o.name;
+}
+
+/** What the option gives: for an augment, its effect at the rank it would reach. */
+function optionDetail(o: SkillOptionDef, u: Unit): string {
+  const id = augmentOf(o);
+  if (!id) return o.description;
+  const text = augmentText(id, nextRank(o, u));
   if (o.kind === 'active' && o.active) {
     const a = ACTIVES[o.active];
-    if (!a) return o.description;
-    return a.cooldown > 0 ? `${a.description} Cooldown ${a.cooldown} turns${a.range ? `, range ${a.range}` : ''}.` : a.description;
+    if (a && a.cooldown > 0) return `${text} Cooldown ${a.cooldown} turns.`;
   }
-  return o.description;
+  return text;
 }
 
 function pickUnit(s: NonNullable<ReturnType<typeof useUi>['store']['state']>, ui: ReturnType<typeof useUi>['store']['ui']): Unit | undefined {
@@ -117,10 +134,10 @@ export function LevelUpModal() {
               pressRef.current = null;
               void choose(o.id);
             } : undefined} {...tip(!my ? <span class="t-bad">Not your turn</span> : null)}>
-            <span class="lu-kind">{KIND_LABEL[o.kind]}</span>
+            <span class="lu-kind">{nextRank(o, u) > 1 ? `${KIND_LABEL[o.kind]} · upgrade` : KIND_LABEL[o.kind]}</span>
             <span class="lu-icon"><Icon k={optionIcon(o)} size={76} /></span>
-            <span class="lu-name">{o.name}</span>
-            <span class="lu-desc">{optionDetail(o)}</span>
+            <span class="lu-name">{optionName(o, u)}</span>
+            <span class="lu-desc">{optionDetail(o, u)}</span>
             <span class="lu-cats">
               {o.categories.map((c) => <span key={c} class={cls('lu-cat', `xp-${c}`)}>{XP_NAMES[c]}</span>)}
               {catWeight(o.categories) > 0 && <span class="lu-why t-dim">{Math.round(catWeight(o.categories) * 100)}% of your XP</span>}

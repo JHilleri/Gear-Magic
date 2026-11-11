@@ -7,7 +7,8 @@ import { castleHexes, monsterMayStand } from '../neutral';
 import { attackProfile, tileDefense } from '../combat';
 import { effectiveStats, getAttackDefs, isMounted } from '../units';
 import type { Ctx, Threat } from './types';
-import { armorOf } from './util';
+import { armorOf, blockOf } from './util';
+import { augmentRank, marksmanMin } from '../../data/ranks';
 
 /** At most this many enemies are assumed to be able to pile onto one hex. */
 const MAX_ATTACKERS = 3;
@@ -57,15 +58,16 @@ export function threatOf(ctx: Ctx, e: Unit): Threat {
 }
 
 /**
- * damage × strikes of `e`'s attack of `kind` against `u`. Only the victim's armor and whether it
- * rides matter (vs-mounted spears), so the value is shared by every unit with the same armor.
+ * damage × strikes of `e`'s attack of `kind` against `u`. Only the victim's block, armor and whether
+ * it rides matter (vs-mounted spears), so the value is shared by every unit with the same protection.
+ * Flanking is left out: it depends on where both stand, and the threat map asks about other hexes.
  */
 function rawDamage(ctx: Ctx, e: Unit, u: Unit, kind: AttackKind): number {
   const armor = armorOf(ctx, u);
-  const key = `${e.id}|${kind}|${armor}|${isMounted(u) ? 1 : 0}`;
+  const key = `${e.id}|${kind}|${armor}/${blockOf(ctx, u)}|${isMounted(u) ? 1 : 0}`;
   let v = ctx.t.prof.get(key);
   if (v === undefined) {
-    const p = attackProfile(ctx.s, e, u, kind);
+    const p = attackProfile(ctx.s, e, u, kind, { flank: false });
     v = p ? p.damage * p.strikes : 0;
     ctx.t.prof.set(key, v);
   }
@@ -97,8 +99,8 @@ function hitsAt(ctx: Ctx, u: Unit, h: Hex): { id: number; v: number }[] {
   const s = ctx.s;
   if (!inBounds(h, s.width, s.height) || ctx.enemies.length === 0) return [];
   const idx = tileIndex(h, s.width);
-  // Armor (equipment, Fortify) and riding change what hits; the hex's cover is fixed this turn.
-  const key = `${u.id}|${idx}|${armorOf(ctx, u)}|${u.equipment.mount ? 1 : 0}${u.equipment.off ? 1 : 0}`;
+  // Block and armor (equipment, Fortify) and riding change what hits; the hex's cover is fixed this turn.
+  const key = `${u.id}|${idx}|${armorOf(ctx, u)}/${blockOf(ctx, u)}|${u.equipment.mount ? 1 : 0}${u.equipment.off ? 1 : 0}`;
   const memo = ctx.hits.get(key);
   if (memo) return memo;
   const def = tileDefense(s, u, h);
@@ -114,7 +116,8 @@ function hitsAt(ctx: Ctx, u: Unit, h: Hex): { id: number; v: number }[] {
     for (const d of getAttackDefs(e)) {
       if (d.kind === 'melee' ? !inM : !inR) continue;
       let hit = d.kind === 'magic' ? 0.7 : physHit;
-      if (d.kind === 'ranged' && e.passives.includes('marksman')) hit = Math.max(hit, 0.6);
+      const marks = augmentRank(e, 'marksman');
+      if (d.kind === 'ranged' && marks > 0) hit = Math.max(hit, marksmanMin(marks));
       const v = rawDamage(ctx, e, u, d.kind) * hit;
       if (v > best) best = v;
     }

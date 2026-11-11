@@ -5,7 +5,9 @@ import { BUILDINGS, BUILDING_LIST } from '../../data/buildings';
 import { PRESETS } from '../../data/presets';
 import { LEADER_XP_MULT } from '../../data/skills';
 import { TERRAIN } from '../../data/terrain';
-import { BARE_WORKER_MULT, WORK_XP, WORKER_MULT } from '../../sim/economy';
+import { BARE_WORKER_MULT, BUILDING_COST_STEP, STARVATION_DAMAGE, WORK_XP, WORKER_MULT } from '../../sim/economy';
+import { FLANK_MULT } from '../../sim/combat';
+import { POISON_DAMAGE, REGEN_HEAL, REST_HEAL } from '../../sim/turn';
 import { HEAL_ORDER_ALERT } from '../../sim/orders';
 import { armoryNames, XP_SOURCES } from '../sheet';
 import { Kbd } from '../common';
@@ -73,21 +75,25 @@ const TOPICS: { id: string; title: string; icon: string; body: ComponentChildren
     id: 'move', title: 'Movement & healing', icon: 'items/horse.png', body: [
       `Terrain: ${moveLine}.`,
       'Mounted units cannot enter mountains and pay +1 in forest and swamp; the Pathfinder passive makes forest and hills cost 1. Entering a hex next to an enemy ends movement (zone of control) unless the unit is a Skirmisher.',
-      `Healing at the start of your turn: +2 HP for a unit that neither moved nor fought last turn; standing on your castle +${healOf('castle')}, a shrine +${healOf('shrine')}, a house +${healOf('house')}; Regeneration +4.`,
-      'Poison deals 4 damage a turn (never fatal) until cured on a castle or shrine, or by Healing Light / Mend.',
+      `Healing at the start of your turn: +${REST_HEAL} HP for a unit that neither moved nor fought last turn; standing on your castle +${healOf('castle')}, a shrine +${healOf('shrine')}, a house +${healOf('house')}; Regeneration +${REGEN_HEAL}.`,
+      `Poison deals ${POISON_DAMAGE} damage a turn (never fatal) until cured on a castle or shrine, or by Healing Light / Mend.`,
       `Standing orders keep a unit still without asking every turn: Rest until healed (Y) lasts until it is whole again or a hostile comes within ${HEAL_ORDER_ALERT} hexes; Sentry (V) lasts until a hostile comes into its sight. Being attacked ends either. Tab skips units under orders.`,
     ],
   },
   {
     id: 'combat', title: 'Combat', icon: 'skills/stat_str.png', body: [
       'Melee attacks an adjacent enemy; ranged and magic reach 2 hexes. The defender strikes back with an attack of the same kind if it has one in range. Strikes alternate; first strike lets a spear defender go first.',
-      'Chance to hit = 100% minus the defender\'s terrain defense (forest 50%, hills 50%, mountains 60%, swamp 20%), plus building and shield bonuses. Magic always hits 70% of the time. Armor reduces every weapon hit; spells and Firebolt pierce it and always deal their listed damage.',
+      'A unit strikes back only once per turn, plus once more for each rank of Combat Reflexes: the first attacker takes the riposte, the next ones strike freely. The forecast says when a defender has already answered.',
+      'Chance to hit = 100% minus the defender\'s terrain defense (forest 50%, hills 50%, mountains 60%, swamp 20%), plus building and shield bonuses. Magic always hits 70% of the time.',
+      'Protection has two parts. Block takes a flat amount off every strike that hits (plate 3, a shield 2), then Armor takes a share of what is left (plate 25%): many light blows break on heavy armor, heavy blows still bite. Magic ignores block. Spells and Firebolt pierce both and always deal their listed damage.',
+      `Flanking: a melee strike at an enemy with one of your units on the hex directly opposite deals ${Math.round((FLANK_MULT - 1) * 100)}% more and ignores its block. Two cheap fighters on either side of a knight can bring it down; careless attackers can be flanked the same way.`,
       'Hover an enemy with a unit selected to see the exact forecast before you commit. Entering a hex next to an enemy ends movement (zone of control).',
     ],
   },
   {
     id: 'growth', title: 'Experience', icon: 'skills/stat_hp.png', body: [
-      'Units earn XP in seven kinds. Each level grants +4 max HP and a choice of three rewards: an attribute, an efficiency multiplier, a passive or an active skill.',
+      'Units earn XP in seven kinds. Each level grants +4 max HP and a choice of three rewards: an attribute, an efficiency multiplier, a passive or an active skill. There is no level cap: each level costs 10 XP more than the last.',
+      'Augments grow: a passive or active skill a unit already has can be offered again, and taking it is an upgrade, one rank stronger (Firebolt II hits for 24 instead of 18, Iron Skin II gives 2 block, Combat Reflexes II strikes back three times a turn). Only Masonry and Devotion, which unlock a building, are learned once.',
       ...XP_CATS.map((c) => <><i class={`xp-dot xp-${c}`} /><b>{XP_NAMES[c]}</b> — {XP_SOURCES[c]}</>),
       'The rewards offered favour the kinds of XP earned during that level: an archer is offered bow skills and rarely melee ones, a builder grows into a better builder, a duelist into a deadlier one. The unit sheet (C) lists which rewards each kind favours.',
       'A choice can wait: "Decide later" keeps it behind the Level up reminder by End Turn and the star on the unit\'s portrait, and the turn can still end.',
@@ -98,7 +104,8 @@ const TOPICS: { id: string; title: string; icon: string; body: ComponentChildren
     id: 'economy', title: 'Economy', icon: 'buildings/farm.png', body: [
       'Each hex holds one building. A unit with Builder\'s Tools starts construction on its hex (inside or next to your territory), then adds build points at the end of every turn it stays there.',
       `Any of your units standing on a finished building that produces something works it: ×${fmt(BARE_WORKER_MULT)} output bare-handed, ×${fmt(WORKER_MULT)} with Builder's Tools, times its work efficiencies. A worker earns ${WORK_XP} XP each turn it does not act (civic, the castle included; research & magic at a library, watchtower, shrine or mage tower; leadership for the leader on its castle). A unit recruited this turn has not worked yet.`,
-      'Units eat 1 food per turn (leaders are free). If food runs out, everyone starves for 3 HP a turn. Your leader on the castle boosts all production by 10%.',
+      `Buildings that produce get dearer the more you have: each farm you own makes the next farm ${Math.round(BUILDING_COST_STEP * 100)}% more expensive (and so on for every kind). Working the ones you have is often the better deal.`,
+      `Units eat 1 food per turn (leaders are free). If food runs out, everyone starves for ${STARVATION_DAMAGE} HP a turn. Your leader on the castle boosts all production by 10%.`,
       'Ending a turn on an enemy building captures it; walls cannot be captured, and castles are razed instead.',
       'Moving your seat: building a new castle (any builder, or the leader) demolishes the old one — and its upgrades — the moment the new site is placed. Until the new castle is finished (6 build points) you cannot recruit at a castle, get its +10% or its defense, and its territory is gone.',
     ],

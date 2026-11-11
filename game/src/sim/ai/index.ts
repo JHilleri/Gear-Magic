@@ -7,6 +7,7 @@
 // resource or a cooldown), so the turn always terminates; a hard step cap backs that up.
 import type { Action, FactionId, GameState, Unit } from '../../core/types';
 import { FACTIONS } from '../../data/factions';
+import { augmentRank } from '../../data/ranks';
 import { tileIndex } from '../../core/hex';
 import { aiChooseLevelOption } from '../progression';
 import { currentFaction } from '../state';
@@ -73,11 +74,12 @@ function buildCtx(s: GameState, mem: AiMemory): Ctx {
   const castle = cb && cb.owner === f && cb.type === 'castle' ? cb : undefined;
   const own = Object.values(s.buildings).filter((b) => b.owner === f).sort((a, b) => a.id - b.id);
   const home = castle?.pos ?? leader?.pos ?? own[0]?.pos ?? units[0]?.pos ?? { q: 0, r: 0 };
-  const leadHexes = new Set<string>();
+  const leadHexes = new Map<string, number>();
   const at = new Map<number, Unit>();
   for (const k in s.units) {
     const u = s.units[k];
-    if (u.passives.includes('leadership')) leadHexes.add(`${u.faction}@${u.pos.q},${u.pos.r}`);
+    const lead = augmentRank(u, 'leadership');
+    if (lead > 0) leadHexes.set(`${u.faction}@${u.pos.q},${u.pos.r}`, lead);
     if (u.hp > 0) at.set(tileIndex(u.pos, s.width), u);
   }
   return {

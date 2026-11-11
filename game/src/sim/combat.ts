@@ -8,6 +8,7 @@ import { TERRAIN, FLAT_TERRAIN, ROUGH_FOR_MOUNTS } from '../data/terrain';
 import { BUILDINGS } from '../data/buildings';
 import { ITEMS } from '../data/items';
 import { FACTIONS } from '../data/factions';
+import { augmentRank, berserkMult, drainShare, extraReactions, leadershipMult, marksmanMin, venomDamage } from '../data/ranks';
 import { getTile, isEnemy } from './state';
 import { effectiveStats, getAttackDefs, isMounted, eff, mainAttackKind } from './units';
 import { techDamageMult } from './research';
@@ -18,12 +19,19 @@ import { orderInterrupted } from './orders';
 // ───────────────────────────── modifiers ─────────────────────────────
 
 const MOUNT_ROUGH_PENALTY = 10;
-export const LEADERSHIP_MULT = 1.15;
-export const BERSERK_MULT = 1.25;
+/** Rank-1 values of the combat passives (data/ranks has every rank). */
+export const LEADERSHIP_MULT = leadershipMult(1);
+export const BERSERK_MULT = berserkMult(1);
 export const CHARGE_MULT = 1.25;
 export const MAGIC_HIT = 0.7;
-export const MARKSMAN_MIN = 0.6;
-export const VAMPIRIC_SHARE = 0.3;
+export const MARKSMAN_MIN = marksmanMin(1);
+export const VAMPIRIC_SHARE = drainShare(1);
+/** Melee damage multiplier on a flanked target (the striker's ally on the hex opposite); flanking strikes also ignore block. */
+export const FLANK_MULT = 1.25;
+/** XP each side that lives through a fight earns, before +1 per strike it landed. */
+export const COMBAT_XP = 2;
+/** Retaliations a unit makes per turn before Combat Reflexes (each rank adds one). */
+export const BASE_REACTIONS = 1;
 
 /** Defense % of `unit` standing on `h`: terrain + building bonus + shield + mount penalty, clamped [10, 90] as "chance to be missed"... returns 0..100. */
 export function tileDefense(state: GameState, unit: Unit, h: Hex): number {
@@ -51,12 +59,62 @@ function attackDefOf(unit: Unit, kind: AttackKind): AttackDef | null {
 /** Ranged and magic retaliate against each other; melee only against melee. */
 const family = (k: AttackKind): 'melee' | 'ranged' => (k === 'melee' ? 'melee' : 'ranged');
 
-function hasLeadershipNeighbor(state: GameState, unit: Unit): boolean {
+/** Hex on the far side of `target` from `from` (axial: 2·target − from). */
+export function oppositeHex(target: Hex, from: Hex): Hex {
+  return { q: 2 * target.q - from.q, r: 2 * target.r - from.r };
+}
+
+/**
+ * The ally that flanks `target` with `striker` (DESIGN §4.5): a living unit of the striker's own
+ * house on the hex opposite the striker, the striker being adjacent. Null when there is none.
+ */
+export function flankingAlly(state: GameState, striker: Unit, target: Unit): Unit | null {
+  if (hexDistance(striker.pos, target.pos) !== 1) return null;
+  const o = unitOn(state, oppositeHex(target.pos, striker.pos));
+  return o && o.id !== striker.id && o.id !== target.id && o.faction === striker.faction && o.hp > 0 ? o : null;
+}
+
+/** Retaliations `unit` may make each turn: 1, plus one per rank of Combat Reflexes. */
+export function reactionsPerTurn(unit: Unit): number {
+  const r = augmentRank(unit, 'reflexes');
+  return BASE_REACTIONS + (r > 0 ? extraReactions(r) : 0);
+}
+
+/** Retaliations `unit` has left this turn. */
+export function reactionsLeft(unit: Unit): number {
+  return Math.max(0, reactionsPerTurn(unit) - (unit.reacted ?? 0));
+}
+
+/** A new turn begins (any house's, or the wilds'): every unit may retaliate again. */
+export function clearReactions(state: GameState): void {
+  for (const k in state.units) delete state.units[k].reacted;
+}
+
+/** Best Leadership rank among `unit`'s adjacent allies (0: none); the strongest aura applies, auras do not add up. */
+export function leadershipRankNear(state: GameState, unit: Unit): number {
+  let best = 0;
   for (const n of neighbors(unit.pos)) {
     const o = unitOn(state, n);
-    if (o && o.id !== unit.id && o.faction === unit.faction && o.passives.includes('leadership')) return true;
+    if (o && o.id !== unit.id && o.faction === unit.faction) best = Math.max(best, augmentRank(o, 'leadership'));
   }
-  return false;
+  return best;
+}
+
+/** Share of melee damage dealt `u` heals (Life Drinker by rank; 0 without it). */
+export function drainOfUnit(u: Unit): number {
+  const r = augmentRank(u, 'vampiric');
+  return r > 0 ? drainShare(r) : 0;
+}
+
+/** Poison damage per turn a melee hit of `u` inflicts (Venom Blades by rank; 0 without it). */
+export function venomOfUnit(u: Unit): number {
+  const r = augmentRank(u, 'poison');
+  return r > 0 ? venomDamage(r) : 0;
+}
+
+/** Poison damage per turn on a poisoned unit (the strongest venom that reached it). */
+export function poisonOn(u: Unit): number {
+  return u.poisonDamage ?? venomDamage(1);
 }
 
 /** Total damage multiplier from active buffs. Power Strike only boosts melee attacks the unit initiates. */
@@ -70,12 +128,20 @@ function buffMult(unit: Unit, kind: AttackKind, attacking: boolean): number {
   return m;
 }
 
+/** Extra knobs of an attack profile (Volley arrows, AI estimates). */
+export interface ProfileOptions {
+  /** Damage multiplier applied with the others, before block and armor (a Volley arrow: 0.6). */
+  mult?: number;
+  /** false: ignore flanking (a position-free estimate, e.g. the AI's threat map). Default true. */
+  flank?: boolean;
+}
+
 /**
  * Profile of `unit` hitting `target` with attack `def`. `attacking` = it initiated the
  * fight (charge and Power Strike only apply on offence). The target's tile defense uses
  * its current position.
  */
-function buildProfile(state: GameState, unit: Unit, target: Unit, def: AttackDef, attacking: boolean): AttackProfile {
+function buildProfile(state: GameState, unit: Unit, target: Unit, def: AttackDef, attacking: boolean, opts: ProfileOptions = {}): AttackProfile {
   const st = effectiveStats(state, unit);
   const tst = effectiveStats(state, target);
   const kind = def.kind;
@@ -87,13 +153,17 @@ function buildProfile(state: GameState, unit: Unit, target: Unit, def: AttackDef
   dmg *= buffMult(unit, kind, attacking);
   const ps = attacking && kind === 'melee' ? unit.buffs.find((b) => b.id === 'powerstrike' && b.damageMult) : undefined;
   if (ps) mods.push({ id: 'powerstrike', label: 'Power Strike (spent on this attack)', mult: ps.damageMult });
-  if (hasLeadershipNeighbor(state, unit)) {
-    dmg *= LEADERSHIP_MULT;
-    mods.push({ id: 'leadership', label: 'Leadership', mult: LEADERSHIP_MULT });
+  const lead = leadershipRankNear(state, unit);
+  if (lead > 0) {
+    const m = leadershipMult(lead);
+    dmg *= m;
+    mods.push({ id: 'leadership', label: 'Leadership', mult: m });
   }
-  if (kind === 'melee' && unit.passives.includes('berserker') && unit.hp < st.maxHp / 2) {
-    dmg *= BERSERK_MULT;
-    mods.push({ id: 'berserker', label: 'Berserker', mult: BERSERK_MULT });
+  const berserk = augmentRank(unit, 'berserker');
+  if (kind === 'melee' && berserk > 0 && unit.hp < st.maxHp / 2) {
+    const m = berserkMult(berserk);
+    dmg *= m;
+    mods.push({ id: 'berserker', label: 'Berserker', mult: m });
   }
   if (attacking && kind === 'melee' && isMounted(unit)) {
     const t = getTile(state, unit.pos);
@@ -117,28 +187,54 @@ function buildProfile(state: GameState, unit: Unit, target: Unit, def: AttackDef
     dmg *= def.vsMounted;
     mods.push({ id: 'vsMounted', label: 'Bonus vs mounted', mult: def.vsMounted });
   }
-  if (kind === 'melee' && unit.passives.includes('poison') && !target.poisoned) mods.push({ id: 'poison', label: 'Poisons on hit (4/turn)' });
-  if (kind === 'melee' && unit.passives.includes('vampiric')) mods.push({ id: 'vampiric', label: `Drains ${Math.round(VAMPIRIC_SHARE * 100)}% of damage dealt` });
+  if (opts.mult !== undefined && opts.mult !== 1) dmg *= opts.mult;
+  // Flanked: the target's guard faces one way, the blow comes from the other (melee only).
+  const flanked = kind === 'melee' && opts.flank !== false && !!flankingAlly(state, unit, target);
+  if (flanked) {
+    dmg *= FLANK_MULT;
+    mods.push({ id: 'flank', label: 'Flanking (ignores block)', mult: FLANK_MULT });
+  }
+  const venom = kind === 'melee' ? venomOfUnit(unit) : 0;
+  if (venom > 0 && (!target.poisoned || poisonOn(target) < venom)) mods.push({ id: 'poison', label: `Poisons on hit (${venom}/turn)` });
+  const drain = kind === 'melee' ? drainOfUnit(unit) : 0;
+  if (drain > 0) mods.push({ id: 'vampiric', label: `Drains ${Math.round(drain * 100)}% of damage dealt` });
+  // Block takes a flat amount off every strike, then armor a share of the rest. Magic and
+  // flanking strikes pass block by.
+  const block = kind === 'magic' || flanked ? 0 : Math.max(0, tst.block ?? 0);
+  dmg = Math.max(0, dmg - block);
   const armor = Math.max(0, Math.min(100, tst.armor));
   dmg *= 1 - armor / 100;
   const damage = Math.max(1, roundHalfUp(dmg));
 
   let hit = kind === 'magic' ? MAGIC_HIT : (100 - tileDefense(state, target, target.pos)) / 100;
-  if (kind === 'ranged' && unit.passives.includes('marksman')) hit = Math.max(hit, MARKSMAN_MIN);
+  const marks = augmentRank(unit, 'marksman');
+  if (kind === 'ranged' && marks > 0) hit = Math.max(hit, marksmanMin(marks));
   return {
     kind, name: def.name, damage, strikes: def.strikes, hitChance: hit, range: def.range, firststrike: !!def.firststrike,
     ...(mods.length ? { mods } : {}),
   };
 }
 
-/** Full attack profile of `attacker` using its attack of `kind` against `defender` (damage after all modifiers, hit chance). Null if the attacker has no such attack. */
-export function attackProfile(state: GameState, attacker: Unit, defender: Unit, kind: AttackKind): AttackProfile | null {
+/**
+ * Full attack profile of `attacker` using its attack of `kind` against `defender` (damage after all
+ * modifiers, block and armor; hit chance). Null if the attacker has no such attack. `opts`: an extra
+ * damage multiplier (Volley) or no flanking (position-free estimates).
+ */
+export function attackProfile(state: GameState, attacker: Unit, defender: Unit, kind: AttackKind, opts: ProfileOptions = {}): AttackProfile | null {
   const def = attackDefOf(attacker, kind);
-  return def ? buildProfile(state, attacker, defender, def, true) : null;
+  return def ? buildProfile(state, attacker, defender, def, true, opts) : null;
 }
 
-/** The defender's retaliation profile (same family, must reach the attacker), or null. */
+/**
+ * The defender's retaliation profile (same family, must reach the attacker), or null: also null
+ * once the defender has used its reactions this turn (see `reachingRetaliation`).
+ */
 export function retaliationProfile(state: GameState, attacker: Unit, defender: Unit, kind: AttackKind): AttackProfile | null {
+  return reactionsLeft(defender) > 0 ? reachingRetaliation(state, attacker, defender, kind) : null;
+}
+
+/** The retaliation the defender's weapons allow (same family, reaching the attacker), whatever reactions it has left. */
+export function reachingRetaliation(state: GameState, attacker: Unit, defender: Unit, kind: AttackKind): AttackProfile | null {
   const dist = hexDistance(attacker.pos, defender.pos);
   const want = family(kind);
   // Prefer the strongest reaching attack of the matching family (e.g. staff magic over nothing).
@@ -200,30 +296,33 @@ function strikeOrder(a: AttackProfile, d: AttackProfile | null): Side[] {
 interface Setup {
   a: AttackProfile;
   d: AttackProfile | null;
+  /** The defender could answer but has no reaction left this turn. */
+  spent: boolean;
   order: Side[];
   aMax: number; dMax: number;
   aHp: number; dHp: number;
-  aDrain: boolean; dDrain: boolean;   // vampiric melee
-  aPoison: boolean; dPoison: boolean; // poison melee
+  aDrain: number; dDrain: number;     // share healed by vampiric melee (0: none)
+  aPoison: number; dPoison: number;   // poison per turn of a melee hit (0: none)
 }
 
 function setup(state: GameState, attacker: Unit, defender: Unit, kind: AttackKind): Setup | null {
   const a = attackProfile(state, attacker, defender, kind);
   if (!a) return null;
-  const d = retaliationProfile(state, attacker, defender, kind);
+  const reach = reachingRetaliation(state, attacker, defender, kind);
+  const d = reach && reactionsLeft(defender) > 0 ? reach : null;
   const aMax = Math.max(effectiveStats(state, attacker).maxHp, attacker.hp);
   const dMax = Math.max(effectiveStats(state, defender).maxHp, defender.hp);
   return {
-    a, d, order: strikeOrder(a, d), aMax, dMax,
+    a, d, spent: !!reach && !d, order: strikeOrder(a, d), aMax, dMax,
     aHp: Math.max(0, attacker.hp), dHp: Math.max(0, defender.hp),
-    aDrain: a.kind === 'melee' && attacker.passives.includes('vampiric'),
-    dDrain: !!d && d.kind === 'melee' && defender.passives.includes('vampiric'),
-    aPoison: a.kind === 'melee' && attacker.passives.includes('poison'),
-    dPoison: !!d && d.kind === 'melee' && defender.passives.includes('poison'),
+    aDrain: a.kind === 'melee' ? drainOfUnit(attacker) : 0,
+    dDrain: !!d && d.kind === 'melee' ? drainOfUnit(defender) : 0,
+    aPoison: a.kind === 'melee' ? venomOfUnit(attacker) : 0,
+    dPoison: !!d && d.kind === 'melee' ? venomOfUnit(defender) : 0,
   };
 }
 
-const drainOf = (dealt: number): number => Math.round(dealt * VAMPIRIC_SHARE);
+const drainOf = (dealt: number, share: number): number => Math.round(dealt * share);
 
 /** Exact outcome distribution (no state mutation, no RNG). */
 export function forecastCombat(state: GameState, attacker: Unit, defender: Unit, kind: AttackKind): CombatForecast | null {
@@ -243,11 +342,11 @@ export function forecastCombat(state: GameState, attacker: Unit, defender: Unit,
       add(k, p * (1 - prof.hitChance));
       if (side === 'attacker') {
         const nd = Math.max(0, dh - prof.damage);
-        const na = s.aDrain ? Math.min(s.aMax, ah + drainOf(dh - nd)) : ah;
+        const na = s.aDrain ? Math.min(s.aMax, ah + drainOf(dh - nd, s.aDrain)) : ah;
         add(na * W + nd, p * prof.hitChance);
       } else {
         const na = Math.max(0, ah - prof.damage);
-        const nd = s.dDrain ? Math.min(s.dMax, dh + drainOf(ah - na)) : dh;
+        const nd = s.dDrain ? Math.min(s.dMax, dh + drainOf(ah - na, s.dDrain)) : dh;
         add(na * W + nd, p * prof.hitChance);
       }
     }
@@ -263,6 +362,7 @@ export function forecastCombat(state: GameState, attacker: Unit, defender: Unit,
   return {
     attacker: s.a,
     defender: s.d,
+    ...(s.spent ? { defenderSpent: true } : {}),
     attackerHpDist,
     defenderHpDist,
     attackerKillChance: attackerHpDist[0],
@@ -297,6 +397,8 @@ export function resolveCombat(state: GameState, attacker: Unit, defender: Unit, 
   if (!s) return [];
   const strikes: StrikeEvent[] = [];
   let aHits = 0, dHits = 0;
+  // Answering spends one of the defender's reactions for this turn.
+  if (s.d) defender.reacted = (defender.reacted ?? 0) + 1;
   for (const side of s.order) {
     if (attacker.hp <= 0 || defender.hp <= 0) break;
     const prof = side === 'attacker' ? s.a : s.d!;
@@ -309,15 +411,17 @@ export function resolveCombat(state: GameState, attacker: Unit, defender: Unit, 
       target.hp = Math.max(0, target.hp - prof.damage);
       ev.damage = before - target.hp;
       if (side === 'attacker') aHits++; else dHits++;
-      const poisons = side === 'attacker' ? s.aPoison : s.dPoison;
-      if (poisons && target.hp > 0 && !target.poisoned) {
+      // A stronger venom (higher Venom Blades rank) replaces a weaker poison; a weaker one does nothing.
+      const venom = side === 'attacker' ? s.aPoison : s.dPoison;
+      if (venom > 0 && target.hp > 0 && (!target.poisoned || poisonOn(target) < venom)) {
         target.poisoned = true;
+        target.poisonDamage = venom;
         ev.poisoned = true;
       }
       const drains = side === 'attacker' ? s.aDrain : s.dDrain;
       if (drains) {
         const max = side === 'attacker' ? s.aMax : s.dMax;
-        const healed = Math.min(max - striker.hp, drainOf(ev.damage));
+        const healed = Math.min(max - striker.hp, drainOf(ev.damage, drains));
         if (healed > 0) { striker.hp += healed; ev.drained = healed; }
       }
     }
@@ -342,9 +446,9 @@ export function resolveCombat(state: GameState, attacker: Unit, defender: Unit, 
   events.push(...logFor(state, [attacker.faction, defender.faction],
     `${aName} attacks ${dName} (${s.a.name}): deals ${aDealt}${s.d ? `, takes ${dDealt}` : ''}.`, 'combat', attacker.faction));
 
-  // Survivors learn from the exchange: 1 + 1 per strike landed.
-  if (attacker.hp > 0) events.push(...giveXp(state, attacker, xpCat(kind), 1 + aHits));
-  if (defender.hp > 0) events.push(...giveXp(state, defender, s.d ? xpCat(s.d.kind) : ownXpCat(defender), 1 + dHits));
+  // Survivors learn from the exchange: COMBAT_XP + 1 per strike landed.
+  if (attacker.hp > 0) events.push(...giveXp(state, attacker, xpCat(kind), COMBAT_XP + aHits));
+  if (defender.hp > 0) events.push(...giveXp(state, defender, s.d ? xpCat(s.d.kind) : ownXpCat(defender), COMBAT_XP + dHits));
 
   if (defender.hp <= 0) events.push(...killUnit(state, defender, attacker, xpCat(kind)));
   else if (attacker.hp <= 0) events.push(...killUnit(state, attacker, defender, s.d ? xpCat(s.d.kind) : ownXpCat(defender)));

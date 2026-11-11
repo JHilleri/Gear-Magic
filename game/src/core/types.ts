@@ -24,7 +24,7 @@ export type EfficiencyId =
 export type PassiveId =
   | 'regeneration' | 'poison' | 'skirmisher' | 'pathfinder' | 'ironskin' | 'leadership'
   | 'harvester' | 'prospector' | 'manaspring' | 'scholar' | 'marksman' | 'berserker'
-  | 'vampiric' | 'inspiring';
+  | 'vampiric' | 'inspiring' | 'reflexes';
 export type ActiveId =
   | 'powerstrike' | 'volley' | 'heal' | 'firebolt' | 'rally' | 'fortify' | 'blink'
   | 'masonry' | 'devotion';
@@ -107,7 +107,9 @@ export interface UnitStats {
   str: number;
   dex: number;
   int: number;
-  armor: number;             // % damage reduction
+  armor: number;             // % damage reduction (after block)
+  /** Flat damage taken off every strike that hits, before the armor % (magic and flanking strikes ignore it). */
+  block: number;
   mov: number;
   vis: number;
 }
@@ -292,6 +294,15 @@ export interface Unit {
   order?: UnitOrder;
   /** Level history, oldest first: the option picked for each level reached (unit sheet). Absent on old saves until loaded. */
   learned?: LearnedOption[];
+  /** Retaliations already made since the current turn began (DESIGN §4.5); absent = 0. Every turn start clears it. */
+  reacted?: number;
+  /**
+   * Ranks of 2 and more of passives and actives learned again (DESIGN §4.8: data/ranks augmentRank).
+   * An augment in `passives` / `actives` with no entry here is rank 1.
+   */
+  ranks?: Partial<Record<PassiveId | ActiveId, number>>;
+  /** Damage per turn of the poison on this unit (Venom Blades rank of whoever poisoned it); absent = POISON_DAMAGE. */
+  poisonDamage?: number;
 }
 
 /** One resolved level-up: the level the offer belonged to and the SkillOptionDef id picked. */
@@ -459,7 +470,7 @@ export interface AttackProfile {
   mods?: AttackMod[];
 }
 
-export type AttackModId = 'charge' | 'powerstrike' | 'leadership' | 'berserker' | 'vsMounted' | 'poison' | 'vampiric';
+export type AttackModId = 'charge' | 'powerstrike' | 'leadership' | 'berserker' | 'vsMounted' | 'poison' | 'vampiric' | 'flank';
 export interface AttackMod { id: AttackModId; label: string; mult?: number }
 
 /** Outcome preview of a spell or active skill on one target hex (sim/spells previewSpell, sim/skills previewSkill). */
@@ -490,6 +501,8 @@ export interface EffectEntry {
 export interface CombatForecast {
   attacker: AttackProfile;
   defender: AttackProfile | null;  // null = cannot retaliate
+  /** The defender has an attack that reaches but has already used its reactions this turn. */
+  defenderSpent?: boolean;
   /** Probability distribution of final hp, index = hp value. */
   attackerHpDist: number[];
   defenderHpDist: number[];

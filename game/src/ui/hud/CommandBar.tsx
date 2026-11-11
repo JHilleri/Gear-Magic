@@ -10,7 +10,9 @@ import { ACTIVES } from '../../data/skills';
 import { attackTargets } from '../../sim/actions';
 import { canUpgrade } from '../../sim/economy';
 import { canGiveOrder, HEAL_ORDER_ALERT, ORDER_NAMES, orderWakeWarning } from '../../sim/orders';
-import { canUseSkill, NO_SKILL_TARGET, skillBlocker, skillTargets } from '../../sim/skills';
+import { canUseSkill, NO_SKILL_TARGET, skillBlocker, skillRange, skillTargets } from '../../sim/skills';
+import { augmentRank, augmentText, rankedName } from '../../data/ranks';
+import { REST_HEAL } from '../../sim/turn';
 import { canBuildWith, mainAttackKind } from '../../sim/units';
 import { barSkills, SKILL_HOTKEYS } from '../../game/interaction';
 import type { GameStore } from '../../game/store';
@@ -201,7 +203,7 @@ export function CommandBar() {
     <Group label="Orders">
       <Cmd label="Rest" sym="heart" hotkey="Y" title={ORDER_NAMES.heal} on={u.order === 'heal'} reason={orderReason('heal')} warn={orderWarn('heal')}
         onNote="Resting — click to give new orders"
-        desc={<>Stay here until fully healed (a unit that neither moves nor fights rests for +2 HP a turn; castles and shrines heal more).
+        desc={<>Stay here until fully healed (a unit that neither moves nor fights rests for +{REST_HEAL} HP a turn; castles and shrines heal more).
           Tab passes it by until then; an enemy within {HEAL_ORDER_ALERT} hexes or an attack wakes it.</>}
         onClick={() => toggleOrder('heal')} />
       <Cmd label="Sentry" sym="eye" hotkey="V" title={ORDER_NAMES.sentry} on={u.order === 'sentry'} reason={orderReason('sentry')} warn={orderWarn('sentry')}
@@ -232,10 +234,12 @@ export function CommandBar() {
           {skills.map((a, i) => {
             const def = ACTIVES[a];
             const armed = mode.kind === 'skill' && mode.unit === u.id && mode.skill === a;
+            const rank = augmentRank(u, a);
+            const range = def.range ? safe(() => skillRange(u, a), def.range) : 0;
             return (
               <Cmd key={a} label={def.name} img={def.icon} hotkey={i < SKILL_HOTKEYS ? String(i + 1) : undefined}
-                title={def.name} sub={`Active skill · cooldown ${def.cooldown}${def.range ? ` · range ${def.range}` : ''}`}
-                desc={def.description} reason={armed ? null : skillReason(a)} on={armed} onNote="Choosing a target — click to cancel"
+                title={rankedName(def.name, rank)} sub={`Active skill${rank > 1 ? ` · rank ${rank}` : ''} · cooldown ${def.cooldown}${range ? ` · range ${range}` : ''}`}
+                desc={augmentText(a, rank)} reason={armed ? null : skillReason(a)} on={armed} onNote="Choosing a target — click to cancel"
                 cooldown={{ left: u.cooldowns?.[a] ?? 0, total: def.cooldown }}
                 onClick={() => (armed ? store.cancelMode() : store.beginSkill(u.id, a))} />
             );
