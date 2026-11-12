@@ -1,28 +1,378 @@
 {
  "units": {
-  "human_commoner": {
-   "file": "models/units/human_commoner.glb",
-   "height": 1.0
+  "human_f_commoner": {
+   "file": "models/units/human_f_commoner.glb",
+   "height": 1.0,
+   "head": {
+    "x": 0.00091,
+    "y": 1.00041,
+    "z": -0.03173,
+    "depth": 0.1252,
+    "neck": -1.1
+   },
+   "neckRing": {
+    "cx": 0.003,
+    "cz": 0.4712,
+    "rx": 0.2736,
+    "rz": 0.2586,
+    "skin": [
+     0.7098,
+     0.4392,
+     0.349
+    ]
+   },
+   "skin": [
+    0.702,
+    0.3961,
+    0.3333
+   ],
+   "eyes": [
+    [
+     -0.01716,
+     0.9322,
+     0.09171
+    ],
+    [
+     0.026,
+     0.93251,
+     0.09198
+    ]
+   ],
+   "eyeR": 0.0062
   },
-  "human_heavy": {
-   "file": "models/units/human_heavy.glb",
-   "height": 1.0
+  "human_f_heavy": {
+   "file": "models/units/human_f_heavy.glb",
+   "height": 1.0,
+   "head": {
+    "x": 0.00013,
+    "y": 1.00007,
+    "z": -0.03503,
+    "depth": 0.11176,
+    "neck": -1.2
+   },
+   "neckRing": {
+    "cx": 0.0096,
+    "cz": 0.4018,
+    "rx": 0.2997,
+    "rz": 0.3072,
+    "skin": [
+     0.6686,
+     0.4627,
+     0.3824
+    ]
+   },
+   "skin": [
+    0.7647,
+    0.5471,
+    0.4549
+   ],
+   "eyes": [
+    [
+     -0.02126,
+     0.93273,
+     0.07434
+    ],
+    [
+     0.02169,
+     0.93204,
+     0.07905
+    ]
+   ],
+   "eyeR": 0.00571
+  },
+  "human_f_light": {
+   "file": "models/units/human_f_light.glb",
+   "height": 1.0,
+   "head": {
+    "x": -0.00118,
+    "y": 1.00019,
+    "z": -0.03847,
+    "depth": 0.11,
+    "neck": -1.22
+   },
+   "neckRing": {
+    "cx": 0.1126,
+    "cz": 0.3403,
+    "rx": 0.4086,
+    "rz": 0.299,
+    "skin": [
+     0.7765,
+     0.5431,
+     0.4314
+    ]
+   },
+   "skin": [
+    0.7961,
+    0.5412,
+    0.4431
+   ],
+   "eyes": [
+    [
+     -0.02191,
+     0.93035,
+     0.06998
+    ],
+    [
+     0.01874,
+     0.92969,
+     0.07021
+    ]
+   ],
+   "eyeR": 0.00584
+  },
+  "human_f_padded": {
+   "file": "models/units/human_f_padded.glb",
+   "height": 1.0,
+   "head": {
+    "x": -0.00111,
+    "y": 0.99982,
+    "z": -0.04209,
+    "depth": 0.1313,
+    "neck": -1.14
+   },
+   "neckRing": {
+    "cx": 0.0101,
+    "cz": 0.334,
+    "rx": 0.7313,
+    "rz": 0.3848
+   },
+   "skin": [
+    0.7294,
+    0.5137,
+    0.4216
+   ],
+   "eyes": [
+    [
+     -0.02452,
+     0.91959,
+     0.08514
+    ],
+    [
+     0.02421,
+     0.91925,
+     0.07908
+    ]
+   ],
+   "eyeR": 0.007
+  },
+  "human_f_robe": {
+   "file": "models/units/human_f_robe.glb",
+   "height": 1.0,
+   "head": {
+    "x": -0.00016,
+    "y": 1.00026,
+    "z": -0.03629,
+    "depth": 0.10437,
+    "neck": -0.94
+   },
+   "neckRing": {
+    "cx": -0.013,
+    "cz": 0.3415,
+    "rx": 0.3703,
+    "rz": 0.5889
+   },
+   "skin": [
+    0.7059,
+    0.4941,
+    0.4235
+   ],
+   "eyes": [
+    [
+     -0.02217,
+     0.94077,
+     0.06621
+    ],
+    [
+     0.01824,
+     0.94034,
+     0.06903
+    ]
+   ],
+   "eyeR": 0.0054
   },
   "human_leader": {
    "file": "models/units/human_leader.glb",
    "height": 1.0
   },
-  "human_light": {
-   "file": "models/units/human_light.glb",
-   "height": 1.0
+  "human_m_commoner": {
+   "file": "models/units/human_m_commoner.glb",
+   "height": 1.0,
+   "head": {
+    "x": -0.00077,
+    "y": 1.00005,
+    "z": -0.02355,
+    "depth": 0.10963,
+    "neck": -1.2
+   },
+   "neckRing": {
+    "cx": 0.0021,
+    "cz": 0.3742,
+    "rx": 0.411,
+    "rz": 0.317,
+    "skin": [
+     0.749,
+     0.502,
+     0.4
+    ]
+   },
+   "skin": [
+    0.7608,
+    0.4784,
+    0.3882
+   ],
+   "eyes": [
+    [
+     -0.02128,
+     0.93841,
+     0.09012
+    ],
+    [
+     0.01905,
+     0.93879,
+     0.09019
+    ]
+   ],
+   "eyeR": 0.00578
   },
-  "human_padded": {
-   "file": "models/units/human_padded.glb",
-   "height": 1.0
+  "human_m_heavy": {
+   "file": "models/units/human_m_heavy.glb",
+   "height": 1.0,
+   "head": {
+    "x": -0.0002,
+    "y": 0.99986,
+    "z": -0.03531,
+    "depth": 0.10965,
+    "neck": -1.2
+   },
+   "neckRing": {
+    "cx": 0.0029,
+    "cz": 0.3011,
+    "rx": 0.581,
+    "rz": 0.4778
+   },
+   "skin": [
+    0.5961,
+    0.3863,
+    0.3471
+   ],
+   "eyes": [
+    [
+     -0.01814,
+     0.93583,
+     0.07761
+    ],
+    [
+     0.01904,
+     0.93503,
+     0.07736
+    ]
+   ],
+   "eyeR": 0.00604
   },
-  "human_robe": {
-   "file": "models/units/human_robe.glb",
-   "height": 1.0
+  "human_m_light": {
+   "file": "models/units/human_m_light.glb",
+   "height": 1.0,
+   "head": {
+    "x": -0.00043,
+    "y": 1.00007,
+    "z": -0.0231,
+    "depth": 0.10998,
+    "neck": -1.18
+   },
+   "neckRing": {
+    "cx": 0.0352,
+    "cz": 0.2775,
+    "rx": 0.6956,
+    "rz": 0.5512
+   },
+   "skin": [
+    0.6961,
+    0.451,
+    0.3608
+   ],
+   "eyes": [
+    [
+     -0.02207,
+     0.93354,
+     0.08971
+    ],
+    [
+     0.01833,
+     0.93354,
+     0.08969
+    ]
+   ],
+   "eyeR": 0.00564
+  },
+  "human_m_padded": {
+   "file": "models/units/human_m_padded.glb",
+   "height": 1.0,
+   "head": {
+    "x": 0.00087,
+    "y": 0.99983,
+    "z": -0.05625,
+    "depth": 0.10584,
+    "neck": -1.2
+   },
+   "neckRing": {
+    "cx": 0.0014,
+    "cz": 0.4322,
+    "rx": 0.4686,
+    "rz": 0.5564
+   },
+   "skin": [
+    0.5922,
+    0.4196,
+    0.3333
+   ],
+   "eyes": [
+    [
+     -0.01494,
+     0.94055,
+     0.05607
+    ],
+    [
+     0.01517,
+     0.94055,
+     0.06125
+    ]
+   ],
+   "eyeR": 0.00546
+  },
+  "human_m_robe": {
+   "file": "models/units/human_m_robe.glb",
+   "height": 1.0,
+   "head": {
+    "x": -0.00382,
+    "y": 0.99994,
+    "z": -0.01203,
+    "depth": 0.10579,
+    "neck": -1.28
+   },
+   "neckRing": {
+    "cx": -0.012,
+    "cz": 0.3045,
+    "rx": 0.6865,
+    "rz": 0.6471
+   },
+   "skin": [
+    0.7294,
+    0.4667,
+    0.4
+   ],
+   "eyes": [
+    [
+     -0.02685,
+     0.93642,
+     0.09705
+    ],
+    [
+     0.01952,
+     0.9368,
+     0.09582
+    ]
+   ],
+   "eyeR": 0.00645
   },
   "orc_commoner": {
    "file": "models/units/orc_commoner.glb",
@@ -236,6 +586,256 @@
    "file": "models/monsters/wolf.glb"
   }
  },
+ "hair": {
+  "beard_full": {
+   "file": "models/hair/beard_full.glb"
+  },
+  "beard_goatee": {
+   "file": "models/hair/beard_goatee.glb"
+  },
+  "beard_long": {
+   "file": "models/hair/beard_long.glb"
+  },
+  "beard_moustache": {
+   "file": "models/hair/beard_moustache.glb"
+  },
+  "beard_short": {
+   "file": "models/hair/beard_short.glb"
+  },
+  "hair_bob": {
+   "file": "models/hair/hair_bob.glb"
+  },
+  "hair_braid": {
+   "file": "models/hair/hair_braid.glb"
+  },
+  "hair_bun": {
+   "file": "models/hair/hair_bun.glb"
+  },
+  "hair_crop": {
+   "file": "models/hair/hair_crop.glb"
+  },
+  "hair_curly": {
+   "file": "models/hair/hair_curly.glb"
+  },
+  "hair_long": {
+   "file": "models/hair/hair_long.glb"
+  },
+  "hair_pixie": {
+   "file": "models/hair/hair_pixie.glb"
+  },
+  "hair_ponytail": {
+   "file": "models/hair/hair_ponytail.glb"
+  },
+  "hair_short": {
+   "file": "models/hair/hair_short.glb"
+  },
+  "hair_swept": {
+   "file": "models/hair/hair_swept.glb"
+  },
+  "hair_tail": {
+   "file": "models/hair/hair_tail.glb"
+  }
+ },
+ "heads": {
+  "head_f1": {
+   "file": "models/heads/head_f1.glb",
+   "eyes": [
+    [
+     -0.1627,
+     -0.5688,
+     0.9384
+    ],
+    [
+     0.1537,
+     -0.5851,
+     0.9368
+    ]
+   ],
+   "eyeR": 0.034,
+   "neck": -1.1,
+   "neckRing": {
+    "cx": 0.0001,
+    "cz": 0.3232,
+    "rx": 0.2379,
+    "rz": 0.2449,
+    "skin": [
+     0.5647,
+     0.3882,
+     0.3412
+    ]
+   },
+   "skin": [
+    0.5294,
+    0.3412,
+    0.302
+   ]
+  },
+  "head_f2": {
+   "file": "models/heads/head_f2.glb",
+   "eyes": [
+    [
+     -0.1401,
+     -0.5596,
+     0.9909
+    ],
+    [
+     0.1418,
+     -0.5621,
+     0.9525
+    ]
+   ],
+   "eyeR": 0.034,
+   "neck": -1.1,
+   "neckRing": {
+    "cx": 0.015,
+    "cz": 0.4276,
+    "rx": 0.2574,
+    "rz": 0.2577,
+    "skin": [
+     0.7529,
+     0.549,
+     0.451
+    ]
+   },
+   "skin": [
+    0.7569,
+    0.5412,
+    0.4471
+   ]
+  },
+  "head_f3": {
+   "file": "models/heads/head_f3.glb",
+   "eyes": [
+    [
+     -0.1727,
+     -0.5889,
+     0.9478
+    ],
+    [
+     0.1625,
+     -0.5894,
+     0.948
+    ]
+   ],
+   "eyeR": 0.034,
+   "neck": -1.08,
+   "neckRing": {
+    "cx": 0.0035,
+    "cz": 0.4078,
+    "rx": 0.2319,
+    "rz": 0.243,
+    "skin": [
+     0.8118,
+     0.5804,
+     0.4627
+    ]
+   },
+   "skin": [
+    0.7961,
+    0.549,
+    0.4353
+   ]
+  },
+  "head_m1": {
+   "file": "models/heads/head_m1.glb",
+   "eyes": [
+    [
+     -0.144,
+     -0.5232,
+     0.9908
+    ],
+    [
+     0.1373,
+     -0.5234,
+     0.9922
+    ]
+   ],
+   "eyeR": 0.034,
+   "neck": -1.08,
+   "neckRing": {
+    "cx": -0.006,
+    "cz": 0.3584,
+    "rx": 0.3461,
+    "rz": 0.3242,
+    "skin": [
+     0.6824,
+     0.502,
+     0.4196
+    ]
+   },
+   "skin": [
+    0.6196,
+    0.451,
+    0.3765
+   ]
+  },
+  "head_m2": {
+   "file": "models/heads/head_m2.glb",
+   "eyes": [
+    [
+     -0.1417,
+     -0.5464,
+     1.0014
+    ],
+    [
+     0.1556,
+     -0.5439,
+     1.001
+    ]
+   ],
+   "eyeR": 0.034,
+   "neck": -1.16,
+   "neckRing": {
+    "cx": 0.0012,
+    "cz": 0.3208,
+    "rx": 0.4759,
+    "rz": 0.3623,
+    "skin": [
+     0.6235,
+     0.4353,
+     0.4
+    ]
+   },
+   "skin": [
+    0.5059,
+    0.3725,
+    0.3373
+   ]
+  },
+  "head_m3": {
+   "file": "models/heads/head_m3.glb",
+   "eyes": [
+    [
+     -0.1365,
+     -0.5375,
+     0.933
+    ],
+    [
+     0.1346,
+     -0.5357,
+     0.932
+    ]
+   ],
+   "eyeR": 0.034,
+   "neck": -1.1,
+   "neckRing": {
+    "cx": 0.0021,
+    "cz": 0.3593,
+    "rx": 0.2868,
+    "rz": 0.3075,
+    "skin": [
+     0.6784,
+     0.5059,
+     0.4235
+    ]
+   },
+   "skin": [
+    0.698,
+    0.5216,
+    0.4314
+   ]
+  }
+ },
  "textures": {
   "crystal": "textures/terrain/crystal.jpg",
   "dirt": "textures/terrain/dirt.jpg",
@@ -321,10 +921,14 @@
   "items/wand.png": "icons/items/wand.png",
   "resources/crystal": "icons/resources/crystal.png",
   "resources/crystal.png": "icons/resources/crystal.png",
+  "resources/dark": "icons/resources/dark.png",
+  "resources/dark.png": "icons/resources/dark.png",
   "resources/food": "icons/resources/food.png",
   "resources/food.png": "icons/resources/food.png",
   "resources/gold": "icons/resources/gold.png",
   "resources/gold.png": "icons/resources/gold.png",
+  "resources/honor": "icons/resources/honor.png",
+  "resources/honor.png": "icons/resources/honor.png",
   "resources/iron": "icons/resources/iron.png",
   "resources/iron.png": "icons/resources/iron.png",
   "resources/mana": "icons/resources/mana.png",

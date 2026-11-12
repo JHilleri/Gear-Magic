@@ -3,7 +3,7 @@
 // missing, so the UI looks finished before (or without) the painted icon set.
 import type { JSX } from 'preact';
 import { useState } from 'preact/hooks';
-import type { AttackKind, FactionId } from '../core/types';
+import type { AttackKind, BodyVariant, FactionId, Unit } from '../core/types';
 import { FACTIONS } from '../data/factions';
 import { useUi } from './ctx';
 import { assetUrl, cls, initials } from './util';
@@ -154,7 +154,7 @@ function symbolFor(cat: string, name: string): Sym | null {
   if (SYMBOLS[name]) return SYMBOLS[name];
   const stem = name.replace(/^(stat|eff|passive|active)_/, '');
   const byStem: Record<string, string> = {
-    str: 'fist', dex: 'ranged', int: 'magic', hp: 'heart', armor: 'shield', block: 'shield', mov: 'boot', vis: 'eye', reflexes: 'sword',
+    str: 'fist', dex: 'ranged', int: 'magic', hp: 'heart', armor: 'shield', block: 'shield', mov: 'boot', vis: 'eye', reflexes: 'sword', honor: 'skull', dark: 'magic',
     attack: 'melee', ranged: 'ranged', magic: 'magic', farming: 'farm', building: 'hammer', mining: 'mine', gathering: 'lumber',
     trade: 'gold', regeneration: 'heart', poison: 'poison', ironskin: 'shield', fortify: 'shield', heal: 'heart',
     firebolt: 'magic', fireball: 'magic', volley: 'ranged', powerstrike: 'sword', marksman: 'ranged', berserker: 'axe',
@@ -221,11 +221,27 @@ export function ResIcon({ r, size = 20 }: { r: string; size?: number }) {
  * first one the asset library has (and that loads) is shown. Without any, a faction-tinted
  * silhouette with initials (or `sym`, a glyph name).
  */
-export function Portrait({ k, name, color, class: klass, sym }: { k: string | readonly string[]; name: string; color: string; class?: string; sym?: string }) {
+export function Portrait({ k, name, color, class: klass, sym, unit, body, large, yaw }: {
+  k: string | readonly string[]; name: string; color: string; class?: string; sym?: string;
+  /** The unit portrayed: one with looks (gender, hair, beard, eyes) is shown as its own model, live. */
+  unit?: Unit; body?: string;
+  /** Live busts only: render at twice the size, turned by `yaw` degrees (the customisation screen). */
+  large?: boolean; yaw?: number;
+}) {
   const { assets } = useUi();
   const lib = assets();
   const keys = typeof k === 'string' ? [k] : k;
   let url: string | null = null;
+  if (unit?.look && lib?.unitPortrait) {
+    try { url = lib.unitPortrait(unit, (body ?? 'commoner') as BodyVariant, large || yaw ? { large, yaw } : undefined); } catch { url = null; }
+    if (url) {
+      return (
+        <div class={cls('portrait portrait-live', klass)} style={{ '--fc': color } as Record<string, string>}>
+          <img src={url} alt={name} draggable={false} />
+        </div>
+      );
+    }
+  }
   for (const key of keys) {
     const u = resolvePortrait(key, lib);
     if (u && !failed.has(u)) { url = u; break; }

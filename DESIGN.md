@@ -26,19 +26,50 @@ is its code form; `game/src/data/*` holds the balance numbers.
 
 | id | Name | Race | Colors | Flavor |
 |---|---|---|---|---|
-| `valen` | House Valen | human | royal blue `#2f6fd6` + gold `#e8c35a` | Player default. Knights, archers, battle-mages. House bonus: +10% ranged. |
-| `thorn` | Thornwild Clans | orc | crimson `#c8342b` + bone `#d9c9a3` | Brutes, axes, wolves. House bonus: +10% melee. |
-| `ashen` | Ashen Covenant | undead | violet `#8a4fd6` + ash `#9aa0a6` | Revenants, necromancy. House bonus: +10% magic, 0.5 food upkeep per unit. |
+| `valen` | House Valen | human | royal blue `#2f6fd6` + gold `#e8c35a` | Player default. Knights, archers, battle-mages. Gold and food. +1 dex, +10% ranged. |
+| `thorn` | Thornwild Clans | orc | crimson `#c8342b` + bone `#d9c9a3` | Brutes, axes, wolves. Food and honor. Regeneration, +5 hp, +2 str, −1 int, +10% melee. |
+| `ashen` | Ashen Covenant | undead | violet `#8a4fd6` + ash `#9aa0a6` | Revenants, necromancy. Gold and mana, no food; half-strength dead, dark-energy elites. +2 int, +5% armor, +10% magic. |
 | `neutral` | Wilds | monsters | grey | Wolves, golems, spiders around ruins. Not a player. |
 
 The human player picks a faction in the main menu (default Valen) and the number of AI
 opponents (1–2; default 2). Each faction starts with: Leader (lv 2) + 2 Commoners (one
-with Builder's Tools), a Castle on the start hex, 1 Farm, 1 House, and resources
+with Builder's Tools), a Castle on the start hex, 1 Farm (not the undead, who never eat), 1 House, and resources
 `gold 60, food 30, wood 40, stone 25, iron 12, crystal 0, mana 0` — enough iron for a forge
 plus a first sword, or a couple of builders, before the first Iron Mine. Each house also starts
 knowing its signature tech (`startingTechs`): Valen Tanning (archers from turn 1), Thorn Polearms
 (spears and war axes), Ashen Crystal Lore (crystal mines). House bonuses apply to every
 controller, player or AI.
+
+**House economies** (`FactionDef` coin / eats / upkeep / recruitCost / innatePassives / unitBase /
+poisonImmune; the rules in `sim/houses.ts`, `sim/elites.ts`):
+
+| | House Valen | Thornwild Clans | Ashen Covenant |
+|---|---|---|---|
+| Coin (what "gold" costs are paid in) | gold | **honor** | gold |
+| Food | eats | eats | **never**: no food in any cost or output, farms forbidden |
+| Upkeep per unit (leader free) | 1 food | 1 food + 0.5 honor | 0.5 mana (+0.5 per elite rank) |
+| Commoner recruit | 15 gold, 5 food | 15 honor, 5 food | 8 gold |
+| Starting stock | gold 60, food 30 … | honor 60 for the gold | mana 30 for the food |
+| Units | commoner body | commoner body + Regeneration I | half body: 15 hp, str 2, dex 2, int 2 (leader full) |
+| Special | — | honor from fights and Arenas | poison immune; dark energy → elite augments |
+
+* `factionCost(f, cost)` turns every cost into the house's resources (gold → honor for orcs, food
+  dropped for the undead): buildings, upgrades, items, recruits. `baseOutput(type, f)` does the same
+  for yields: an orc castle makes 3 honor instead of 3 gold, orc houses make nothing, the orc Training
+  Ground is an **Arena** making `ARENA_HONOR` 2 honor **only while a unit works it** (`workedOnly`;
+  ×2 bare-handed like any building, so 4 a turn; the unit gets its drill XP, not work XP); the undead castle makes `UNDEAD_CASTLE_MANA` 2 mana instead of its
+  food, and the dead never farm (`houseForbids`).
+* **Honor** (orcs): every fight an orc unit takes part in, won or lost, gives `FIGHT_HONOR` 1; a kill
+  gives 2 per level of the victim, a monster half that (`MONSTER_HONOR_SHARE`); plus the castle and
+  worked Arenas. It pays for everything gold buys elsewhere and the honor upkeep.
+* **Dark energy** (undead): only from kills, 2 per level of the victim; never spent on upkeep. It
+  buys **elite augments** (`data/elites.ts`), with the `empower` action, for a unit standing on its own
+  castle or a mage tower, free (no movement or action), no level-up needed: Unholy Vigor +10 max hp
+  (hp come at once), Grave Might +4 str, Deadeye +4 dex, Dark Wisdom +4 int per rank (the level-up
+  picks give +8/+3), each rank costing 10 × rank dark energy and adding `ELITE_UPKEEP` 0.5 mana a turn.
+* An upkeep the house cannot pay (food, honor or mana) costs every unit drawing it
+  `STARVATION_DAMAGE` 4 hp, never below 1.
+* Saves from before: an orc house's gold becomes honor; honor and dark energy start at 0.
 
 ## 3. Map
 
@@ -75,11 +106,17 @@ controller, player or AI.
 `maxHp, str (melee), dex (ranged), int (magic), block (flat damage off every strike that hits),
 armor (% damage reduction after block, 0–70), mov (movement points), vis (vision radius)`.
 
+Attributes outside the damage formula: a **worker** yields `STAT_YIELD` 3% more per point of
+**Strength** on raw materials (wood, stone, iron, crystal) and honor, and per point of **Intellect** on
+research and gold (`statYieldMult`, part of `workerResourceMult`); food and mana follow no stat.
+**Dexterity** dodges (enemy melee and ranged attacks hit 1% less per point, `DODGE_PER_DEX`) and aims
+(the unit's own ranged attacks hit 1% more per point, `AIM_PER_DEX`); magic is unaffected.
+
 Commoner base: `maxHp 30, str 4, dex 4, int 3, block 0, armor 0, mov 5, vis 4`.
 Leader base:  `maxHp 46, str 6, dex 5, int 5, block 1, armor 10, mov 5, vis 5`, starts level 2.
 
 Race modifiers (added to base stats, `data/factions.ts` `statMods`): human +1 dex; orc +5 maxHp,
-+1 str, −1 int; undead +2 int, +5 armor (armor is already a % reduction, so +5 points). House
++2 str, −1 int; undead +2 int, +5 armor (armor is already a % reduction, so +5 points). House
 damage multipliers: valen ×1.1 ranged (`rangedMult`), thorn ×1.1 melee (`meleeMult`), ashen ×1.1
 magic (`magicMult`) and 0.5 food upkeep.
 
@@ -156,7 +193,8 @@ and does meet block and armor.
 * Strikes alternate attacker, defender, attacker, … until both have used their strikes or
   one dies. *firststrike* on the defender makes it strike first.
 * Hit chance = `100 − defender tile defense` (+ wall/castle bonus, + shield +5, mounted
-  penalty), clamped [10, 90]. Magic attacks always 70%.
+  penalty), minus 1% per point of the target's dexterity (dodge), plus for ranged attacks 1% per
+  point of the shooter's dexterity (aim), clamped [10, 90]. Magic attacks always 70%.
 * Forecast (`forecastCombat`) gives exact probabilities of each side's HP outcome
   (dynamic programming over strike sequence) and expected damage; the UI shows it on
   hover before the click.
@@ -322,22 +360,37 @@ unlocks and the listed building.
 | Apprentice | wand, robe | Mage Tower, Castle |
 | Battle Mage | staff, robe, ring | Mage Tower |
 
-Names: a new unit is named once, when it is created, from its house's pool. It is a woman
-when its race is human and its first body is the light body (`bodyVariant` of its starting
-equipment: leather, so human Archers and Spearmen; the `human_light` portrait and model) and
-draws from the house's female list (`femaleUnitNames`); every other unit is a man and draws from
-`unitNames` (orcs and undead have one list). Arming a commoner later never renames it. Leaders
-keep their title (Queen Aldra Valen).
+Identity: who a unit is — name, gender, looks — is decided once, when it is created, and never
+changes with its equipment. Humans have a **gender** (`Unit.gender`, half men, half women; any
+preset can be either) and **looks** (`Unit.look`, `data/appearance.ts`): a face (3 per gender),
+a hair cut (6 for men incl. bald, 7 for women), a hair colour (8), an eye colour (6) and, for men,
+a beard (5, or clean-shaven). Both are drawn from the game seed and the unit id alone, never from the game's
+dice, so they change no outcome. A woman is named from the house's `femaleUnitNames`, a man from
+`unitNames`. Every body armour has a man's and a woman's model (`human_<m|f>_<body>`, bald); its
+head is replaced by the unit's face model (`head_<m|f><n>`, far more detailed, tinted to the
+body's skin), the hair and beard are separate pieces on it, tinted to the hair colour, and the
+irises take the eye colour (`render/appearance.ts`). The portrait of such a unit is a live bust of
+its own model (`render/portrait.ts`). Orcs and undead have neither yet (one list of names, one
+model per armour). Leaders keep their title (Queen Aldra Valen), their house's `leaderGender`
+and their own model. A save from before this gives each human the gender its name was drawn for.
 
-Commoner cost: `15 gold, 5 food`. Recruiting from Castle requires the leader on the
+Customising: the **Appearance** window (unit sheet → Appearance) shows a large bust that can be
+turned and lets the player change an own human's name (1–18 characters, unique in the house),
+gender, face, hair cut and colour, eye colour and beard, or roll new looks. It is one free
+`customize` action (the player's turn; no cost, no stat, no dice): `canCustomize` checks that the
+looks suit the gender (a woman's or a man's hair cut, a beard only on a man). Leaders, orcs and
+undead cannot be customised.
+
+Commoner cost: the house's `recruitCost` (`15 gold, 5 food`; orcs `15 honor, 5 food`; undead `8 gold`), items in its own resources. Recruiting from Castle requires the leader on the
 castle. Each recruit site (castle, house, training ground, mage tower) can recruit once
 per turn; the recruit appears on the site's hex or the nearest free adjacent hex (never on
 another faction's building) and cannot move that turn — Haste and Rally do not help it — nor
 capture where it stands until its next turn. Summoned elementals follow the same rules: they never
 appear on another faction's building, and neither march nor capture on their first turn.
 
-Upkeep: each unit eats 1 food/turn (undead 0.5); leader free. If food < 0 at upkeep,
-every unit loses 4 hp (`STARVATION_DAMAGE`; cannot die from starvation below 1 hp) and food is set to 0.
+Upkeep: the house's `upkeep` per unit (1 food; orcs 1 food + 0.5 honor; undead 0.5 mana, +0.5 per
+elite rank); leader free. If a stock it draws on goes below 0 at upkeep, every unit drawing it loses 4 hp
+(`STARVATION_DAMAGE`; never below 1 hp) and the stock is set to 0.
 
 ### 4.10 Standing orders (`sim/orders.ts`)
 A unit can be told to stay put: **Rest until healed** (`'heal'`) or **Sentry** (`'sentry'`), with
@@ -471,7 +524,9 @@ Factions act in order (player first). `endTurn(factionId)`:
    that slew the leader (`eliminatedBy`); an AI is crowned victor only if it is the last house
    standing.
 Neutral monsters act after all factions each round: they guard ruins (wander within 3
-hexes) and attack adjacent/near units. Respawn near ruins every 12 rounds if under cap.
+hexes) and attack adjacent/near units. Packs: a lone beast at ruins within 8 hexes of a start,
+three beasts mid-way, a golem-led four far out (more beasts to fight: orc honor). Respawn near
+ruins every 8 rounds if under the cap (3 per ruin).
 Monsters never enter within 3 hexes of a castle (its territory is safe), and during rounds 1–3
 they only defend their lair.
 
@@ -480,6 +535,16 @@ they only defend their lair.
 Runs entirely through the public action API (`sim/actions.ts`), same rules as the player,
 fog-of-war respected loosely (it may know building locations; it sees units only within
 its vision). Layers:
+* **House economies** (§2): every cost the AI weighs goes through `factionCost` / `presetCost(p, f)` /
+  `itemCost`; recruiting waits until every upkeep resource stays paid (`upkeepOk`: food, honor, mana)
+  and the army target is bounded by the room in each. Orcs build an Arena right after the quarry and
+  more when honor runs low only once every Arena is worked (an empty one yields nothing): idle
+  commoners and resting fighters work them, and an empty Arena with honor below 60 is reason to
+  recruit a commoner; the undead never plan farms (nor expand
+  the border with one) and raise mage towers when mana runs short. An `empower` phase (after level-ups)
+  spends dark energy on units standing on the castle or a mage tower while the mana income carries
+  the upkeep: Unholy Vigor for the leader and builders, Grave Might / Unholy Vigor for fighters,
+  Deadeye for shooters, Dark Wisdom for mages.
 * **Economy planner**: target building mix by phase (opening: farm, lumber, quarry,
   house, forge, training; mid: mine, library, crystal mine, mage tower; walls near the
   castle under threat). The forge's iron (and, without iron income, a replacement Builder's
@@ -490,7 +555,10 @@ its vision). Layers:
   the Ashen Covenant, whose mages run on crystal, raises its crystal mine (and a second quarry
   when stone is short) before its iron mine. Later mage towers stand toward the
   rival. Units step off a builder's planned site. Picks sites by scoring tiles (terrain/deposit fit, distance to
-  castle, safety). Builder units are assigned to construction sites; keeps 1 builder per
+  castle, safety). A producer with no legal site in reach (a deposit beyond the border) grows the
+  border toward the nearest free site with a cheap farm, house, lumber camp or quarry: within 9 hexes
+  of home, 14 for a house's first crystal mine (its towers, mages and, for the undead, the host's
+  mana depend on it). Builder units are assigned to construction sites; keeps 1 builder per
   ~4 buildings (min 1, max 3); an idle builder does not take a mage tower's hex while a mage
   could channel there.
 * **Research**: Writing first (no library yet), Polearms against riders, Mining, Masonry when

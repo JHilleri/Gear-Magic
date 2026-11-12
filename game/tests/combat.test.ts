@@ -64,9 +64,29 @@ describe('attackProfile', () => {
     const p = attackProfile(s, a, d, 'melee')!;
     expect(p.damage).toBe(5); // (7 + 2 − plate's 3 block) × (1 − 25%) = 4.5 → 5
     expect(p.strikes).toBe(3);
-    expect(p.hitChance).toBeCloseTo(0.6);
+    // Grass 40% defense, and the defender's 4 Dexterity dodges 4% more.
+    expect(p.hitChance).toBeCloseTo(0.56);
     setTerrain(s, d.pos, 'forest');
-    expect(attackProfile(s, a, d, 'melee')!.hitChance).toBeCloseTo(0.5);
+    expect(attackProfile(s, a, d, 'melee')!.hitChance).toBeCloseTo(0.46);
+  });
+
+  it('Dexterity: the target dodges melee and ranged (1% a point), a shooter aims (1% a point), magic ignores both', () => {
+    const { s, a, d } = duel({ a: { items: ['sword'] }, d: {} });
+    d.base = { ...d.base, dex: 0 };
+    expect(attackProfile(s, a, d, 'melee')!.hitChance).toBeCloseTo(0.6); // grass, no dodge
+    d.base = { ...d.base, dex: 10 };
+    expect(attackProfile(s, a, d, 'melee')!.hitChance).toBeCloseTo(0.5); // −10%
+    const r = duel({ a: { items: ['bow'] }, d: {}, dist: 2 });
+    r.d.base = { ...r.d.base, dex: 0 };
+    r.a.base = { ...r.a.base, dex: 12 };
+    expect(attackProfile(r.s, r.a, r.d, 'ranged')!.hitChance).toBeCloseTo(0.72); // +12% aim
+    r.d.base = { ...r.d.base, dex: 50 };
+    expect(attackProfile(r.s, r.a, r.d, 'ranged')!.hitChance).toBeCloseTo(0.22); // 60% − 50% dodge + 12% aim
+    r.d.base = { ...r.d.base, dex: 70 };
+    expect(attackProfile(r.s, r.a, r.d, 'ranged')!.hitChance).toBeCloseTo(0.1); // clamped at 10%
+    const m = duel({ a: { items: ['wand'] }, d: {}, dist: 2 });
+    m.d.base = { ...m.d.base, dex: 30 };
+    expect(attackProfile(m.s, m.a, m.d, 'magic')!.hitChance).toBeCloseTo(0.7); // magic always 70%
   });
 
   it('applies faction melee bonus and rounding (min 1)', () => {
@@ -181,6 +201,9 @@ describe('attack legality and retaliation', () => {
 describe('forecastCombat', () => {
   it('exact distribution for a simple exchange', () => {
     const { s, a, d } = duel({ a: { items: ['sword'] }, d: { hp: 22 } });
+    // No Dexterity on either side, so grass gives a clean 60% (dodging has its own test).
+    a.base = { ...a.base, dex: 0 };
+    d.base = { ...d.base, dex: 0 };
     const fc = forecastCombat(s, a, d, 'melee')!;
     // 9 × 3 at 60% vs a wounded defender (22 of 30 hp): dies only to 3 hits.
     expect(fc.defenderKillChance).toBeCloseTo(0.216, 10);

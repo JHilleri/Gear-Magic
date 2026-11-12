@@ -1,8 +1,11 @@
 import type { PresetDef, PresetId, ResourceCost, UnitStats } from '../core/types';
 
+/** House Valen's commoner (each house has its own: FactionDef.recruitCost). */
 export const COMMONER_COST: ResourceCost = { gold: 15, food: 5 };
 
 export const COMMONER_STATS: UnitStats = { maxHp: 30, str: 4, dex: 4, int: 3, armor: 0, block: 0, mov: 5, vis: 4 };
+/** The Ashen Covenant's risen dead (every unit but the leader): half the commoner's hit points and attributes. */
+export const UNDEAD_STATS: UnitStats = { maxHp: 15, str: 2, dex: 2, int: 2, armor: 0, block: 0, mov: 5, vis: 4 };
 export const LEADER_STATS: UnitStats = { maxHp: 46, str: 6, dex: 5, int: 5, armor: 10, block: 1, mov: 5, vis: 5 };
 
 export const PRESETS: Record<PresetId, PresetDef> = {

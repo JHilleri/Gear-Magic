@@ -339,6 +339,7 @@ describe('end turn grace, window hotkeys, targeting tone', () => {
   it('equip and level-up opened from a unit sheet return to the sheet', () => {
     expect(returnTarget('unitsheet', 'equip')).toBe('unitsheet');
     expect(returnTarget('unitsheet', 'levelup')).toBe('unitsheet');
+    expect(returnTarget('unitsheet', 'customize')).toBe('unitsheet');
     expect(returnTarget('unitsheet', 'research')).toBeNull();
     expect(returnTarget(null, 'equip')).toBeNull();
     expect(returnTarget('build', 'equip')).toBeNull();

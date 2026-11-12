@@ -2,10 +2,11 @@
 // Falls back to procedural rigs (render/procedural.ts) for any model the manifest lacks.
 import * as THREE from 'three';
 import { clone as skeletonClone } from 'three/addons/utils/SkeletonUtils.js';
-import type { AttackKind, BodyVariant, FactionId, GameState, Hex, ItemId, MonsterKind, RaceId, StrikeEvent, Unit, UnitId } from '../core/types';
+import type { AttackKind, BodyVariant, FactionId, GameState, Gender, Hex, ItemId, MonsterKind, RaceId, StrikeEvent, Unit, UnitId } from '../core/types';
 import { hexToWorld, inBounds, tileIndex, worldToHex } from '../core/hex';
 import { FACTIONS } from '../data/factions';
 import { ITEMS } from '../data/items';
+import { bodyPaintKey, dressHead, patchBodyShader, type BodyPaint } from './appearance';
 import { bodyVariant, effectiveStats } from '../sim/units';
 import { DEFAULT_RUN_SPEED, DEFAULT_WALK_SPEED, FOOT_SPEED, UNIT_HEIGHT, walkTimeScale } from './types';
 import type { CreateUnitLayer, FxLayerApi, RenderContext, UnitLayerApi } from './types';
@@ -108,11 +109,17 @@ export function seatedClip(clip: string): string | null {
 const PADDED_ITEM: ItemId = 'tunic';
 /**
  * Rigged GLB keys a unit's body may use, best first: a commoner in the padded tunic wears the
- * '<race>_padded' model once it ships, else the plain commoner body.
+ * '<race>_padded' model once it ships, else the plain commoner body. A unit with a gender wears
+ * that armour's own cut ('<race>_<m|f>_<body>', bald: its hair is a separate piece) before the
+ * shared model; a leader has one model.
  */
-export function unitBodyKeys(race: RaceId, body: BodyVariant, bodyItem: ItemId | null | undefined): string[] {
+export function unitBodyKeys(race: RaceId, body: BodyVariant, bodyItem: ItemId | null | undefined, gender?: Gender): string[] {
   const keys: string[] = [];
-  if (body === 'commoner' && bodyItem === PADDED_ITEM) keys.push(`${race}_padded`);
+  const g = gender && body !== 'leader' ? (gender === 'female' ? 'f' : 'm') : null;
+  const padded = body === 'commoner' && bodyItem === PADDED_ITEM;
+  if (g && padded) keys.push(`${race}_${g}_padded`);
+  if (g) keys.push(`${race}_${g}_${body}`);
+  if (padded) keys.push(`${race}_padded`);
   keys.push(`${race}_${body}`);
   return keys;
 }
@@ -549,7 +556,9 @@ export const createUnitLayer: CreateUnitLayer = (ctx: RenderContext, fx: FxLayer
   function signature(u: Unit): string {
     const e = u.equipment;
     // the body item, not only the body variant: the padded tunic has its own model (unitBodyKeys)
-    return [u.race, u.monster ?? '', u.faction, u.monster ? '' : safeBody(u), e.body, e.main, e.off, e.trinket, e.mount, u.isLeader ? 1 : 0].join('|');
+    const l = u.look;
+    return [u.race, u.monster ?? '', u.faction, u.monster ? '' : safeBody(u), e.body, e.main, e.off, e.trinket, e.mount, u.isLeader ? 1 : 0,
+      u.gender ?? '', l ? `${l.hair},${l.hairColor},${l.eyes},${l.beard},${l.face}` : ''].join('|');
   }
 
   function statusOf(u: Unit, state: GameState | null): StatusData {
@@ -648,7 +657,9 @@ export const createUnitLayer: CreateUnitLayer = (ctx: RenderContext, fx: FxLayer
    * metal reflects almost nothing of the weak environment and reads as a black blob), plus a thin
    * faction-coloured fresnel rim so a unit separates from dark castles and shadows.
    */
-  function adoptMaterials(v: UnitView, obj: THREE.Object3D, tint?: THREE.Color, role: 'body' | 'mount' | 'other' = 'other', leader = false): void {
+  function adoptMaterials(
+    v: UnitView, obj: THREE.Object3D, tint?: THREE.Color, role: 'body' | 'mount' | 'other' = 'other', leader = false,
+  ): void {
     const rim = role === 'body' ? (leader ? 0.5 : 0.35) : role === 'mount' ? 0.2 : 0;
     const rimColor = role === 'other' ? null : ctx.factionColor(v.faction);
     obj.traverse((o) => {
@@ -672,6 +683,8 @@ export const createUnitLayer: CreateUnitLayer = (ctx: RenderContext, fx: FxLayer
           v.reads.push({ uRim: read.uRim, base: rim });
           c.onBeforeCompile = (sh) => {
             Object.assign(sh.uniforms, read);
+            const paint = c.userData.paint as BodyPaint | undefined;
+            if (paint) patchBodyShader(sh, paint);
             sh.fragmentShader = sh.fragmentShader
               .replace('#include <common>', '#include <common>\nuniform float uMinLum; uniform vec3 uRimColor; uniform float uRim;')
               .replace('#include <map_fragment>', `#include <map_fragment>
@@ -682,7 +695,8 @@ export const createUnitLayer: CreateUnitLayer = (ctx: RenderContext, fx: FxLayer
               .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
   { float fr = 1.0 - saturate(dot(normal, normalize(vViewPosition))); totalEmissiveRadiance += uRimColor * (uRim * fr * fr * fr); }`);
           };
-          c.customProgramCacheKey = () => 'unit-readable';
+          // (a body's head paint is set after its looks are dressed: paintBody)
+          c.customProgramCacheKey = () => (c.userData.paint ? `unit-readable-${bodyPaintKey(c.userData.paint as BodyPaint)}` : 'unit-readable');
         }
         v.glbMats.push(c);
         return c;
@@ -910,14 +924,20 @@ export const createUnitLayer: CreateUnitLayer = (ctx: RenderContext, fx: FxLayer
     }
 
     // body
-    const bodyKeys = unitBodyKeys(u.race, body, u.equipment.body);
+    const bodyKeys = unitBodyKeys(u.race, body, u.equipment.body, u.gender);
     const key = firstAvailable(bodyKeys, (k) => !!ctx.assets.skinned(k)) ?? bodyKeys[bodyKeys.length - 1];
     const sk = ctx.assets.skinned(key);
     let hipsH = 0.5;
     let H = 1;
     if (sk) {
       const model = skeletonClone(sk.scene);
+      const entry = ctx.assets.manifest.units?.[key];
+      const before = v.glbMats.length;
       adoptMaterials(v, model, undefined, 'body', u.isLeader);
+      const bodyMats = v.glbMats.slice(before);
+      // Looks: the face model, hair and beard on the head bone; then the body's own head is hidden or painted.
+      const paint = dressHead(ctx.assets, model, entry, u.gender, u.look, (piece) => adoptMaterials(v, piece, undefined, 'other'));
+      if (paint) for (const m of bodyMats) { m.userData.paint = paint; if (paint.hide) m.side = THREE.DoubleSide; m.needsUpdate = true; }
       H = ctx.assets.manifest.units?.[key]?.height ?? measureHeight(model);
       const holder = new THREE.Group();
       holder.add(model);

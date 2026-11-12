@@ -25,9 +25,9 @@ export const STAT_ORDER: readonly (keyof UnitStats)[] = ['maxHp', 'str', 'dex', 
 /** What each attribute does (the sheet's stat tooltips). */
 export const STAT_HELP: Record<keyof UnitStats, string> = {
   maxHp: 'Hit points. The unit dies at 0.',
-  str: 'Melee damage: +1 per strike for every 2 points.',
-  dex: 'Ranged damage: +1 per strike for every 2 points.',
-  int: 'Damage of magic attacks (staff, wand: +1 per 2 points) and spell range from a Mage Tower (+1 per 3 points). Spell and Firebolt damage is fixed.',
+  str: 'Melee damage: +1 per strike for every 2 points. Working a building: +3% raw materials (wood, stone, iron, crystal) and honor per point.',
+  dex: 'Ranged damage: +1 per strike for every 2 points. Aim: +1% ranged hit chance per point. Dodge: enemy melee and ranged attacks hit 1% less per point.',
+  int: 'Damage of magic attacks (staff, wand: +1 per 2 points) and spell range from a Mage Tower (+1 per 3 points). Working a building: +3% research and gold per point. Spell and Firebolt damage is fixed.',
   armor: 'After block, takes this percentage off the damage of every strike that hits (at most 70). Spells, Firebolt, poison and starvation ignore it.',
   block: 'Flat damage taken off every strike that hits, before armor. Magic attacks and flanking strikes pass it by; so do spells, Firebolt, poison and starvation.',
   mov: 'Movement points per turn.',

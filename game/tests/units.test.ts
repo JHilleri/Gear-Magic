@@ -2,11 +2,12 @@ import { describe, expect, it } from 'vitest';
 import { makeTestState, makeTestUnit, makeTestBuilding, at, setTerrain } from './helpers';
 import {
   createUnit, effectiveStats, getAttackDefs, isMounted, canBuildWith, bodyVariant, eff,
-  canEquip, equip, canUnequip, unequip, unitValue, isFemaleAtCreation,
+  canEquip, equip, canUnequip, unequip, unitValue, assignAppearance,
 } from '../src/sim/units';
-import { COMMONER_STATS, LEADER_STATS } from '../src/data/presets';
+import { COMMONER_STATS, LEADER_STATS, UNDEAD_STATS } from '../src/data/presets';
 import { FACTIONS, MONSTERS } from '../src/data/factions';
 import { FISTS_ATTACK } from '../src/data/items';
+import { BEARDS, EYE_COLORS, FACES, HAIR_COLORS, HAIR_STYLES } from '../src/data/appearance';
 
 describe('createUnit', () => {
   it('builds a commoner with race modifiers and registers it', () => {
@@ -14,7 +15,7 @@ describe('createUnit', () => {
     const u = createUnit(s, { faction: 'thorn', pos: at(2, 2) });
     expect(s.units[String(u.id)]).toBe(u);
     expect(u.race).toBe('orc');
-    expect(u.base).toEqual({ ...COMMONER_STATS, maxHp: COMMONER_STATS.maxHp + 5, str: COMMONER_STATS.str + 1, int: COMMONER_STATS.int - 1 });
+    expect(u.base).toEqual({ ...COMMONER_STATS, maxHp: COMMONER_STATS.maxHp + 5, str: COMMONER_STATS.str + 2, int: COMMONER_STATS.int - 1 });
     expect(u.hp).toBe(u.base.maxHp);
     expect(u.level).toBe(1);
     expect(u.mp).toBe(COMMONER_STATS.mov);
@@ -23,13 +24,18 @@ describe('createUnit', () => {
     expect(u.xpByCat).toEqual({ melee: 0, ranged: 0, building: 0, civic: 0, explore: 0, leader: 0, magic: 0 });
   });
 
-  it('applies undead armor and human dex', () => {
+  it('applies each house\'s body: human dex, orc Regeneration, the undead\'s half-strength dead (not the leader)', () => {
     const s = makeTestState();
     expect(createUnit(s, { faction: 'valen', pos: at(1, 1) }).base.dex).toBe(COMMONER_STATS.dex + 1);
+    const o = createUnit(s, { faction: 'thorn', pos: at(1, 3) });
+    expect(o.passives).toEqual(['regeneration']);
+    expect(o.base.maxHp).toBe(COMMONER_STATS.maxHp + 5);
     const d = createUnit(s, { faction: 'ashen', pos: at(1, 2) });
-    expect(d.base.int).toBe(COMMONER_STATS.int + 2);
-    expect(d.base.armor).toBe(5);
+    expect(d.base).toEqual({ ...UNDEAD_STATS, int: UNDEAD_STATS.int + 2, armor: 5 });
+    expect(d.base.maxHp).toBe(15);
     expect(d.race).toBe('undead');
+    const lich = createUnit(s, { faction: 'ashen', pos: at(2, 2), isLeader: true, level: 1 });
+    expect(lich.base.maxHp).toBe(LEADER_STATS.maxHp); // the leader is no half-strength husk
   });
 
   it('creates leaders with leader stats, +4 hp per level above 1, and links the faction', () => {
@@ -81,7 +87,7 @@ describe('createUnit', () => {
     const s = makeTestState(30, 30);
     const names = new Set<string>();
     for (let i = 0; i < 25; i++) {
-      const u = createUnit(s, { faction: 'valen', pos: at(i, 0) });
+      const u = createUnit(s, { faction: 'valen', pos: at(i, 0), gender: 'male' });
       expect(names.has(u.name)).toBe(false);
       names.add(u.name);
     }
@@ -89,45 +95,84 @@ describe('createUnit', () => {
     expect([...names].some((n) => n.endsWith(' II'))).toBe(true);
   });
 
-  it('names a recruit by the body it is first drawn in: human light body → a woman\'s name', () => {
+  it('a human is a man or a woman for life: gender, name pool and looks are fixed at creation', () => {
     const s = makeTestState(30, 30);
     const female = new Set(FACTIONS.valen.femaleUnitNames);
     const male = new Set(FACTIONS.valen.unitNames);
     expect(female.size).toBeGreaterThanOrEqual(12);
     for (const n of female) expect(male.has(n)).toBe(false);
-    // Archers and spearmen wear leather: the human_light portrait and model (a woman).
-    for (const [i, preset] of (['archer', 'spearman', 'archer'] as const).entries()) {
-      const u = createUnit(s, { faction: 'valen', pos: at(i, 0), preset });
-      expect(bodyVariant(u)).toBe('light');
-      expect(isFemaleAtCreation(u.race, bodyVariant(u))).toBe(true);
-      expect(female.has(u.name), `${preset} ${u.name}`).toBe(true);
+    // Any preset can be either: the armour no longer decides.
+    const seen = { male: 0, female: 0 };
+    const looks = new Set<string>();
+    for (let i = 0; i < 16; i++) {
+      const u = createUnit(s, { faction: 'valen', pos: at(i, 0), preset: i % 2 ? 'archer' : 'swordsman' });
+      expect(u.gender === 'male' || u.gender === 'female').toBe(true);
+      seen[u.gender!]++;
+      expect((u.gender === 'female' ? female : male).has(u.name), `${u.gender} ${u.name}`).toBe(true);
+      expect(u.look).toBeDefined();
+      expect(HAIR_STYLES.find((h) => h.id === u.look!.hair)!.genders).toContain(u.gender);
+      if (u.gender === 'female') expect(u.look!.beard).toBe('none');
+      expect(BEARDS.some((b) => b.id === u.look!.beard)).toBe(true);
+      expect(HAIR_COLORS.some((c) => c.id === u.look!.hairColor)).toBe(true);
+      expect(EYE_COLORS.some((c) => c.id === u.look!.eyes)).toBe(true);
+      looks.add(JSON.stringify([u.gender, u.look]));
     }
-    // Every other human body is male: commoner, builder, swordsman (tunic), knight (plate), mage (robe).
-    for (const [i, preset] of (['commoner', 'builder', 'swordsman', 'knight', 'apprentice'] as const).entries()) {
-      const u = createUnit(s, { faction: 'valen', pos: at(i, 2), preset });
-      expect(male.has(u.name), `${preset} ${u.name}`).toBe(true);
-    }
-    // Orcs and undead in leather keep their house's (male) list; leaders keep their title.
+    expect(seen.male).toBeGreaterThan(0);
+    expect(seen.female).toBeGreaterThan(0);
+    expect(looks.size).toBeGreaterThan(8); // units are told apart
+    // The gender can be forced; the name follows it.
+    const w = createUnit(s, { faction: 'valen', pos: at(0, 2), preset: 'knight', gender: 'female' });
+    expect(w.gender).toBe('female');
+    expect(female.has(w.name)).toBe(true);
+    const m = createUnit(s, { faction: 'valen', pos: at(1, 2), preset: 'archer', gender: 'male' });
+    expect(m.gender).toBe('male');
+    expect(male.has(m.name)).toBe(true);
+    // Orcs and undead have neither a gender nor rolled looks (humans only, for now).
     for (const f of ['thorn', 'ashen'] as const) {
       const u = createUnit(s, { faction: f, pos: at(f === 'thorn' ? 10 : 11, 4), preset: 'archer' });
-      expect(bodyVariant(u)).toBe('light');
+      expect(u.gender).toBeUndefined();
+      expect(u.look).toBeUndefined();
       expect(FACTIONS[f].unitNames).toContain(u.name);
     }
-    expect(createUnit(s, { faction: 'valen', pos: at(12, 4), isLeader: true }).name).toBe(FACTIONS.valen.leaderName);
-    // The name is fixed at creation: arming a commoner with leather later does not rename it.
+    // Leaders keep their title, take their house's gender and have their own model: no rolled looks.
+    const q = createUnit(s, { faction: 'valen', pos: at(12, 4), isLeader: true });
+    expect(q.name).toBe(FACTIONS.valen.leaderName);
+    expect(q.gender).toBe('female');
+    expect(q.look).toBeUndefined();
+    // Identity survives a change of armour.
     const c = createUnit(s, { faction: 'valen', pos: at(13, 4) });
-    const before = c.name;
+    const before = JSON.stringify([c.name, c.gender, c.look]);
     c.equipment.body = 'leather';
     expect(bodyVariant(c)).toBe('light');
-    expect(c.name).toBe(before);
-    expect(male.has(before)).toBe(true);
+    expect(JSON.stringify([c.name, c.gender, c.look])).toBe(before);
   });
 
-  it('female names run out like male ones: regnal numbers, never a repeat', () => {
+  it('looks come from the game seed and the unit id, never from the game dice', () => {
+    const a = makeTestState(12, 12);
+    const b = makeTestState(12, 12);
+    const rng = a.rngState;
+    const ua = createUnit(a, { faction: 'valen', pos: at(1, 1), name: 'Test' });
+    const ub = createUnit(b, { faction: 'valen', pos: at(1, 1), name: 'Test' });
+    expect(a.rngState).toBe(rng); // a named unit draws nothing
+    expect([ub.gender, ub.look]).toEqual([ua.gender, ua.look]);
+    // An old save's unit (no gender) gets one, keeping the gender its name was drawn for.
+    delete ua.gender; delete ua.look;
+    assignAppearance(a.settings.seed, ua, 'female');
+    expect(ua.gender).toBe('female');
+    expect(ua.look!.beard).toBe('none');
+    // Looks from before faces existed keep everything and gain the face they would have rolled.
+    const kept = { ...ub.look! };
+    delete (ub.look as Partial<typeof kept>).face;
+    assignAppearance(b.settings.seed, ub);
+    expect(ub.look).toEqual(kept);
+    expect(FACES[ub.gender!][ub.look!.face]).toBeDefined();
+  });
+
+  it('names run out into regnal numbers, never a repeat', () => {
     const s = makeTestState(30, 30);
     const names = new Set<string>();
     for (let i = 0; i < 24; i++) {
-      const u = createUnit(s, { faction: 'valen', pos: at(i, 0), preset: 'archer' });
+      const u = createUnit(s, { faction: 'valen', pos: at(i, 0), preset: 'archer', gender: 'female' });
       expect(names.has(u.name)).toBe(false);
       names.add(u.name);
     }

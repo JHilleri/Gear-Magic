@@ -8,7 +8,7 @@ import type { SaveSlot, SavesInfo } from './session';
 
 export type ModalId =
   | null | 'menu' | 'newgame' | 'research' | 'spellbook' | 'forge' | 'recruit' | 'levelup'
-  | 'equip' | 'build' | 'help' | 'end' | 'settings' | 'unitsheet';
+  | 'equip' | 'build' | 'help' | 'end' | 'settings' | 'unitsheet' | 'empower' | 'customize';
 
 export type InteractionMode =
   | { kind: 'idle' }

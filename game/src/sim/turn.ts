@@ -63,7 +63,8 @@ export function unitTurnUpkeep(state: GameState, u: Unit): GameEvent[] {
     const it = u.equipment[slot];
     if (it && ITEMS[it].regen) heal += ITEMS[it].regen!;
   }
-  if (u.poisoned && cures) { u.poisoned = false; delete u.poisonDamage; }
+  // A castle or shrine cures; the undead never carry poison at all (DESIGN §2).
+  if (u.poisoned && (cures || FACTIONS[u.faction]?.poisonImmune)) { u.poisoned = false; delete u.poisonDamage; }
   if (u.poisoned) {
     // Poison bites first (never fatal), then whatever healing the unit gets.
     events.push(...applyDamage(state, u, poisonOn(u), 'poison', null, 1));

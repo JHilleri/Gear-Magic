@@ -53,7 +53,7 @@ export function EquipModal() {
       <div class="equip-layout">
         <div class="equip-unit">
           <div class="eu-head">
-            <Portrait k={portraitKey(u, body)} name={u.name} color={fd.color} class="eu-portrait" />
+            <Portrait k={portraitKey(u, body)} unit={u} body={body} name={u.name} color={fd.color} class="eu-portrait" />
             <div>
               <div class="eu-name">{u.name}</div>
               <div class="t-dim">{unitRole(u)} · Level {u.level}</div>

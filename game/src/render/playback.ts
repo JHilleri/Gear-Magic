@@ -194,6 +194,14 @@ export async function playEventSequence(
         }
         break;
       }
+      case 'unitEmpowered': {
+        // An undead elite rank: the same rising burst as a level-up.
+        if (unitVisible(ev.unit)) {
+          layers.fx.levelUp(anchor(ev.unit));
+          await wait(250 / sp);
+        }
+        break;
+      }
       case 'unitDamaged': {
         const u = units[String(ev.unit)];
         if (u) u.hp = Math.max(0, u.hp - ev.amount);

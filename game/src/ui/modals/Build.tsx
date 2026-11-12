@@ -8,6 +8,7 @@ import { ACTIVES } from '../../data/skills';
 import { TERRAIN } from '../../data/terrain';
 import { buildOptions } from '../../sim/actions';
 import { BUILDING_COST_STEP, buildingCost } from '../../sim/economy';
+import { baseOutput, buildingDescription, buildingName, houseForbids, workedOnly } from '../../sim/houses';
 import { Cost, Output, TipCard } from '../common';
 import { act, useUi } from '../ctx';
 import { Icon, Sym } from '../icons';
@@ -56,7 +57,7 @@ export function BuildModal() {
     <Modal size="xl" title="Construct" icon={<Icon k="items/tools.png" size={40} />} onClose={() => store.closeModal()}
       sub={<span>{u.name} on {tdef?.name ?? 'unknown ground'}{tile?.deposit ? ` (${tile.deposit} deposit)` : ''} · {okCount} building{okCount === 1 ? '' : 's'} possible here · construction progresses at the end of each turn while a builder stays on the site</span>}>
       <div class="build-groups">
-        {GROUPS.map((g) => (
+        {GROUPS.map((g) => ({ ...g, ids: g.ids.filter((id) => !houseForbids(id, f)) })).filter((g) => g.ids.length > 0).map((g) => (
           <div class="item-group" key={g.name}>
             <div class="group-title">{g.name}</div>
             <div class="build-grid">
@@ -64,6 +65,9 @@ export function BuildModal() {
                 const d = BUILDINGS[id];
                 const err = errOf(id);
                 const cost = safe(() => buildingCost(s, f, id), d.cost);
+                // The house's own name and yield (an orc Arena makes honor, an undead castle mana).
+                const name = safe(() => buildingName(id, f), d.name);
+                const out = safe(() => baseOutput(id, f), d.output);
                 const owned = Object.values(s.buildings).filter((b) => b.owner === f && b.type === id).length;
                 const dearer = Object.keys(cost).some((k) => (cost as Record<string, number>)[k] !== (d.cost as Record<string, number>)[k]);
                 const locked = (d.unlock && !fs.techs.includes(d.unlock)) || (!!d.unlockSkill && !u.actives.includes(d.unlockSkill));
@@ -71,9 +75,9 @@ export function BuildModal() {
                 return (
                   <button type="button" key={id} class={cls('build-card', err && 'is-disabled', locked && 'locked')} aria-disabled={!!err}
                     onClick={err ? undefined : () => void build(id)}
-                    {...tip(<TipCard icon={<Icon k={d.icon} size={40} />} title={d.name} sub={`Terrain: ${d.terrains.map((t) => TERRAIN[t].name).join(', ')}${d.deposit ? ` · needs ${d.deposit} deposit` : ''}`}>
-                      {d.description}
-                      {dearer && <div class="tip-note t-dim">You own {plural(owned, d.name.toLowerCase(), d.name.toLowerCase().replace(/y$/, 'ie') + 's')}: each one makes the next {Math.round(BUILDING_COST_STEP * 100)}% dearer.</div>}
+                    {...tip(<TipCard icon={<Icon k={d.icon} size={40} />} title={name} sub={`Terrain: ${d.terrains.map((t) => TERRAIN[t].name).join(', ')}${d.deposit ? ` · needs ${d.deposit} deposit` : ''}`}>
+                      {safe(() => buildingDescription(id, f), d.description)}
+                      {dearer && <div class="tip-note t-dim">You own {plural(owned, name.toLowerCase(), name.toLowerCase().replace(/y$/, 'ie') + 's')}: each one makes the next {Math.round(BUILDING_COST_STEP * 100)}% dearer.</div>}
                       {req && <div class={cls('tip-note', locked ? 't-bad' : 't-good')}>Requires {req}</div>}
                       {d.recruits && (
                         <div class="tip-note">Recruits: {d.recruits.map((p, i) => {
@@ -87,9 +91,9 @@ export function BuildModal() {
                     </TipCard>)}>
                     <span class="bc-icon"><Icon k={d.icon} size={52} dim={!!locked} />{locked && <span class="bc-lock"><Sym name="lock" /></span>}</span>
                     <span class="bc-main">
-                      <span class="bc-name">{d.name}</span>
+                      <span class="bc-name">{name}</span>
                       <Cost cost={cost} have={fs.resources} compact />
-                      <span class="bc-row"><Output out={d.output} empty={d.armory ? 'Armory' : d.defense ? `+${d.defense[0]}% def` : '—'} /><span class="bc-pts" {...tip('Build points (one builder adds ~1 per turn)')}><Sym name="hammer" />{d.buildPoints}</span></span>
+                      <span class="bc-row"><span class="bc-out"><Output out={out} empty={d.armory ? 'Armory' : d.defense ? `+${d.defense[0]}% def` : '—'} />{workedOnly(id, f) && <span class="t-dim" {...tip('Yields only while a unit works it (×2 bare-handed)')}>when worked</span>}</span><span class="bc-pts" {...tip('Build points (one builder adds ~1 per turn)')}><Sym name="hammer" />{d.buildPoints}</span></span>
                       {err && <span class="bc-err">{err}</span>}
                       {!err && id === 'castle' && confirmCastle && moveWarning && <span class="bc-err">{moveWarning} Click again to confirm.</span>}
                     </span>

@@ -14,7 +14,7 @@ import { currentFaction } from '../state';
 import { canBuildWith } from '../units';
 import { isVisible } from '../visibility';
 import { buildPhase, builderMovePhase, craftPhase, equipPhase, recruitPhase } from './economy-ai';
-import { fortifyPhase, hastePhase, mendPhase, rallyPhase, spellPhase } from './magic';
+import { empowerPhase, fortifyPhase, hastePhase, mendPhase, rallyPhase, spellPhase } from './magic';
 import { researchPhase } from './research-ai';
 import { getStrategy } from './strategy';
 import { attackPhase, leaderPhase, militaryMovePhase, retreatPhase } from './tactics';
@@ -51,7 +51,8 @@ function turnData(mem: AiMemory): TurnData {
   return t;
 }
 
-function buildCtx(s: GameState, mem: AiMemory): Ctx {
+/** The per-call AI context (exported for tests and probes). */
+export function buildCtx(s: GameState, mem: AiMemory): Ctx {
   const f = mem.faction;
   const fs = s.factions[f];
   const t = turnData(mem);
@@ -115,6 +116,7 @@ interface Phase { name: string; run: (ctx: Ctx) => Action | null }
 /** Phase order: bookkeeping, economy spend, magic, combat, movement, then late spending. */
 const PHASES: Phase[] = [
   { name: 'levelup', run: levelUpPhase },
+  { name: 'empower', run: empowerPhase },
   { name: 'research', run: researchPhase },
   { name: 'build', run: buildPhase },
   { name: 'spells', run: spellPhase },

@@ -30,10 +30,10 @@ describe('spawnInitialMonsters', () => {
       expect(hexDistance(m.pos, m.home!)).toBeGreaterThanOrEqual(1);
     }
     const byHome = (h: Hex) => ms.filter((m) => hexDistance(m.home!, h) === 0);
-    expect(byHome(far).length).toBe(3);
+    // A lone beast by a start, three mid-way, a golem-led four far out (DESIGN §2: more beasts).
+    expect(byHome(far).length).toBe(4);
     expect(byHome(far).some((m) => m.monster === 'golem')).toBe(true);
-    expect(byHome(mid).length).toBeGreaterThanOrEqual(1);
-    expect(byHome(mid).length).toBeLessThanOrEqual(2);
+    expect(byHome(mid).length).toBe(3);
     // No two monsters share a hex.
     expect(new Set(ms.map((m) => `${m.pos.q},${m.pos.r}`)).size).toBe(ms.length);
   });
@@ -142,14 +142,14 @@ describe('runNeutralTurn', () => {
     expect(golem.hp).toBeGreaterThanOrEqual(12); // Regeneration (rank 1): +2
   });
 
-  it('respawns at unguarded ruins every 12 rounds', () => {
+  it('respawns at unguarded ruins every 8 rounds', () => {
     const s = makeTestState(20, 14);
     const ruin = at(10, 7);
     setTerrain(s, ruin, 'ruins');
-    s.round = 11;
+    s.round = 7;
     runNeutralTurn(s);
     expect(monsters(s).length).toBe(0);
-    s.round = 12;
+    s.round = 8;
     const evs = runNeutralTurn(s);
     expect(monsters(s).length).toBe(1);
     expect(evs.some((e) => e.type === 'unitSpawned' && e.reason === 'monster')).toBe(true);

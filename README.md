@@ -41,6 +41,9 @@ Then see `blender/README.md` to rig and process the models (`python3 blender/bat
 
 Extra manifests added later: `manifests/extra3d.json` (elemental, reeds), `manifests/extra3d_b.json`
 (orc/undead houses and farms, the undead commoner, padded-tunic bodies), `manifests/portraits_b.json`.
+Gendered human bodies, faces and the hair / beard pieces: `tools/make_appearance_manifest.py` → `manifests/appearance.json`
+(`gen.py`, `strip_bust.py` on the heads, then `i2m.py src_units src_hair src_heads`, then `blender/batch.py hair heads units`;
+see `blender/README.md`, Looks).
 
 Notes from production:
 * `gen.py` submits one image at a time and retries blank results: this ComfyUI build produced flat grey
@@ -69,7 +72,7 @@ everything at `http://127.0.0.1:5180/dev/audio.html` (recorded vs procedural, mu
 ```bash
 cd game
 npx tsc --noEmit
-npx vitest run                      # 479 tests (+3 skipped) incl. AI-vs-AI games
+npx vitest run                      # 495 tests (+3 skipped) incl. AI-vs-AI games
 AI_METRICS=1 npx vitest run tests/ai-metrics.test.ts   # optional: AI behaviour numbers over many seeds
 BALANCE_TABLE=1 npx vitest run tests/balance-table.test.ts   # optional: damage table between level-1 recruits
 npm run build

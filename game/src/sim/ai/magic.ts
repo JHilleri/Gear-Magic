@@ -1,5 +1,6 @@
 // Spells from mage towers and active unit skills (DESIGN §7, §4.8, §9 "Spells").
-import type { Action, Hex, SpellId, Unit } from '../../core/types';
+import type { Action, EliteId, Hex, SpellId, Unit } from '../../core/types';
+import { ELITE_UPKEEP } from '../../data/elites';
 import { hexDistance, inBounds, spiral, tileIndex } from '../../core/hex';
 import { SPELLS } from '../../data/spells';
 import { TERRAIN } from '../../data/terrain';
@@ -12,7 +13,9 @@ import { getStrategy } from './strategy';
 import { HASTE_MIN_SCORE, hastePlan, ready } from './tactics';
 import { exposureAt } from './threat';
 import type { Ctx } from './types';
-import { attempt, maxHp, mhp, unitsNear, val, valueOf } from './util';
+import { attempt, incomeOf, maxHp, mhp, unitsNear, val, valueOf } from './util';
+import { canEmpower, eliteRank, empowerSiteError, raisesElites } from '../elites';
+import { unitRole } from '../progression';
 
 interface SpellOption { spell: SpellId; target: Hex; value: number }
 
@@ -405,6 +408,33 @@ export function fortifyPhase(ctx: Ctx): Action | null {
     const site = buildingOn(ctx.s, u.pos);
     if (site && site.owner === ctx.f && site.buildLeft > 0 && canBuildWith(u)) continue;
     const a = attempt(ctx, { type: 'skill', unit: u.id, skill: 'fortify' });
+    if (a) return a;
+  }
+  return null;
+}
+
+/**
+ * Undead elites (DESIGN §2): spend dark energy on a unit standing on the castle or a mage tower, as
+ * long as the mana income can carry the extra upkeep. The stat follows the unit's trade: Grave
+ * Might for fighters, Deadeye for shooters, Dark Wisdom for mages, Unholy Vigor for the rest
+ * (and for the leader, whose life is the house's).
+ */
+export function empowerPhase(ctx: Ctx): Action | null {
+  if (!raisesElites(ctx.f)) return null;
+  const dark = ctx.fs.resources.dark ?? 0;
+  if (dark < 10) return null;
+  const inc = incomeOf(ctx);
+  // Keep the host's mana paid: each rank costs ELITE_UPKEEP a turn.
+  if ((inc.mana ?? 0) - ELITE_UPKEEP < 0 && (ctx.fs.resources.mana ?? 0) < 40) return null;
+  const cands = ctx.units
+    .filter((u) => !u.monster && u.summonTurns === undefined && empowerSiteError(ctx.s, u) === null)
+    .sort((a, b) => Number(b.isLeader) - Number(a.isLeader) || b.level - a.level || a.id - b.id);
+  for (const u of cands) {
+    const role = unitRole(u);
+    const pick: EliteId = u.isLeader ? 'vigor' : role === 'fighter' ? (eliteRank(u, 'might') <= eliteRank(u, 'vigor') ? 'might' : 'vigor')
+      : role === 'archer' ? 'deadeye' : role === 'mage' ? 'wisdom' : 'vigor';
+    if (canEmpower(ctx.s, u, pick) !== null) continue;
+    const a = attempt(ctx, { type: 'empower', unit: u.id, elite: pick });
     if (a) return a;
   }
   return null;

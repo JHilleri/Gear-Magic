@@ -1951,7 +1951,7 @@ class Controller implements GameController {
     events.forEach((ev, i) => {
       switch (ev.type) {
         case 'combat': grab(ev.attacker, i); grab(ev.defender, i); break;
-        case 'unitDamaged': case 'unitHealed': case 'unitLeveled': case 'unitDied': grab(ev.unit, i); break;
+        case 'unitDamaged': case 'unitHealed': case 'unitLeveled': case 'unitEmpowered': case 'unitDied': grab(ev.unit, i); break;
         case 'log': {
           const entry = ev.entry;
           hiddenLog.add(entry);
@@ -1983,7 +1983,7 @@ class Controller implements GameController {
         }
         case 'unitDamaged': { const v = u(ev.unit); if (v) { v.hp = Math.max(0, v.hp - ev.amount); changed = true; } break; }
         case 'unitHealed': { const v = u(ev.unit); if (v) { v.hp += ev.amount; v.poisoned = false; changed = true; } break; }
-        case 'unitDied': case 'unitLeveled': hd.units.delete(ev.unit); break;
+        case 'unitDied': case 'unitLeveled': case 'unitEmpowered': hd.units.delete(ev.unit); break;
         default: break;
       }
     }
@@ -2498,7 +2498,7 @@ class Controller implements GameController {
         patch.levelUpUnit = unit;
         break;
       }
-      case 'equip': case 'build': {
+      case 'equip': case 'build': case 'empower': {
         if (!s) return;
         const unit = opts?.unit ?? this.selectedOwnUnit()?.id;
         if (unit === undefined) { this.warn('Select a unit first.', MODAL_HINT); return; }
@@ -2518,6 +2518,16 @@ class Controller implements GameController {
         const unit = opts?.unit ?? (m.kind === 'unit' || m.kind === 'skill' || m.kind === 'attack' ? m.unit : atHex?.id);
         const u = unit !== undefined ? getUnit(s, unit) : undefined;
         if (!u || (u.faction !== this.human && !isVisible(s, this.human, u.pos))) { this.warn('Select a unit first.', MODAL_HINT); return; }
+        patch.sheetUnit = u.id;
+        break;
+      }
+      case 'customize': {
+        // One of the player's own units that has looks (humans; the leader keeps theirs).
+        if (!s) return;
+        const unit = opts?.unit ?? this.ui.sheetUnit ?? this.selectedOwnUnit()?.id;
+        const u = unit !== undefined && unit !== null ? getUnit(s, unit) : undefined;
+        if (!u || u.faction !== this.human) { this.warn('Select one of your units first.', MODAL_HINT); return; }
+        if (!u.look || u.isLeader) { this.warn(`${u.name} keeps their own looks.`, MODAL_HINT); return; }
         patch.sheetUnit = u.id;
         break;
       }

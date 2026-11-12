@@ -11,6 +11,7 @@ import { attackTargets } from '../../sim/actions';
 import { canUpgrade } from '../../sim/economy';
 import { canGiveOrder, HEAL_ORDER_ALERT, ORDER_NAMES, orderWakeWarning } from '../../sim/orders';
 import { canUseSkill, NO_SKILL_TARGET, skillBlocker, skillRange, skillTargets } from '../../sim/skills';
+import { empowerSiteError, raisesElites } from '../../sim/elites';
 import { augmentRank, augmentText, rankedName } from '../../data/ranks';
 import { REST_HEAL } from '../../sim/turn';
 import { canBuildWith, mainAttackKind } from '../../sim/units';
@@ -187,6 +188,13 @@ export function CommandBar() {
     work.push(<Cmd key="equip" label="Equip" sym="equip" title="Equip" reason={notNow}
       desc={`Give ${name} items from the stockpile.`}
       onClick={() => store.openModal('equip', { unit: u.id })} />);
+  }
+  // Ashen Covenant: raise elites with dark energy on the castle or a mage tower (DESIGN §2).
+  if (safe(() => raisesElites(u.faction) && empowerSiteError(s, u) === null, false)) {
+    const dark = Math.floor(s.factions[viewer]?.resources.dark ?? 0);
+    work.push(<Cmd key="empower" label="Empower" sym="magic" title="Empower" reason={notNow}
+      desc={`Spend dark energy (${dark} stored) on ${name}'s elite augments: +HP, Strength, Dexterity or Intellect, each rank adding mana upkeep.`}
+      onClick={() => store.openModal('empower', { unit: u.id })} />);
   }
   if (hereOwn?.type === 'forge') {
     work.push(<Cmd key="forge" label="Forge" sym="forge" hotkey="F" title="Forge" reason={notNow}

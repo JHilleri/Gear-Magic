@@ -28,8 +28,8 @@ function fallbackState(): GameState {
     tiles.push({ terrain: (i % 97 === 0 ? terrains[8] : t) as TerrainId, deposit: null, elevation: (Math.sin(i * 12.9898) * 0.5 + 0.5), building: null, variant: i % 13 });
   }
   const fs = (id: 'valen' | 'thorn' | 'neutral', human: boolean) => ({
-    id, isHuman: human, alive: true, resources: { gold: 0, food: 0, wood: 0, stone: 0, iron: 0, crystal: 0, mana: 0, research: 0 },
-    income: { gold: 0, food: 0, wood: 0, stone: 0, iron: 0, crystal: 0, mana: 0, research: 0 }, stockpile: {}, techs: [], researching: null,
+    id, isHuman: human, alive: true, resources: { gold: 0, food: 0, wood: 0, stone: 0, iron: 0, crystal: 0, mana: 0, research: 0, honor: 0, dark: 0 },
+    income: { gold: 0, food: 0, wood: 0, stone: 0, iron: 0, crystal: 0, mana: 0, research: 0, honor: 0, dark: 0 }, stockpile: {}, techs: [], researching: null,
     researchProgress: 0, spellCooldowns: {}, explored: new Array(n).fill(1), visible: new Array(n).fill(1), farsight: [], leaderId: null, castleId: null,
     stats: { kills: 0, lost: 0, built: 0, researched: 0, spellsCast: 0 },
   });

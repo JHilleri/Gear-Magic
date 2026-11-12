@@ -11,19 +11,32 @@ import { BUILDINGS } from '../data/buildings';
 import { TERRAIN } from '../data/terrain';
 import { zeroXp } from '../data/skills';
 import { generateMap } from './mapgen';
-import { createUnit, effectiveStats, mainAttackKind } from './units';
+import { assignAppearance, createUnit, effectiveStats, mainAttackKind } from './units';
+import { hasAppearance } from '../data/appearance';
 import { queueLevelOffer, settleLevelUps } from './progression';
 import { spawnInitialMonsters } from './neutral';
 import { computeAllVisibility } from './visibility';
 
 export const LOG_CAP = 300;
 
-/** Starting stock of every faction (DESIGN §2). */
+/** Starting stock of House Valen (DESIGN §2); the other houses start from startingResources. */
 export const STARTING_RESOURCES: Readonly<Resources> = {
-  gold: 60, food: 30, wood: 40, stone: 25, iron: 12, crystal: 0, mana: 0, research: 0,
+  gold: 60, food: 30, wood: 40, stone: 25, iron: 12, crystal: 0, mana: 0, research: 0, honor: 0, dark: 0,
 };
 
-const zeroResources = (): Resources => ({ gold: 0, food: 0, wood: 0, stone: 0, iron: 0, crystal: 0, mana: 0, research: 0 });
+/**
+ * A house's starting stock: Valen's, with its coin in place of gold (orcs start with 60 honor) and,
+ * for a house that never eats, mana in place of food (the undead start with 30 mana).
+ */
+export function startingResources(f: FactionId): Resources {
+  const def = FACTIONS[f];
+  const r: Resources = { ...STARTING_RESOURCES };
+  if (def?.coin === 'honor') { r.honor = r.gold; r.gold = 0; }
+  if (def && !def.eats) { r.mana = r.food; r.food = 0; }
+  return r;
+}
+
+const zeroResources = (): Resources => ({ gold: 0, food: 0, wood: 0, stone: 0, iron: 0, crystal: 0, mana: 0, research: 0, honor: 0, dark: 0 });
 
 function newFactionState(id: FactionId, n: number, isHuman: boolean): FactionState {
   const isNeutral = id === 'neutral';
@@ -31,7 +44,7 @@ function newFactionState(id: FactionId, n: number, isHuman: boolean): FactionSta
     id,
     isHuman,
     alive: true,
-    resources: isNeutral ? zeroResources() : { ...STARTING_RESOURCES },
+    resources: isNeutral ? zeroResources() : startingResources(id),
     income: zeroResources(),
     stockpile: {},
     // Each house knows its signature tech from turn 1 (DESIGN §2); not counted as researched.
@@ -118,8 +131,8 @@ function freeSpawnHexes(state: GameState, center: Hex, count: number): Hex[] {
 
 /**
  * Build a fresh game: map (sim/mapgen), factions (human = settings.playerFaction, then
- * `aiCount` AI factions from PLAYABLE_FACTIONS, plus 'neutral'), each with castle + farm +
- * house + leader (level 2, sword + tunic) + 2 commoners (one with tools) and starting
+ * `aiCount` AI factions from PLAYABLE_FACTIONS, plus 'neutral'), each with castle + farm (not
+ * the undead, who never eat) + house + leader (level 2, sword + tunic) + 2 commoners (one with tools) and starting
  * resources (DESIGN §2); neutral monsters around ruins; visibility computed for all.
  * Deterministic for a given settings.seed.
  */
@@ -160,7 +173,8 @@ export function createGame(settings: GameSettings): GameState {
     const start = map.starts[i];
     placeBuilding(state, 'castle', f, start);
     const taken: Hex[] = [];
-    const farmHex = pickStartSite(state, start, 'farm', taken);
+    // The dead never eat: no starting farm for them (DESIGN §2).
+    const farmHex = FACTIONS[f].eats ? pickStartSite(state, start, 'farm', taken) : null;
     if (farmHex) { placeBuilding(state, 'farm', f, farmHex); taken.push(farmHex); }
     const houseHex = pickStartSite(state, start, 'house', taken);
     if (houseHex) placeBuilding(state, 'house', f, houseHex);
@@ -374,6 +388,14 @@ export function deserialize(json: string): GameState {
     fs.spellCooldowns ??= {};
     fs.stockpile ??= {};
     fs.stats ??= { kills: 0, lost: 0, built: 0, researched: 0, spellsCast: 0 };
+    // Honor and dark energy came with the house economies (DESIGN §2): an older save's orcs keep
+    // their gold as honor, and the stocks start at 0.
+    if (fs.resources && !Number.isFinite(fs.resources.honor)) {
+      fs.resources.honor = 0;
+      if (FACTIONS[fs.id]?.coin === 'honor') { fs.resources.honor = fs.resources.gold ?? 0; fs.resources.gold = 0; }
+    }
+    if (fs.resources && !Number.isFinite(fs.resources.dark)) fs.resources.dark = 0;
+    if (fs.income) { fs.income.honor ??= 0; fs.income.dark ??= 0; }
   }
   // Units from a save made before the balance pass (no block stat): they also levelled on the old,
   // higher XP thresholds, so the levels their XP already pays for are granted once the state is whole.
@@ -389,6 +411,11 @@ export function deserialize(json: string): GameState {
     if (!Array.isArray(u.learned)) u.learned = [];
     migrateUnitBalance(u);
     migrateAugmentRanks(u);
+    // Gender and looks came later: an older human keeps the gender its name was drawn for.
+    if (!u.monster && hasAppearance(u.race) && (!u.gender || (!u.isLeader && (!u.look || !Number.isInteger(u.look.face))))) {
+      const female = FACTIONS[u.faction]?.femaleUnitNames?.includes(u.name.replace(/ [IVX]+$/, '')) ?? false;
+      assignAppearance(state.settings?.seed ?? 1, u, u.isLeader ? undefined : female ? 'female' : 'male');
+    }
     if (u.order !== undefined && (u.monster || (u.order !== 'heal' && u.order !== 'sentry'))) delete u.order;
   }
   state.log ??= [];

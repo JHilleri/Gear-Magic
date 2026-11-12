@@ -22,7 +22,8 @@ const LEASH_RADIUS = 4;
 export const CASTLE_SANCTUARY = 3;
 /** During the first rounds monsters only defend their lair (no raids on fresh starts). */
 const LAIR_ONLY_ROUNDS = 3;
-const RESPAWN_EVERY = 12;
+/** The wilds refill every 8 rounds (more beasts to fight: the Thornwild's honor, DESIGN §2). */
+const RESPAWN_EVERY = 8;
 const RUINS_XP = 12;
 
 function ruinsHexes(state: GameState): Hex[] {
@@ -103,12 +104,16 @@ function spawnMonster(state: GameState, kind: MonsterKind, pos: Hex, home: Hex):
   return u;
 }
 
-/** Pack composition by remoteness: near ruins get a lone beast, far ones a golem-led pack. */
+/**
+ * Pack composition by remoteness: the ruins nearest a start keep a lone beast (an opening must stay
+ * playable), the rest hold bigger packs than they used to (more to fight for honor, DESIGN §2):
+ * three beasts mid-way, a golem-led four far out.
+ */
 function packFor(state: GameState, dist: number): MonsterKind[] {
   const r = rand(state);
   if (dist <= 8) return [r < 0.65 ? 'wolf' : 'spider'];
-  if (dist <= 12) return r < 0.5 ? ['wolf', 'wolf'] : ['wolf', 'spider'];
-  return r < 0.5 ? ['golem', 'wolf', 'spider'] : ['golem', 'spider', 'wolf'];
+  if (dist <= 12) return r < 0.5 ? ['wolf', 'wolf', 'spider'] : ['wolf', 'spider', 'spider'];
+  return r < 0.5 ? ['golem', 'wolf', 'spider', 'wolf'] : ['golem', 'spider', 'wolf', 'spider'];
 }
 
 /** Place initial guardians around each ruin (1–3 of wolf/spider/golem by distance from starts; none within 5 hexes of a start). */
@@ -123,10 +128,10 @@ export function spawnInitialMonsters(state: GameState, ruins: Hex[]): void {
 }
 
 function monsterCap(state: GameState): number {
-  return Math.max(4, ruinsHexes(state).length * 2);
+  return Math.max(6, ruinsHexes(state).length * 3);
 }
 
-/** Every 12 rounds: ruins without guardians and without nearby troops spawn a new pack member. */
+/** Every 8 rounds: ruins without guardians and without nearby troops spawn a new pack member. */
 function respawn(state: GameState): GameEvent[] {
   const events: GameEvent[] = [];
   const monsters = Object.values(state.units).filter((u) => u.faction === 'neutral');

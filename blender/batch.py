@@ -4,13 +4,16 @@
     python3 blender/batch.py [CATEGORY ...] [--force] [--only id1,id2] [--jobs N] [--no-preview]
                              [--watch [MINUTES]]
 
-CATEGORY is any of units, items, mounts, monsters, buildings, props (default: all; `--cats a,b` also works).
+CATEGORY is any of units, items, mounts, monsters, buildings, props, hair, heads (default: all; `--cats a,b` also works).
 units     -> rig_humanoid.py   -> models/units/<id>.glb
 items     -> process_static.py --kind item     -> models/items/<id>.glb
 mounts    -> process_static.py --kind mount    -> models/mounts/<id>.glb   (saddle in <id>.meta.json)
 monsters  -> process_static.py --kind monster  -> models/monsters/<id>.glb
 buildings -> process_static.py --kind building -> models/buildings/<id>.glb
 props     -> process_static.py --kind prop     -> models/props/<id>.glb
+hair      -> fit_hair.py (arguments per piece: appearance_fit.json) -> models/hair/<id>.glb
+heads     -> fit_head.py (eye positions: appearance_fit.json)        -> models/heads/<id>.glb
+             bald bodies (units <race>_<m|f>_<body>) also get head_frame.py --write (head frame, eyes)
 Previews go to art/outputs/processed/<category>/<id>.png, logs next to them.  Up-to-date outputs
 (newer than their source and than the scripts) are skipped unless --force.  Sources still being
 written (bad GLB length or modified < 5 s ago) are skipped and picked up by the next run.  Items run
@@ -32,7 +35,20 @@ PREV = os.path.join(ROOT, "art", "outputs", "processed")
 BLENDER = os.environ.get("BLENDER", "/snap/bin/blender")
 # Render/bake threads per Blender process: full-core Cycles alongside GPU work has shut this machine down.
 THREADS = os.environ.get("BLENDER_THREADS", "4")
-ORDER = ["items", "mounts", "monsters", "buildings", "props", "units"]
+# (heads before hair: the pieces are fitted against the faces' shapes)
+ORDER = ["items", "mounts", "monsters", "buildings", "props", "heads", "hair", "units"]
+# Per-asset knobs of the looks pipeline: fit_hair.py arguments per piece ("pieces") and the eye
+# positions read off each bald body's face render ("eyes", head_frame.py --eyes).
+FIT = os.path.join(HERE, "appearance_fit.json")
+
+
+def fit_table():
+    import json
+    try:
+        with open(FIT) as f:
+            return json.load(f)
+    except (OSError, ValueError):
+        return {}
 KIND = {"items": "item", "mounts": "mount", "monsters": "monster", "buildings": "building", "props": "prop"}
 
 
@@ -50,8 +66,10 @@ def complete_glb(path):
 
 
 def scripts_mtime(cat):
-    names = ["common.py"] + (["rig_humanoid.py", "rig_anim.py"] if cat == "units" else ["process_static.py"])
-    return max(os.path.getmtime(os.path.join(HERE, n)) for n in names)
+    names = ["common.py"] + (["rig_humanoid.py", "rig_anim.py"] if cat == "units" else
+                             ["fit_hair.py", "headmap.py", "appearance_fit.json"] if cat == "hair" else
+                             ["fit_head.py", "head_frame.py", "headmap.py", "appearance_fit.json"] if cat == "heads" else ["process_static.py"])
+    return max(os.path.getmtime(os.path.join(HERE, n)) for n in names if os.path.exists(os.path.join(HERE, n)))
 
 
 def job(cat, src, dst, preview):
@@ -62,6 +80,18 @@ def job(cat, src, dst, preview):
     if cat == "units":
         cmd = ["nice", "-n", "15", BLENDER, "-b", "-t", THREADS, "-P", os.path.join(HERE, "rig_humanoid.py"), "--", src, dst,
                "--items", os.path.join(OUT, "items")]
+    elif cat == "hair":
+        cmd = ["nice", "-n", "15", BLENDER, "-b", "-t", THREADS, "-P", os.path.join(HERE, "fit_hair.py"), "--", src, dst,
+               "--kind", "beard" if stem.startswith("beard_") else "hair", "--maps", os.path.join(PREV, "heads"),
+               *[str(x) for x in fit_table().get("pieces", {}).get(stem, [])]]
+        preview = False  # head_frame.py --preview shows pieces on a body
+    elif cat == "heads":
+        cmd = ["nice", "-n", "15", BLENDER, "-b", "-t", THREADS, "-P", os.path.join(HERE, "fit_head.py"), "--", src, dst,
+               "--face", os.path.join(PREV, cat, stem + "_face.png"), "--maps", os.path.join(PREV, "heads")]
+        eyes = fit_table().get("eyes", {}).get(stem)
+        if eyes:
+            cmd += ["--eyes", eyes]
+        preview = False
     else:
         cmd = ["nice", "-n", "15", BLENDER, "-b", "-t", THREADS, "-P", os.path.join(HERE, "process_static.py"), "--", src, dst, "--kind", KIND[cat], "--id", stem]
     if preview:
@@ -69,6 +99,14 @@ def job(cat, src, dst, preview):
     t0 = time.time()
     with open(logp, "w") as log:
         r = subprocess.run(cmd, stdout=log, stderr=subprocess.STDOUT)
+        # a gendered (bald) body: measure its head frame for the hair pieces, place its eyes
+        if cat == "units" and r.returncode == 0 and ("_m_" in stem or "_f_" in stem):
+            cmd = ["nice", "-n", "15", BLENDER, "-b", "-t", THREADS, "-P", os.path.join(HERE, "head_frame.py"), "--", dst, "--write",
+                   "--face", os.path.join(PREV, cat, stem + "_face.png")]
+            eyes = fit_table().get("eyes", {}).get(stem)
+            if eyes:
+                cmd += ["--eyes", eyes]
+            r = subprocess.run(cmd, stdout=log, stderr=subprocess.STDOUT)
     ok = r.returncode == 0 and os.path.exists(dst) and os.path.getmtime(dst) >= t0 - 1
     text = open(logp, errors="replace").read()
     if "Traceback" in text:

@@ -10,6 +10,7 @@ import type {
   AssetLibrary, BuildingLayerApi, FxLayerApi, OverlayLayerApi, RenderContext, UnitLayerApi,
 } from './types';
 import { loadAssets } from './assets';
+import { createPortraitRenderer } from './portrait';
 import { createUnitLayer } from './units';
 import { createBuildingLayer } from './buildings';
 import { createOverlayLayer } from './overlays';
@@ -464,10 +465,13 @@ export function createWorldRenderer(canvas: HTMLCanvasElement): WorldRenderer {
     },
     /** Debug (perf comparisons): disable decor culling and shadow tiers (every prop drawn in every pass). */
     debugDecorNoCull(on: boolean) { decor?.setDebugNoCull(on); },
+    /** The asset library once loaded (the UI's icons and portraits; live unit busts). */
+    getAssets() { return assets; },
 
     async init(onProgress: LoadProgress) {
       if (ready) { onProgress(1, 'Ready'); return; }
       assets = await loadAssets((f, l) => onProgress(f * 0.6, l));
+      assets.unitPortrait = createPortraitRenderer(renderer, assets);
       onProgress(0.62, 'Painting the land');
       textures = await generateWorldTextures(renderer, assets, (f) => onProgress(0.62 + f * 0.3, 'Painting the land'));
       fowU.uNoiseTex.value = textures.noise;

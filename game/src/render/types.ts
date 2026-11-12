@@ -1,7 +1,7 @@
 // Internal contracts between render/world.ts (scene, camera, terrain, loop) and the
 // entity layers (units, buildings, overlays, fx). See ASSETS.md for model conventions.
 import type * as THREE from 'three';
-import type { AttackKind, FactionId, GameState, Hex, SpellId, StrikeEvent, UnitId, BuildingInstanceId } from '../core/types';
+import type { AttackKind, BodyVariant, FactionId, GameState, Hex, SpellId, StrikeEvent, Unit, UnitId, BuildingInstanceId } from '../core/types';
 import type { OverlayState } from './index';
 
 /** World-space height of one unit model (hex radius = 1). Units stand taller than trees and boulders. */
@@ -43,9 +43,26 @@ export interface SkinnedAsset {
   animations: THREE.AnimationClip[];
 }
 
+/** A neck as an ellipse (head-frame units, +Z forward) and its skin colour when bare. */
+export interface NeckRing { cx: number; cz: number; rx: number; rz: number; skin?: [number, number, number] }
+
 export interface AssetManifest {
   /** `walkSpeed` / `runSpeed`: planted-foot speed of the walk / run cycle (sidecar `walk_speed` / `run_speed`, model heights/s). */
-  units: Record<string, { file: string; height?: number; walkSpeed?: number; runSpeed?: number }>;
+  units: Record<string, {
+    file: string; height?: number; walkSpeed?: number; runSpeed?: number;
+    /** Bald bodies: the head frame hair and beard pieces are placed in (crown at the occiput, skull depth; model units). */
+    head?: { x: number; y: number; z: number; depth: number; /** Throat line (frame units): the body's own head is hidden above it under a face model. */ neck?: number };
+    /** Bald bodies: skin colour of the cheeks (sRGB 0..1), to tint a face model to. */
+    skin?: [number, number, number];
+    /** Bald bodies: the neck just under the throat line (head-frame units): centre, radii, and its colour when it is bare skin. */
+    neckRing?: NeckRing;
+    /** Bald bodies: the two iris centres (model units) and the iris radius, for the eye colour. */
+    eyes?: [number, number, number][]; eyeR?: number;
+  }>;
+  /** Hair and beard pieces ('hair_<style>', 'beard_<style>'), modelled in the head frame, grey (tinted per unit). */
+  hair: Record<string, { file: string }>;
+  /** Faces ('head_<m|f><n>'): detailed heads in the head frame; iris centres + radius, throat line, skin colour (frame units). */
+  heads: Record<string, { file: string; eyes?: [number, number, number][]; eyeR?: number; neck?: number; skin?: [number, number, number]; neckRing?: NeckRing }>;
   items: Record<string, { file: string }>;
   mounts: Record<string, { file: string; saddle?: [number, number, number] }>;
   buildings: Record<string, { file: string }>;
@@ -56,10 +73,13 @@ export interface AssetManifest {
   portraits: Record<string, string>;
 }
 
+/** A live portrait's view: `large` renders at twice the size (the customisation screen), `yaw` turns the bust (degrees, 0 = the usual three-quarter view). */
+export interface PortraitOpts { large?: boolean; yaw?: number }
+
 export interface AssetLibrary {
   manifest: AssetManifest;
   /** Clone of a static model normalised as loaded (or null if missing → caller uses procedural fallback). */
-  model(kind: 'items' | 'mounts' | 'buildings' | 'props' | 'monsters', key: string): THREE.Object3D | null;
+  model(kind: 'items' | 'mounts' | 'buildings' | 'props' | 'monsters' | 'hair' | 'heads', key: string): THREE.Object3D | null;
   /** Rigged unit asset (shared; clone before use) or null if missing. */
   skinned(key: string): SkinnedAsset | null;
   /** Terrain/other texture or null. */
@@ -67,6 +87,8 @@ export interface AssetLibrary {
   /** URL for a UI icon/portrait key ('items/sword.png' → '/assets/icons/items/sword.png') or null. */
   iconUrl(key: string): string | null;
   portraitUrl(key: string): string | null;
+  /** Live bust of a unit that has looks (its own body, hair, beard, eyes) as a data URL; null: use the painted portrait. */
+  unitPortrait?(u: Unit, body: BodyVariant, opts?: PortraitOpts): string | null;
 }
 
 /** Shared services handed by world.ts to every layer. */

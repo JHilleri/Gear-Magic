@@ -305,11 +305,11 @@ export function hotkeyModalAction(current: ModalId, target: Exclude<ModalId, nul
 
 /**
  * Window to return to when `next` (opened over `prev`) closes: Settings and Help go back to the
- * pause menu; the equip and level-up windows opened from a unit sheet go back to that sheet.
+ * pause menu; the equip, level-up and appearance windows opened from a unit sheet go back to that sheet.
  */
 export function returnTarget(prev: ModalId, next: ModalId): ModalId {
   if (prev === 'menu' && (next === 'settings' || next === 'help')) return 'menu';
-  if (prev === 'unitsheet' && (next === 'equip' || next === 'levelup')) return 'unitsheet';
+  if (prev === 'unitsheet' && (next === 'equip' || next === 'levelup' || next === 'customize')) return 'unitsheet';
   return null;
 }
 

@@ -4,8 +4,8 @@ import { GLTFLoader, type GLTF } from 'three/addons/loaders/GLTFLoader.js';
 import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
 import type { AssetLibrary, AssetManifest, SkinnedAsset } from './types';
 
-type ModelKind = 'items' | 'mounts' | 'buildings' | 'props' | 'monsters';
-const MODEL_KINDS: ModelKind[] = ['items', 'mounts', 'buildings', 'props', 'monsters'];
+type ModelKind = 'items' | 'mounts' | 'buildings' | 'props' | 'monsters' | 'hair' | 'heads';
+const MODEL_KINDS: ModelKind[] = ['items', 'mounts', 'buildings', 'props', 'monsters', 'hair', 'heads'];
 
 /** Base URL of the asset folder (honours Vite's `base`). */
 export function assetBase(): string {
@@ -16,7 +16,7 @@ export function assetBase(): string {
 }
 
 export function emptyManifest(): AssetManifest {
-  return { units: {}, items: {}, mounts: {}, buildings: {}, props: {}, monsters: {}, textures: {}, icons: {}, portraits: {} };
+  return { units: {}, items: {}, mounts: {}, buildings: {}, props: {}, monsters: {}, hair: {}, heads: {}, textures: {}, icons: {}, portraits: {} };
 }
 
 /** Fill missing sections and drop malformed entries so the rest of the code can trust the shape. */
@@ -24,7 +24,7 @@ function normalizeManifest(raw: unknown): AssetManifest {
   const m = emptyManifest();
   if (!raw || typeof raw !== 'object') return m;
   const r = raw as Record<string, unknown>;
-  const fileSections = ['units', 'items', 'mounts', 'buildings', 'props', 'monsters'] as const;
+  const fileSections = ['units', 'items', 'mounts', 'buildings', 'props', 'monsters', 'hair', 'heads'] as const;
   for (const s of fileSections) {
     const sec = r[s];
     if (!sec || typeof sec !== 'object') continue;

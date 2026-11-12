@@ -14,6 +14,11 @@ the CPU. No add-ons or extra Python packages are needed (Blender's bundled numpy
 | `rig_humanoid.py` | auto-rig + skin + animate a T-pose humanoid → `models/units/<id>.glb` |
 | `rig_anim.py` | pose solver (2-bone IK, item aiming) and the procedural clips (imported by `rig_humanoid.py`) |
 | `rig_preview.py` | contact sheet of a rigged GLB (rest pose, bone x-ray, key frames of every clip, front/side) |
+| `fit_hair.py` | hair / beard piece on a green mannequin → keyed, registered in the head frame, greyed → `models/hair/<id>.glb` |
+| `fit_head.py` | a face: bald head from image-to-3D → head frame, neck plug, skin colour, iris positions → `models/heads/<id>.glb` |
+| `head_frame.py` | head frame, throat line, neck ring, skin colour + eye positions of a bald body (written to its sidecar), previews of pieces on a body |
+| `headmap.py` | the shape of a head as a radial map (shared by the fitting scripts; the game mirrors it), throat and neck-ring measures |
+| `appearance_fit.json` | per-piece `fit_hair.py` arguments and per-body eye positions |
 | `process_static.py` | normalise / clean / decimate buildings, props, items, mounts, monsters |
 | `preview.py` | turntable of a static GLB with hex outline, front arrow, origin marker, 1.0-tall reference |
 | `common.py` | shared helpers (import + join, floater removal, decimation, textures, atomic GLB export) |
@@ -107,6 +112,65 @@ blender -b -P blender/process_static.py -- in.glb out.glb --kind building|prop|i
 
 All kinds: floaters removed, normals recalculated, collapse decimation (UVs kept), shading smooth or by
 angle (buildings/items/rocks), sidecar `<out>.meta.json` with the glTF bounding box.
+
+## Looks: bald bodies, hair and beard pieces
+
+Gendered bodies (`art/tools/make_appearance_manifest.py`, ids `human_<m|f>_<body>`) are rigged like any
+unit; `batch.py` then runs `head_frame.py --write` on them, which stores the **head frame** in the
+sidecar (`head`: crown of the skull at the occiput, unit = skull depth) and, when `appearance_fit.json`
+lists the body under `eyes`, the iris centres (`eyes`, `eye_r`). To place the eyes of a new body: open
+`art/outputs/processed/units/<id>_face.png` (768 px flat front view of the face), read the pixel
+coordinates of the two pupils, add `"<id>": "x,y;x,y"` to the table and re-run; each point is snapped
+to the darkest blob nearby and marked with a red cross on the next face render.
+
+Hair and beard pieces are generated on a pure green, faceless mannequin head in pale blonde.
+`fit_hair.py` deletes the green faces, estimates the skull under the wig (see its docstring), exports
+the piece in the head frame and replaces the texture by a levelled grey so the game can tint it.
+The image model also draws a pale bust under the neck: `--zmin`, `--low-x`, `--low-y` cut it away
+(per piece in `appearance_fit.json`).
+
+Faces (`head_<m|f><n>`) are whole heads of their own — a full-body model has only a few dozen texels
+of face, far too little for a portrait. `art/tools/strip_bust.py` first clears the pale shirt the image
+model draws under the neck; `fit_head.py` then measures the skull like a body's, finds the throat (where
+the front of the neck begins under the chin, `headmap.find_throat`), keeps 0.3 skull depths of neck
+under it, measures that neck as a ring, samples the cheeks' colour and finds the irises (the darker
+part of the pale patch in each eye box of a flat front render, written to
+`art/outputs/processed/heads/<id>_face.png` with the result circled; override in
+`appearance_fit.json` → `eyes`). It also writes the face's **radial map** next to the previews
+(`<id>.map.json`): the distance of its surface from a point inside the head, by direction.
+
+**One piece, every face.** Faces differ in shape, and a wig's mannequin differs from all of them, so
+a piece placed rigidly fits only the head it was tuned on. Instead:
+
+1. `fit_hair.py` registers each piece on the *generic head* (the mean of the faces' radial maps) using
+   the mannequin's visible skin — its face under a wig, its skull over a beard — not the wig, whose
+   buns, volume and tails say little about the head under it;
+2. it stores per vertex (second UV set) the distance of the surface the piece was modelled on: the
+   generic head, corrected by where the mannequin's skin and the piece's own edge show it to differ,
+   and never above the piece itself;
+3. in game every vertex moves, along its direction from the head's centre, by the difference between
+   that surface and the face's own radial map (computed from the face's geometry).
+
+So hair keeps its modelled thickness over any skull and a beard follows any jaw. Run `heads` before
+`hair` (batch.py orders them so with `--jobs 1`): the hair is fitted against the faces' maps.
+
+The neck: a body's head is taller for its skull than a face model's, so the game scales the face until
+the two throats are level, hides the body's head above its throat line, and shapes the face's short
+neck onto the body's neck ring (same width at the join, graded to its colour) when that neck is bare
+skin; inside a collar, a hood or a gorget it is simply drawn in.
+
+Things that went wrong and are now handled in `fit_hair.py` (keep them in mind for a new piece): the
+mannequin's neck in the shade of its chin and the shadows of its eye sockets being too dark to key
+(the neck column, `--face-clear`, the dark rule for beards), and the bust showing as hair-coloured
+shards at the collar (`--zmin`, `--low-*`, and the rule that every island wholly under the jaw goes).
+Proportions to keep in mind, in skull depths under the crown: eyes −0.55, chin −1.07, throat −1.1,
+shoulders −1.3.
+
+```bash
+python3 blender/batch.py hair heads units --only hair_long,head_f1,human_f_light
+blender -b -P blender/head_frame.py -- game/public/assets/models/units/human_f_light.glb \
+        --preview sheet.png --pieces a.glb,b.glb+c.glb --tint c9622a      # rows of pieces on the head
+```
 
 ## Previews
 

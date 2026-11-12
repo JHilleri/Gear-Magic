@@ -7,6 +7,9 @@ import { LEADER_XP_MULT } from '../../data/skills';
 import { TERRAIN } from '../../data/terrain';
 import { BARE_WORKER_MULT, BUILDING_COST_STEP, STARVATION_DAMAGE, WORK_XP, WORKER_MULT } from '../../sim/economy';
 import { FLANK_MULT } from '../../sim/combat';
+import { ARENA_HONOR, FIGHT_HONOR, KILL_REWARD } from '../../sim/houses';
+import { ELITE_UPKEEP } from '../../data/elites';
+import { FACTIONS } from '../../data/factions';
 import { POISON_DAMAGE, REGEN_HEAL, REST_HEAL } from '../../sim/turn';
 import { HEAL_ORDER_ALERT } from '../../sim/orders';
 import { armoryNames, XP_SOURCES } from '../sheet';
@@ -53,7 +56,15 @@ const TOPICS: { id: string; title: string; icon: string; body: ComponentChildren
   {
     id: 'goal', title: 'Goal', icon: 'buildings/castle.png', body: [
       'Every faction is led by a single Leader. If your leader falls, your house is lost. Slay every rival leader to win.',
-      'Neutral beasts guard the ancient ruins; the first unit to explore a ruin claims its treasure. Unguarded ruins spawn new beasts every 12 rounds.',
+      'Neutral beasts guard the ancient ruins; the first unit to explore a ruin claims its treasure. Unguarded ruins spawn new beasts every 8 rounds.',
+    ],
+  },
+  {
+    id: 'houses', title: 'The three houses', icon: 'emblems/valen.png', body: [
+      <><b>House Valen</b> (humans) runs on gold and food: houses and the castle pay gold, farms feed the army (1 food a turn per unit). +1 Dexterity, +10% ranged damage.</>,
+      <><b>The Thornwild Clans</b> (orcs) know no gold: <b>honor</b> pays for everything gold buys elsewhere. Every fight an orc takes part in brings honor (+{FIGHT_HONOR}), each kill +{KILL_REWARD.thorn?.honor} per level of the victim (half for a monster), the castle yields some, and a unit working an <b>Arena</b> (their Training Ground) earns {ARENA_HONOR * 2} a turn; an empty Arena yields nothing. Their houses yield nothing. Each unit eats 1 food and costs {FACTIONS.thorn.upkeep.honor} honor a turn. Every orc regenerates; +5 HP, +2 Strength, −1 Intellect, +10% melee.</>,
+      <><b>The Ashen Covenant</b> (undead) never eats: no food, no farms. Their dead cost {FACTIONS.ashen.upkeep.mana} mana a turn each (the castle yields mana in place of food) and are cheap but frail: half a commoner's HP and attributes (not the leader). They are immune to poison. Killing earns <b>dark energy</b>, spent on elite augments for a unit standing on the castle or a mage tower: Unholy Vigor (+10 HP), Grave Might (+4 Strength), Deadeye (+4 Dexterity), Dark Wisdom (+4 Intellect), each rank adding {ELITE_UPKEEP} mana upkeep. +2 Intellect, +5% armor, +10% magic.</>,
+      'Attributes matter outside battle too: a worker yields 3% more raw materials (wood, stone, iron, crystal) and honor per point of Strength, and 3% more research and gold per point of Intellect. Dexterity aims (+1% ranged hit chance per point) and dodges (enemy weapons hit 1% less per point).',
     ],
   },
   {
@@ -61,6 +72,7 @@ const TOPICS: { id: string; title: string; icon: string; body: ComponentChildren
       'Everyone starts as a Commoner. Equipment defines what a unit can do: Builder\'s Tools build and upgrade buildings, weapons fight, bows and staves strike from 2 hexes, armor reduces damage, a mount adds movement and a charge on open ground.',
       `Craft items at a Forge into your stockpile, then equip them while standing on an armory: ${armoryNames()}. Equipping is free and does not end the turn.`,
       'The unit sheet (C or I, or click the portrait) shows everything about a unit: each attribute and where every point comes from, its attacks, equipment, augments and level history, and its experience.',
+      'Every human recruit is its own person: a man or a woman, with a name, a hair cut and colour, eye colour and (for men) maybe a beard. That is fixed for life — a change of armour changes the outfit, never the person — so you can tell your veterans apart on the map and in their portrait. You can change all of it, and the name, from the unit sheet: Appearance.',
     ],
   },
   {
@@ -105,7 +117,7 @@ const TOPICS: { id: string; title: string; icon: string; body: ComponentChildren
       'Each hex holds one building. A unit with Builder\'s Tools starts construction on its hex (inside or next to your territory), then adds build points at the end of every turn it stays there.',
       `Any of your units standing on a finished building that produces something works it: ×${fmt(BARE_WORKER_MULT)} output bare-handed, ×${fmt(WORKER_MULT)} with Builder's Tools, times its work efficiencies. A worker earns ${WORK_XP} XP each turn it does not act (civic, the castle included; research & magic at a library, watchtower, shrine or mage tower; leadership for the leader on its castle). A unit recruited this turn has not worked yet.`,
       `Buildings that produce get dearer the more you have: each farm you own makes the next farm ${Math.round(BUILDING_COST_STEP * 100)}% more expensive (and so on for every kind). Working the ones you have is often the better deal.`,
-      `Units eat 1 food per turn (leaders are free). If food runs out, everyone starves for ${STARVATION_DAMAGE} HP a turn. Your leader on the castle boosts all production by 10%.`,
+      `Units eat 1 food per turn (leaders are free; orcs also pay honor, the undead pay mana instead). If food runs out, everyone starves for ${STARVATION_DAMAGE} HP a turn. Your leader on the castle boosts all production by 10%.`,
       'Ending a turn on an enemy building captures it; walls cannot be captured, and castles are razed instead.',
       'Moving your seat: building a new castle (any builder, or the leader) demolishes the old one — and its upgrades — the moment the new site is placed. Until the new castle is finished (6 build points) you cannot recruit at a castle, get its +10% or its defense, and its territory is gone.',
     ],

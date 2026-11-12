@@ -9,7 +9,7 @@ import { parseUnitMeta } from '../src/render/assets';
 import { DEFAULT_RUN_SPEED, DEFAULT_WALK_SPEED, FOOT_SPEED, RUN_CYCLE, UNIT_HEIGHT, walkTimeScale } from '../src/render/types';
 import type { GameEvent, GameState, Hex, Unit } from '../src/core/types';
 import type { RenderContext } from '../src/render/types';
-import heavyMeta from '../public/assets/models/units/human_heavy.meta.json';
+import heavyMeta from '../public/assets/models/units/human_m_heavy.meta.json';
 
 function fakeHost(state: GameState, opts: { cancelled?: () => boolean; animateMove?: () => Promise<void> } = {}) {
   const units = {

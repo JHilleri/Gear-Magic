@@ -1,3 +1,4 @@
+import { assignAppearance } from '../src/sim/units';
 // Hand-built game states for unit tests (no mapgen dependency).
 import type { Building, BuildingId, FactionId, FactionState, GameState, Hex, ItemId, Resources, TerrainId, Unit } from '../src/core/types';
 import { offsetToAxial, tileIndex } from '../src/core/hex';
@@ -6,12 +7,12 @@ import { FACTIONS } from '../src/data/factions';
 import { zeroXp } from '../src/data/skills';
 
 export function res(partial: Partial<Resources> = {}): Resources {
-  return { gold: 0, food: 0, wood: 0, stone: 0, iron: 0, crystal: 0, mana: 0, research: 0, ...partial };
+  return { gold: 0, food: 0, wood: 0, stone: 0, iron: 0, crystal: 0, mana: 0, research: 0, honor: 0, dark: 0, ...partial };
 }
 
 function factionState(id: FactionId, n: number, isHuman: boolean): FactionState {
   return {
-    id, isHuman, alive: true, resources: res({ gold: 100, food: 50, wood: 50, stone: 50, iron: 30, crystal: 20 }), income: res(),
+    id, isHuman, alive: true, resources: res({ gold: 100, honor: 100, food: 50, wood: 50, stone: 50, iron: 30, crystal: 20 }), income: res(),
     stockpile: {}, techs: [], researching: null, researchProgress: 0, spellCooldowns: {},
     explored: new Array(n).fill(1), visible: new Array(n).fill(1), farsight: [], leaderId: null, castleId: null,
     stats: { kills: 0, lost: 0, built: 0, researched: 0, spellsCast: 0 },
@@ -58,6 +59,8 @@ export function makeTestUnit(state: GameState, faction: FactionId, pos: Hex, opt
     u.equipment[slot] = it;
   }
   delete (u as any).items;
+  // Humans have a gender and looks, as a created unit does (a loaded save would add them otherwise).
+  assignAppearance(state.settings?.seed ?? 1, u);
   state.units[String(id)] = u;
   if (u.isLeader) state.factions[faction].leaderId = id;
   return u;

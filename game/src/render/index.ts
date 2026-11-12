@@ -1,6 +1,7 @@
 // Public facade of the 3D renderer. Reads GameState; never mutates it.
 import type { BuildingInstanceId, FactionId, GameEvent, GameState, Hex, ReachInfo, UnitId } from '../core/types';
 import type { PlaybackPlan } from './playback';
+import type { AssetLibrary } from './types';
 
 export interface OverlayState {
   selectedUnit: UnitId | null;
@@ -28,6 +29,8 @@ export interface WorldRenderer {
    * in small slices between other tasks, so setGame() does not block the page as long.
    */
   prepareGame?(state: GameState): Promise<void>;
+  /** The asset library once loaded (null before init resolves). */
+  getAssets?(): AssetLibrary | null;
   /** Rebuild terrain for a new game and snap all units/buildings to `state` as seen by `viewer`. */
   setGame(state: GameState, viewer: FactionId): void;
   /** Incremental sync after events have been animated (adds/removes/moves meshes, fog, territory, equipment). */

@@ -1,6 +1,6 @@
 // Combat resolution and forecast. See DESIGN §4.4–4.5.
 import type {
-  AttackDef, AttackKind, AttackMod, AttackProfile, CombatForecast, FactionId, GameEvent, GameState, Hex, StrikeEvent, Unit, XpCategory,
+  AttackDef, AttackKind, AttackMod, AttackProfile, CombatForecast, FactionId, GameEvent, GameState, Hex, ResourceId, StrikeEvent, Unit, XpCategory,
 } from '../core/types';
 import { hexDistance, neighbors } from '../core/hex';
 import { rand } from '../core/rng';
@@ -13,7 +13,8 @@ import { getTile, isEnemy } from './state';
 import { effectiveStats, getAttackDefs, isMounted, eff, mainAttackKind } from './units';
 import { techDamageMult } from './research';
 import { checkVictory } from './turn';
-import { buildingOn, giveXp, isFunctional, isHumanFaction, logEvent, logFor, roundHalfUp, unitOn } from './ruleutil';
+import { buildingOn, giveXp, isFunctional, isHumanFaction, logEvent, logFor, round2, roundHalfUp, unitOn } from './ruleutil';
+import { FIGHT_HONOR, killReward } from './houses';
 import { orderInterrupted } from './orders';
 
 // ───────────────────────────── modifiers ─────────────────────────────
@@ -28,6 +29,10 @@ export const MARKSMAN_MIN = marksmanMin(1);
 export const VAMPIRIC_SHARE = drainShare(1);
 /** Melee damage multiplier on a flanked target (the striker's ally on the hex opposite); flanking strikes also ignore block. */
 export const FLANK_MULT = 1.25;
+/** Hit chance a target's Dexterity takes off melee and ranged attacks, per point (dodging). */
+export const DODGE_PER_DEX = 0.01;
+/** Hit chance a shooter's Dexterity adds to its ranged attacks, per point (aiming). */
+export const AIM_PER_DEX = 0.01;
 /** XP each side that lives through a fight earns, before +1 per strike it landed. */
 export const COMBAT_XP = 2;
 /** Retaliations a unit makes per turn before Combat Reflexes (each rank adds one). */
@@ -194,7 +199,7 @@ function buildProfile(state: GameState, unit: Unit, target: Unit, def: AttackDef
     dmg *= FLANK_MULT;
     mods.push({ id: 'flank', label: 'Flanking (ignores block)', mult: FLANK_MULT });
   }
-  const venom = kind === 'melee' ? venomOfUnit(unit) : 0;
+  const venom = kind === 'melee' && !FACTIONS[target.faction]?.poisonImmune ? venomOfUnit(unit) : 0;
   if (venom > 0 && (!target.poisoned || poisonOn(target) < venom)) mods.push({ id: 'poison', label: `Poisons on hit (${venom}/turn)` });
   const drain = kind === 'melee' ? drainOfUnit(unit) : 0;
   if (drain > 0) mods.push({ id: 'vampiric', label: `Drains ${Math.round(drain * 100)}% of damage dealt` });
@@ -207,6 +212,12 @@ function buildProfile(state: GameState, unit: Unit, target: Unit, def: AttackDef
   const damage = Math.max(1, roundHalfUp(dmg));
 
   let hit = kind === 'magic' ? MAGIC_HIT : (100 - tileDefense(state, target, target.pos)) / 100;
+  if (kind !== 'magic') {
+    // Dexterity (DESIGN §4.1): the target dodges weapons, a shooter aims; magic always hits 70%.
+    hit -= DODGE_PER_DEX * Math.max(0, tst.dex);
+    if (kind === 'ranged') hit += AIM_PER_DEX * Math.max(0, st.dex);
+    hit = Math.max(0.1, Math.min(0.9, hit));
+  }
   const marks = augmentRank(unit, 'marksman');
   if (kind === 'ranged' && marks > 0) hit = Math.max(hit, marksmanMin(marks));
   return {
@@ -413,7 +424,7 @@ export function resolveCombat(state: GameState, attacker: Unit, defender: Unit, 
       if (side === 'attacker') aHits++; else dHits++;
       // A stronger venom (higher Venom Blades rank) replaces a weaker poison; a weaker one does nothing.
       const venom = side === 'attacker' ? s.aPoison : s.dPoison;
-      if (venom > 0 && target.hp > 0 && (!target.poisoned || poisonOn(target) < venom)) {
+      if (venom > 0 && target.hp > 0 && !FACTIONS[target.faction]?.poisonImmune && (!target.poisoned || poisonOn(target) < venom)) {
         target.poisoned = true;
         target.poisonDamage = venom;
         ev.poisoned = true;
@@ -449,12 +460,22 @@ export function resolveCombat(state: GameState, attacker: Unit, defender: Unit, 
   // Survivors learn from the exchange: COMBAT_XP + 1 per strike landed.
   if (attacker.hp > 0) events.push(...giveXp(state, attacker, xpCat(kind), COMBAT_XP + aHits));
   if (defender.hp > 0) events.push(...giveXp(state, defender, s.d ? xpCat(s.d.kind) : ownXpCat(defender), COMBAT_XP + dHits));
+  // The Thornwild win honor in every fight they take part in, won or lost (DESIGN §2).
+  earnHonor(state, attacker.faction, FIGHT_HONOR);
+  earnHonor(state, defender.faction, FIGHT_HONOR);
 
   if (defender.hp <= 0) events.push(...killUnit(state, defender, attacker, xpCat(kind)));
   else if (attacker.hp <= 0) events.push(...killUnit(state, attacker, defender, s.d ? xpCat(s.d.kind) : ownXpCat(defender)));
   // Being attacked ends a standing order (rest or sentry) of a defender that lived through it.
   events.push(...orderInterrupted(state, defender));
   return events;
+}
+
+/** Honor for a fight a unit of `f` took part in, when its house fights for honor (DESIGN §2). */
+function earnHonor(state: GameState, f: FactionId, amount: number): void {
+  if (FACTIONS[f]?.coin !== 'honor' || amount <= 0) return;
+  const fs = state.factions[f];
+  if (fs?.alive) fs.resources.honor = round2((fs.resources.honor ?? 0) + amount);
 }
 
 /** Extra kill bookkeeping for non-combat damage. */
@@ -524,6 +545,16 @@ export function killUnit(state: GameState, unit: Unit, killer: Unit | null, cat?
   if (killerAlive) hostileKiller!.kills++;
   events.push(...logFor(state, [unit.faction, killer?.faction ?? creditFaction],
     killer ? `${unit.name} is slain by ${killer.name}.` : `${unit.name} has perished.`, 'combat', unit.faction));
+
+  // A kill pays the slayer's house (honor for orcs, dark energy for the undead; DESIGN §2).
+  if (creditFaction) {
+    const fsk = state.factions[creditFaction];
+    if (fsk) {
+      for (const [r, n] of Object.entries(killReward(creditFaction, unit)) as [ResourceId, number][]) {
+        fsk.resources[r] = round2((fsk.resources[r] ?? 0) + n);
+      }
+    }
+  }
 
   if (hostileKiller && killerAlive) {
     events.push(...giveXp(state, hostileKiller, cat ?? ownXpCat(hostileKiller), killXp(unit)));

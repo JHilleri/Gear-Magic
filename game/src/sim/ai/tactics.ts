@@ -6,6 +6,7 @@ import { BUILDINGS } from '../../data/buildings';
 import { FLAT_TERRAIN } from '../../data/terrain';
 import { tileDefense } from '../combat';
 import { fireboltOf, volleyProfile } from '../skills';
+import { baseOutput, producesFor, workedOnly } from '../houses';
 import { augmentRank } from '../../data/ranks';
 import { canBuildAt, computeTerritory } from '../economy';
 import { canBuildWith, getAttackDefs } from '../units';
@@ -881,8 +882,8 @@ function moveUnit(ctx: Ctx, u: Unit, strat: Strategy, claims: Map<number, unknow
   return null;
 }
 
-/** Producing buildings an idle unarmed commoner works (towers are mages' posts, the castle the leader's). */
-const COMMONER_POSTS: BuildingId[] = ['farm', 'lumber', 'quarry', 'mine', 'crystalmine', 'library', 'house'];
+/** Posts an idle commoner works (only those that produce for its house: no orc houses, no undead farms; the orc Arena yields honor). */
+const COMMONER_POSTS: BuildingId[] = ['farm', 'lumber', 'quarry', 'mine', 'crystalmine', 'library', 'house', 'training'];
 
 /** Stock below which a resource counts as short when an idle commoner picks a post. */
 const SHORT_STOCK = 20;
@@ -894,18 +895,19 @@ const SHORT_STOCK = 20;
  */
 function workPost(ctx: Ctx, u: Unit, maxDist: number): Hex | null {
   const res = ctx.fs.resources;
-  const short = (b: Building): boolean => Object.entries(BUILDINGS[b.type].output)
+  const short = (b: Building): boolean => Object.entries(baseOutput(b.type, ctx.f))
     .some(([r, n]) => (n ?? 0) > 0 && r !== 'research' && (res[r as keyof typeof res] ?? 0) < SHORT_STOCK);
   let best: Building | null = null;
   let bv = -Infinity;
   for (const b of ctx.own) {
-    if (!COMMONER_POSTS.includes(b.type) || !isFunctional(b)) continue;
+    if (!COMMONER_POSTS.includes(b.type) || !isFunctional(b) || !producesFor(b.type, ctx.f)) continue;
     const occ = unitOn(ctx.s, b.pos);
     if (occ && occ.id !== u.id) continue;
     if (claimedByOther(ctx, `post:${b.pos.q},${b.pos.r}`, u.id) || claimedByOther(ctx, `work:${b.id}`, u.id)) continue;
     const d = hexDistance(b.pos, u.pos);
     if (d > maxDist) continue;
-    const v = -d + (short(b) ? 3 : 0);
+    // An empty Arena yields nothing at all: a worker there adds its whole output.
+    const v = -d + (short(b) ? 3 : 0) + (workedOnly(b.type, ctx.f) ? 2 : 0);
     if (v > bv) { bv = v; best = b; }
   }
   if (!best) return null;

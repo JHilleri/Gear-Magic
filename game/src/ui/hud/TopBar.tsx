@@ -4,6 +4,7 @@ import { BUILDINGS } from '../../data/buildings';
 import { FACTIONS } from '../../data/factions';
 import { TECHS } from '../../data/research';
 import { buildingOutput, factionIncome, STARVATION_DAMAGE } from '../../sim/economy';
+import { buildingName, FIGHT_HONOR, KILL_REWARD, resourcesOf, unitUpkeep } from '../../sim/houses';
 import { manaCap } from '../../sim/spells';
 import { Kbd, TipCard } from '../common';
 import { useUi } from '../ctx';
@@ -22,7 +23,7 @@ export function incomeBreakdown(s: GameState, f: FactionId, r: ResourceId, total
     if (!isComplete(b)) continue;
     const v = safe(() => buildingOutput(s, b), {})[r] ?? 0;
     if (!v) continue;
-    const name = BUILDINGS[b.type]?.name ?? b.type;
+    const name = safe(() => buildingName(b.type, f), BUILDINGS[b.type]?.name ?? b.type);
     const g = groups.get(name) ?? { count: 0, value: 0 };
     g.count++; g.value += v;
     groups.set(name, g);
@@ -30,13 +31,14 @@ export function incomeBreakdown(s: GameState, f: FactionId, r: ResourceId, total
   const rows: BreakdownRow[] = [...groups.entries()]
     .sort((a, b) => b[1].value - a[1].value)
     .map(([name, g]) => ({ label: g.count > 1 ? `${name} ×${g.count}` : name, value: g.value }));
+  // Upkeep of the house's units in this resource (food, honor for orcs, mana for the undead and elites).
   let upkeep = 0;
-  if (r === 'food') {
-    const per = FACTIONS[f]?.foodUpkeep ?? 1;
-    const eaters = unitsOwned(s, f).filter((u) => !u.isLeader && !u.monster && u.summonTurns == null).length;
-    upkeep = -eaters * per;
-    if (eaters > 0) rows.push({ label: `Upkeep (${eaters} units)`, value: upkeep });
+  let payers = 0;
+  for (const u of unitsOwned(s, f)) {
+    const v = safe(() => unitUpkeep(u)[r] ?? 0, 0);
+    if (v > 0) { upkeep -= v; payers++; }
   }
+  if (payers > 0) rows.push({ label: `Upkeep (${payers} unit${payers === 1 ? '' : 's'})`, value: upkeep });
   const accounted = rows.reduce((a, x) => a + x.value, 0);
   const other = total - accounted;
   if (Math.abs(other) > 0.05) rows.push({ label: 'Equipment & skills', value: other });
@@ -77,6 +79,10 @@ function ResourceChip({ r, res, income, cap }: { r: ResourceId; res: Resources; 
           <tfoot><tr><td>Per turn</td><td class={inc < 0 ? 't-bad' : 't-good'}>{signed(inc)}</td></tr></tfoot>
         </table>
         {r === 'food' && inc < 0 && <div class="t-bad tip-note">Starvation: when food runs out, every unit loses {STARVATION_DAMAGE} HP per turn.</div>}
+        {r === 'honor' && <div class="tip-note t-dim">Won in every fight (+{FIGHT_HONOR} per orc in it, won or lost), for every kill (+{KILL_REWARD.thorn?.honor} per level of the victim, half for a monster), and by units working an Arena. Pays for everything gold buys elsewhere.</div>}
+        {r === 'honor' && inc < 0 && <div class="t-bad tip-note">When honor runs out, every unit loses {STARVATION_DAMAGE} HP per turn.</div>}
+        {r === 'mana' && (income.mana ?? 0) < 0 && <div class="t-bad tip-note">When mana runs out, every unit that draws it loses {STARVATION_DAMAGE} HP per turn.</div>}
+        {r === 'dark' && <div class="tip-note t-dim">Earned only by killing (+2 per level of the victim). Spent on elite augments for units standing on your castle or a mage tower.</div>}
         {r === 'mana' && res.mana >= cap && <div class="t-warn tip-note">Mana is at its cap. Build Mage Towers to raise it.</div>}
       </TipCard>
     );
@@ -126,7 +132,7 @@ export function TopBar() {
   return (
     <div class="topbar panel">
       <div class="res-list">
-        {RESOURCE_ORDER.map((r) => <ResourceChip key={r} r={r} res={fs.resources} income={income} cap={cap} />)}
+        {safe(() => resourcesOf(f), RESOURCE_ORDER).map((r) => <ResourceChip key={r} r={r} res={fs.resources} income={income} cap={cap} />)}
       </div>
       <div class={cls('round-banner', mine && 'mine')} style={{ '--fc': curDef.color, '--fa': curDef.accent } as Record<string, string>}>
         <span class="round-num"><small>Round</small>{over ? s.round : tv.round}</span>

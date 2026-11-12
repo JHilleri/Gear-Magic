@@ -2,15 +2,21 @@
 // where each point comes from, attacks, the five equipment slots, every augment and the level
 // history, the seven kinds of experience, and the house stockpile. Units of other houses (and
 // beasts) open read-only, without the stockpile.
+import { describeAppearance } from '../../data/appearance';
 import type { ComponentChildren } from 'preact';
 import type { EquipSlot, GameState, Unit, UnitStats } from '../../core/types';
 import { BUILDINGS } from '../../data/buildings';
-import { FACTIONS, MONSTERS } from '../../data/factions';
+import { FACTIONS, MONSTERS, upkeepText } from '../../data/factions';
 import { FISTS_ATTACK, ITEMS } from '../../data/items';
 import { LEADER_XP_MULT, xpToNext } from '../../data/skills';
 import { TERRAIN } from '../../data/terrain';
 import { dutyOf } from '../../game/duty';
 import { poisonOn, tileDefense } from '../../sim/combat';
+import { ELITE_ORDER } from '../../sim/houses';
+import { ELITE_UPKEEP, ELITES } from '../../data/elites';
+import { rankedName } from '../../data/ranks';
+
+const STAT_NAMES_SHORT = { maxHp: 'max HP', str: 'Strength', dex: 'Dexterity', int: 'Intellect', armor: 'armor', block: 'block', mov: 'movement', vis: 'vision' } as const;
 import { skillRange } from '../../sim/skills';
 import { BARE_WORKER_MULT, unitIncome, unitUpkeep, workerMult, workerOf, WORKER_MULT } from '../../sim/economy';
 import { HEAL_ORDER_ALERT, ORDER_NAMES } from '../../sim/orders';
@@ -74,7 +80,8 @@ function Hero({ s, u, own, stats }: { s: GameState; u: Unit; own: boolean; stats
   const segs = xpSegments(u, toNext);
   const myTurn = isMyTurn(s, store.ui);
   const duty = own && !u.order ? safe(() => dutyOf(s, u), null) : null;
-  const upkeep = safe(() => unitUpkeep(u), 0);
+  const upkeep = safe(() => unitUpkeep(u), {} as ReturnType<typeof unitUpkeep>);
+  const upkeepTotal = Object.values(upkeep).reduce((a, v) => a + (v ?? 0), 0);
   const income = safe(() => unitIncome(s, u), {});
   const turnState = !own || !myTurn ? null
     : u.acted && u.mp <= 0 ? 'Done for this turn' : u.acted ? 'Has acted' : u.moved ? 'Has moved' : 'Ready';
@@ -87,7 +94,7 @@ function Hero({ s, u, own, stats }: { s: GameState; u: Unit; own: boolean; stats
   return (
     <div class="us-hero" style={{ '--fc': fd.color, '--fa': fd.accent } as Record<string, string>}>
       <div class="us-portrait-wrap">
-        <Portrait k={portraitKey(u, body)} name={name} color={fd.color} class="us-portrait" />
+        <Portrait k={portraitKey(u, body)} unit={u} body={body} name={name} color={fd.color} class="us-portrait" />
         <span class="us-level" {...tip(`Level ${u.level}`)}><small>Lvl</small>{u.level}</span>
         {u.isLeader && <span class="leader-crown" {...tip('Leader — if they fall, the house is lost')}><Sym name="castle" /></span>}
       </div>
@@ -108,8 +115,8 @@ function Hero({ s, u, own, stats }: { s: GameState; u: Unit; own: boolean; stats
             <Sym name="boot" /><small>Move</small><b>{own ? `${fmt(u.mp)} / ${fmt(stats.mov)}` : fmt(stats.mov)}</b>
           </span>
           <span class="us-fact" {...tip('Enemies this unit has slain')}><Sym name="skull" /><small>Kills</small><b>{u.kills ?? 0}</b></span>
-          {!u.monster && <span class="us-fact" {...tip(upkeep > 0 ? `Eats ${fmt(upkeep)} food each turn` : 'Eats nothing: leaders and summons are fed by the house')}>
-            <Sym name="food" /><small>Upkeep</small><b>{fmt(upkeep)}</b></span>}
+          {!u.monster && <span class="us-fact" {...tip(upkeepTotal > 0 ? `Costs the house ${upkeepText(upkeep)} each turn${u.elite ? ' (its elite augments draw mana)' : ''}` : 'Costs nothing: leaders and summons are kept by the house')}>
+            <Sym name={upkeep.mana && !upkeep.food ? 'mana' : 'food'} /><small>Upkeep</small><b>{upkeepTotal > 0 ? upkeepText(upkeep) : '0'}</b></span>}
           {!u.monster && !u.summonTurns && (
             // What it would bring to a building: lit while it works one, dimmed as a potential.
             <span class={cls('us-fact', works ? 'us-fact-on' : 'us-fact-dim')} {...tip(<TipCard title={works ? `Working the ${hereDef!.name}` : 'As a worker'}
@@ -309,6 +316,18 @@ function AugmentList({ u, own }: { u: Unit; own: boolean }) {
           </div>
         );
       })}
+      {u.elite && Object.values(u.elite).some((r) => (r ?? 0) > 0) && <div class="us-sub">Elite augments</div>}
+      {ELITE_ORDER.filter((e) => (u.elite?.[e] ?? 0) > 0).map((e) => {
+        const def = ELITES[e];
+        const r = u.elite![e]!;
+        return (
+          <div key={e} class="us-aug kind-passive">
+            <span class="us-aug-icon"><Icon k={def.icon} size={40} /></span>
+            <span class="us-aug-main"><b>{rankedName(def.name, r)}<small class="t-dim"> · rank {r}</small></b>
+              <span class="us-aug-desc">+{def.per * r} {STAT_NAMES_SHORT[def.stat]} · {fmt(ELITE_UPKEEP * r)} mana upkeep a turn</span></span>
+          </div>
+        );
+      })}
       {a.passives.length > 0 && <div class="us-sub">Passives</div>}
       {a.passives.map((p) => (
         <div key={p.id} class="us-aug kind-passive">
@@ -434,6 +453,7 @@ export function UnitSheetModal() {
         <Btn small onClick={() => go(1)} title="Next unit of your house">Next ›</Btn>
       </>}
       <span class="us-foot-gap" />
+      {own && u.look && !u.isLeader && <Btn icon="sheet" title="Change this unit's name, face, hair, eyes and beard" onClick={() => store.openModal('customize', { unit: u.id })}>Appearance</Btn>}
       {own && u.pendingLevelUps > 0 && <Btn glow primary icon="star" disabled={!my} reason={my ? null : 'Not your turn'} onClick={() => store.openModal('levelup', { unit: u.id })}>Level up</Btn>}
       <Btn onClick={close}>Close</Btn>
     </div>
@@ -443,7 +463,7 @@ export function UnitSheetModal() {
     <Modal size="xl" parchment={false} class="unit-sheet" onClose={close} footer={footer}
       icon={<Emblem faction={u.faction} size={44} />}
       title={name}
-      sub={<span>Level {u.level} {role}{own ? '' : ` · ${u.faction === 'neutral' ? 'wild creature' : 'enemy'}`} · <span style={{ color: `color-mix(in srgb, ${fd.color} 50%, #fff)` }}>{fd.name}</span></span>}>
+      sub={<span>Level {u.level} {role}{u.gender && !u.isLeader ? ` · ${u.gender === 'female' ? 'woman' : 'man'}${u.look ? `, ${describeAppearance(u.look).toLowerCase()}` : ''}` : ''}{own ? '' : ` · ${u.faction === 'neutral' ? 'wild creature' : 'enemy'}`} · <span style={{ color: `color-mix(in srgb, ${fd.color} 50%, #fff)` }}>{fd.name}</span></span>}>
       <Hero s={s} u={u} own={own} stats={stats} />
       <div class="us-cols">
         <div class="us-col">

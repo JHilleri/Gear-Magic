@@ -2,11 +2,12 @@
 import type { PresetId, ResourceCost, UnitStats } from '../../core/types';
 import { aOrAn } from '../../core/text';
 import { BUILDINGS } from '../../data/buildings';
-import { FACTIONS } from '../../data/factions';
+import { upkeepText, FACTIONS } from '../../data/factions';
 import { ITEMS } from '../../data/items';
 import { COMMONER_COST, COMMONER_STATS, PRESETS } from '../../data/presets';
 import { recruitOptions } from '../../sim/actions';
 import { presetCost } from '../../sim/economy';
+import { buildingName } from '../../sim/houses';
 import { techDamageMult } from '../../sim/research';
 import { Cost, TipCard } from '../common';
 import { act, useUi } from '../ctx';
@@ -42,19 +43,21 @@ export function RecruitModal() {
     const r = await act(store, { type: 'recruit', site: site.id, preset: p });
     if (r.ok && store.ui.modal === 'recruit') store.closeModal();
   };
-  const upkeep = fd.foodUpkeep;
+  const upkeep = upkeepText(fd.upkeep);
+  const siteName = safe(() => buildingName(site.type, site.owner), def.name);
 
   return (
-    <Modal size="lg" title={`Recruit at ${def.name}`} icon={<Icon k={def.icon} size={40} />} onClose={() => store.closeModal()}
-      sub={<span>{site.recruitedThisTurn ? <span class="t-bad">Already recruited here this turn</span> : 'One recruit per site per turn'} · Recruits cannot move on the turn they arrive · Upkeep {upkeep} food/turn each</span>}>
+    <Modal size="lg" title={`Recruit at ${siteName}`} icon={<Icon k={def.icon} size={40} />} onClose={() => store.closeModal()}
+      sub={<span>{site.recruitedThisTurn ? <span class="t-bad">Already recruited here this turn</span> : 'One recruit per site per turn'} · Recruits cannot move on the turn they arrive · Upkeep {upkeep} a turn each</span>}>
       <div class="preset-grid">
         {opts.map(({ preset, error }) => {
           const p = PRESETS[preset];
-          const cost = safe(() => presetCost(preset), fallbackCost(preset));
+          const cost = safe(() => presetCost(preset, site.owner ?? fd.id), fallbackCost(preset));
           const err = !my ? 'Not your turn' : error;
           const main = p.items.map((i) => ITEMS[i]).find((d) => d.attack);
           // The recruit's real numbers: commoner + house traits + items, damage as the unit panel shows it.
-          const stat = (k: keyof UnitStats) => COMMONER_STATS[k] + (fd.statMods?.[k] ?? 0) + p.items.reduce((a, i) => a + (ITEMS[i].stats?.[k] ?? 0), 0);
+          // (the house's own body: the undead's dead have half the commoner's stats)
+          const stat = (k: keyof UnitStats) => (fd.unitBase ?? COMMONER_STATS)[k] + (fd.statMods?.[k] ?? 0) + p.items.reduce((a, i) => a + (ITEMS[i].stats?.[k] ?? 0), 0);
           const armor = stat('armor');
           const block = stat('block');
           const mov = stat('mov');
@@ -86,6 +89,7 @@ export function RecruitModal() {
                 <div class="pc-stats">
                   <span {...tip('Damage per strike before the target\'s block and armor × strikes')}>{atk ? `${atk.name} ${dmg}×${atk.strikes}` : 'Fists 3×2'}</span>
                   <span {...tip('Block: damage taken off every strike that hits · Armor: share of the rest taken off')}>Block {block} · Armor {armor}%</span>
+                  <span>HP {stat('maxHp')}</span>
                   <span>Move {mov}</span>
                 </div>
                 <div class="pc-foot">

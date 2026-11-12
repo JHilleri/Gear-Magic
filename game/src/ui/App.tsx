@@ -22,13 +22,15 @@ import { ResearchModal } from './modals/Research';
 import { SettingsModal } from './modals/Settings';
 import { SpellbookModal } from './modals/Spellbook';
 import { UnitSheetModal } from './modals/UnitSheet';
+import { EmpowerModal } from './modals/Empower';
+import { CustomizeModal } from './modals/Customize';
 import { LoadingScreen, NewGameModal, TitleScreen, useImage } from './screens/Screens';
 import { hideTip, TooltipLayer } from './tooltip';
 import { assetUrl, cls, viewerOf } from './util';
 import './styles.css';
 
 /** Modals that need a running game. */
-const GAME_MODALS = new Set<ModalId>(['research', 'spellbook', 'forge', 'recruit', 'levelup', 'equip', 'build', 'end', 'unitsheet']);
+const GAME_MODALS = new Set<ModalId>(['research', 'spellbook', 'forge', 'recruit', 'levelup', 'equip', 'build', 'end', 'unitsheet', 'empower', 'customize']);
 
 function ModalHost() {
   const { store } = useUi();
@@ -49,6 +51,8 @@ function ModalHost() {
     case 'settings': return <SettingsModal />;
     case 'end': return <EndModal />;
     case 'unitsheet': return <UnitSheetModal />;
+    case 'empower': return <EmpowerModal />;
+    case 'customize': return <CustomizeModal />;
     default: return null;
   }
 }

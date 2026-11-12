@@ -20,7 +20,7 @@ const baseUi = (p: Partial<UiState> = {}): UiState => ({
 describe('formatting', () => {
   it('the New Game card shows a house\'s armor bonus as a percentage (block is the flat one)', () => {
     expect(factionPerks(FACTIONS.ashen)[0]).toBe('+2 Intellect, +5% armor');
-    expect(factionPerks(FACTIONS.thorn)[0]).toBe('+5 HP, +1 Strength, -1 Intellect');
+    expect(factionPerks(FACTIONS.thorn)[0]).toBe('+5 HP, +2 Strength, -1 Intellect');
   });
 
   it('formats numbers, signs and percentages', () => {

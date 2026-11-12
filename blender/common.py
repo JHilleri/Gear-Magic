@@ -119,6 +119,34 @@ def faces_np(obj):
     return c.reshape(-1, 3), a, nr.reshape(-1, 3)
 
 
+def vertex_texture_colors(obj):
+    """Nx3 base-colour texel (sRGB 0..1) under each vertex (one of its loops), or None without a texture."""
+    me = obj.data
+    img = None
+    for slot in obj.material_slots:
+        m = slot.material
+        if m and m.node_tree:
+            for n in m.node_tree.nodes:
+                if n.type == 'BSDF_PRINCIPLED' and n.inputs["Base Color"].is_linked:
+                    src = n.inputs["Base Color"].links[0].from_node
+                    if src.type == 'TEX_IMAGE' and src.image:
+                        img = src.image
+    if img is None or not me.uv_layers.active:
+        return None
+    w, h = img.size
+    px = np.array(img.pixels[:], np.float32).reshape(h, w, 4)
+    uv = np.zeros(len(me.loops) * 2, np.float32)
+    me.uv_layers.active.data.foreach_get("uv", uv)
+    uv = uv.reshape(-1, 2)
+    vi = np.zeros(len(me.loops), np.int32)
+    me.loops.foreach_get("vertex_index", vi)
+    x = np.clip((uv[:, 0] % 1.0) * w, 0, w - 1).astype(np.int32)
+    y = np.clip((uv[:, 1] % 1.0) * h, 0, h - 1).astype(np.int32)
+    out = np.zeros((len(me.vertices), 3), np.float32)
+    out[vi] = px[y, x, :3]
+    return out
+
+
 def tri_count(obj):
     me = obj.data
     lt = np.empty(len(me.polygons), dtype=np.int32)

@@ -1,9 +1,12 @@
-import type { FactionDef, FactionId, MonsterKind, TechId, UnitStats } from '../core/types';
+import type { FactionDef, FactionId, MonsterKind, ResourceCost, TechId, UnitStats } from '../core/types';
+import { UNDEAD_STATS } from './presets';
 
 export const FACTIONS: Record<FactionId, FactionDef> = {
   valen: {
     id: 'valen', name: 'House Valen', race: 'human', color: '#2f6fd6', accent: '#e8c35a',
-    statMods: { dex: 1 }, rangedMult: 1.1, foodUpkeep: 1, leaderName: 'Queen Aldra Valen',
+    statMods: { dex: 1 }, rangedMult: 1.1, leaderName: 'Queen Aldra Valen', leaderGender: 'female',
+    // Gold and food: the full economy (DESIGN §2).
+    coin: 'gold', eats: true, upkeep: { food: 1 }, recruitCost: { gold: 15, food: 5 },
     unitNames: ['Edric', 'Aldric', 'Tobin', 'Godwin', 'Garrick', 'Hal', 'Osric', 'Bryn', 'Cael', 'Leofric', 'Rowan', 'Brand', 'Wendel', 'Cedric', 'Aldous', 'Oswin', 'Piers', 'Jory', 'Wulfric', 'Corwin'],
     femaleUnitNames: ['Aelis', 'Edith', 'Maud', 'Isolde', 'Rowena', 'Elswyth', 'Matilda', 'Avelina', 'Aldith', 'Elinor', 'Wynne', 'Hilde', 'Sibyl', 'Cecily', 'Alys', 'Agnes', 'Beatrix', 'Margery', 'Tamsin', 'Elspeth'],
     emblem: 'emblems/valen.png',
@@ -13,7 +16,10 @@ export const FACTIONS: Record<FactionId, FactionDef> = {
   },
   thorn: {
     id: 'thorn', name: 'Thornwild Clans', race: 'orc', color: '#c8342b', accent: '#d9c9a3',
-    statMods: { maxHp: 5, str: 1, int: -1 }, meleeMult: 1.1, foodUpkeep: 1, leaderName: 'Warchief Grukka Thornfist',
+    statMods: { maxHp: 5, str: 2, int: -1 }, meleeMult: 1.1, leaderName: 'Warchief Grukka Thornfist',
+    // Food and honor: honor replaces gold, won by fighting and in the Arena (DESIGN §2).
+    coin: 'honor', eats: true, upkeep: { food: 1, honor: 0.5 }, recruitCost: { honor: 15, food: 5 },
+    innatePassives: ['regeneration'],
     unitNames: ['Gash', 'Grakk', 'Urzog', 'Brakka', 'Throk', 'Durz', 'Dagrum', 'Skarn', 'Hrok', 'Krull', 'Narzh', 'Vorn', 'Zug', 'Brug', 'Borgo', 'Kazgar', 'Mogg', 'Taruk'],
     emblem: 'emblems/thorn.png',
     startingTechs: ['polearms'],
@@ -22,7 +28,10 @@ export const FACTIONS: Record<FactionId, FactionDef> = {
   },
   ashen: {
     id: 'ashen', name: 'Ashen Covenant', race: 'undead', color: '#8a4fd6', accent: '#9aa0a6',
-    statMods: { int: 2, armor: 5 }, magicMult: 1.1, foodUpkeep: 0.5, leaderName: 'Lich-Lord Morvain',
+    statMods: { int: 2, armor: 5 }, magicMult: 1.1, leaderName: 'Lich-Lord Morvain',
+    // Gold and mana, no food: many cheap half-strength dead, a few elites raised with dark energy (DESIGN §2).
+    coin: 'gold', eats: false, upkeep: { mana: 0.5 }, recruitCost: { gold: 8 },
+    unitBase: UNDEAD_STATS, poisonImmune: true,
     unitNames: ['Vesper', 'Grimwald', 'Sorrow', 'Malek', 'Ilse', 'Mortis', 'Caskel', 'Nyx', 'Revna', 'Thane', 'Ossian', 'Lethe', 'Hollow', 'Vael', 'Duskan', 'Sepulka'],
     emblem: 'emblems/ashen.png',
     startingTechs: ['crystallore'],
@@ -31,7 +40,7 @@ export const FACTIONS: Record<FactionId, FactionDef> = {
   },
   neutral: {
     id: 'neutral', name: 'The Wilds', race: 'monster', color: '#8a8a8a', accent: '#5a5a5a',
-    statMods: {}, foodUpkeep: 0, leaderName: '', unitNames: [], emblem: 'emblems/neutral.png', researchPriority: [], startingTechs: [],
+    statMods: {}, coin: 'gold', eats: false, upkeep: {}, recruitCost: {}, leaderName: '', unitNames: [], emblem: 'emblems/neutral.png', researchPriority: [], startingTechs: [],
     flavor: 'Beasts and guardians of the old ruins.',
   },
 };
@@ -55,9 +64,20 @@ export function factionPerks(def: FactionDef, techName: (t: TechId) => string = 
   if (def.rangedMult) mult.push(`+${Math.round((def.rangedMult - 1) * 100)}% ranged`);
   if (def.magicMult) mult.push(`+${Math.round((def.magicMult - 1) * 100)}% magic`);
   if (mult.length) out.push(`${mult.join(', ')} damage`);
-  if (def.foodUpkeep < 1) out.push(def.foodUpkeep === 0.5 ? 'half food upkeep' : `${def.foodUpkeep} food upkeep`);
+  if (def.coin === 'honor') out.push('Honor instead of gold: won by fighting and in the Arena');
+  if (!def.eats) out.push('Never eats: no food at all');
+  out.push(`Upkeep per unit: ${upkeepText(def.upkeep)}`);
+  if (def.innatePassives?.includes('regeneration')) out.push('Every unit regenerates');
+  if (def.unitBase) out.push('Cheap units at half strength; elites raised with dark energy');
+  if (def.poisonImmune) out.push('Immune to poison');
   for (const t of def.startingTechs ?? []) out.push(`Starts with ${techName(t)}`);
   return out;
+}
+
+/** "1 food, 0.5 honor" (the house's upkeep in words). */
+export function upkeepText(c: ResourceCost): string {
+  const parts = Object.entries(c).filter(([, v]) => v).map(([k, v]) => `${v} ${k === 'dark' ? 'dark energy' : k}`);
+  return parts.length ? parts.join(', ') : 'none';
 }
 
 export interface MonsterDef {

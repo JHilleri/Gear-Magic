@@ -1,0 +1,122 @@
+{
+ "pieces": {
+  "hair_short": [
+   "--zmin",
+   -1.08
+  ],
+  "hair_crop": [
+   "--thick",
+   0.02,
+   "--zmin",
+   -1.0,
+   "--face-clear",
+   -0.32
+  ],
+  "hair_curly": [
+   "--zmin",
+   -1.12
+  ],
+  "hair_pixie": [
+   "--zmin",
+   -1.15
+  ],
+  "hair_bun": [
+   "--zmin",
+   -1.2,
+   "--face-clear",
+   -0.32
+  ],
+  "hair_bob": [
+   "--zmin",
+   -1.35
+  ],
+  "hair_swept": [
+   "--zmin",
+   -1.4,
+   "--low-z",
+   -1.2,
+   "--low-x",
+   0.55,
+   "--low-y",
+   -0.3,
+   "--face-clear",
+   -0.32
+  ],
+  "hair_tail": [
+   "--zmin",
+   -1.7,
+   "--low-z",
+   -1.1,
+   "--low-x",
+   0.4,
+   "--low-y",
+   -0.2,
+   "--face-clear",
+   -0.32
+  ],
+  "hair_ponytail": [
+   "--zmin",
+   -1.9,
+   "--low-z",
+   -1.1,
+   "--low-x",
+   0.4,
+   "--low-y",
+   -0.2,
+   "--face-clear",
+   -0.32
+  ],
+  "hair_braid": [
+   "--zmin",
+   -2.0,
+   "--tris",
+   6500,
+   "--low-x",
+   0.62,
+   "--face-clear",
+   -0.32
+  ],
+  "hair_long": [
+   "--zmin",
+   -1.9,
+   "--tris",
+   6500,
+   "--low-x",
+   0.68
+  ],
+  "beard_moustache": [
+   "--zmin",
+   -1.02
+  ],
+  "beard_goatee": [
+   "--zmin",
+   -1.6
+  ],
+  "beard_short": [
+   "--zmin",
+   -1.35
+  ],
+  "beard_full": [
+   "--zmin",
+   -1.6
+  ],
+  "beard_long": [
+   "--zmin",
+   -2.4,
+   "--low-x",
+   0.5
+  ]
+ },
+ "eyes": {
+  "human_f_commoner": "301,361;486,355",
+  "human_f_heavy": "289,382;481,380",
+  "human_f_light": "292,381;471,384",
+  "human_f_padded": "298,368;474,369",
+  "human_f_robe": "=280,356;470,358",
+  "human_m_commoner": "294,347;472,346",
+  "human_m_heavy": "301,349;466,346",
+  "human_m_light": "=286,376;468,376",
+  "human_m_padded": "=310,352;450,352",
+  "human_m_robe": "300,324;471,325"
+ }
+}

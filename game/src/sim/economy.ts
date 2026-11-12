@@ -8,12 +8,13 @@ import { aOrAn } from '../core/text';
 import { BUILDINGS } from '../data/buildings';
 import { augmentRank, yieldPerTurn } from '../data/ranks';
 import { ITEMS } from '../data/items';
-import { PRESETS, COMMONER_COST } from '../data/presets';
+import { PRESETS } from '../data/presets';
 import { FACTIONS } from '../data/factions';
 import { TERRAIN } from '../data/terrain';
 import { TECHS, TECH_LIST } from '../data/research';
 import { newId } from './state';
-import { canBuildWith, createUnit, eff, mainAttackKind } from './units';
+import { canBuildWith, createUnit, eff, mainAttackKind, statsOf } from './units';
+import { ALL_RESOURCES, baseOutput, buildingName, factionCost, houseForbids, itemCost, producesFor, recruitCost, unitUpkeep, workedOnly } from './houses';
 import { buildingUnlocked, hasTech, itemUnlocked, presetUnlocked, resourceMult } from './research';
 import { computeVisibility } from './visibility';
 import { manaCap } from './spells';
@@ -22,12 +23,13 @@ import {
   buildingOn, giveXp, isBuilt, isFunctional, isHumanFaction, logEvent, logFor, passableForSpawn, round2, unitOn,
 } from './ruleutil';
 
-const RESOURCE_ORDER: ResourceId[] = ['gold', 'food', 'wood', 'stone', 'iron', 'crystal', 'mana', 'research'];
+const RESOURCE_ORDER: readonly ResourceId[] = ALL_RESOURCES;
+export { unitUpkeep };
 
 // ───────────────────────────── resources ─────────────────────────────
 
 export function emptyResources(): Resources {
-  return { gold: 0, food: 0, wood: 0, stone: 0, iron: 0, crystal: 0, mana: 0, research: 0 };
+  return { gold: 0, food: 0, wood: 0, stone: 0, iron: 0, crystal: 0, mana: 0, research: 0, honor: 0, dark: 0 };
 }
 
 export function canAfford(res: Resources, cost: ResourceCost): boolean {
@@ -65,7 +67,7 @@ export function formatCost(cost: ResourceCost): string {
   const parts: string[] = [];
   for (const k of RESOURCE_ORDER) {
     const c = cost[k];
-    if (c) parts.push(`${Math.round(c * 10) / 10} ${k}`);
+    if (c) parts.push(`${Math.round(c * 10) / 10} ${k === 'dark' ? 'dark energy' : k}`);
   }
   return parts.length ? parts.join(', ') : 'free';
 }
@@ -76,7 +78,7 @@ function missing(res: Resources, cost: ResourceCost): string {
   for (const k of RESOURCE_ORDER) {
     const c = cost[k] ?? 0;
     const have = res[k] ?? 0;
-    if (c > 0 && have + 1e-9 < c) parts.push(`${Math.ceil(c - have)} ${k}`);
+    if (c > 0 && have + 1e-9 < c) parts.push(`${Math.ceil(c - have)} ${k === 'dark' ? 'dark energy' : k}`);
   }
   return `Not enough resources (need ${parts.join(', ')} more)`;
 }
@@ -141,8 +143,9 @@ export const BUILDING_COST_STEP = 0.25;
  * base cost. DESIGN §5. `planned`: more of that type assumed already started (AI plans).
  */
 export function buildingCost(state: GameState, faction: FactionId, type: BuildingId, planned = 0): ResourceCost {
-  const base = BUILDINGS[type].cost;
-  if (type === 'castle' || !hasWorkableOutput(type)) return { ...base };
+  // In the house's own resources (honor for orcs, no food for the undead; DESIGN §2).
+  const base = factionCost(faction, BUILDINGS[type].cost);
+  if (type === 'castle' || !producesFor(type, faction)) return { ...base };
   let n = Math.max(0, planned);
   for (const k in state.buildings) {
     const b = state.buildings[k];
@@ -176,6 +179,8 @@ export function canBuildAt(state: GameState, unit: Unit, building: BuildingId): 
     const tech = TECH_LIST.find((t) => t.unlocksBuildings?.includes(building)) ?? (def.unlock ? TECHS[def.unlock] : undefined);
     return `Requires research: ${tech?.name ?? def.unlock}`;
   }
+  const forbidden = houseForbids(building, f);
+  if (forbidden) return forbidden;
   const site = siteError(state, f, unit.pos, building, founding);
   if (site) return site;
   const cost = buildingCost(state, f, building);
@@ -267,7 +272,7 @@ export function maxBuildingLevel(state: GameState, faction: FactionId): number {
 
 /** Resources to upgrade from the building's current level: cost × level. */
 export function upgradeCost(b: Building): ResourceCost {
-  return scaleCost(BUILDINGS[b.type].cost, b.level);
+  return factionCost(b.owner, scaleCost(BUILDINGS[b.type].cost, b.level));
 }
 
 /** Build points of an upgrade from the current level: buildPoints × level. */
@@ -313,7 +318,22 @@ export function startUpgrade(state: GameState, unit: Unit): GameEvent[] {
 /** Which worker efficiency boosts a resource. */
 const RESOURCE_EFF: Record<ResourceId, EfficiencyId> = {
   gold: 'trade', food: 'farming', wood: 'gathering', stone: 'mining', iron: 'mining', crystal: 'mining', mana: 'mana', research: 'research',
+  honor: 'trade', dark: 'trade',
 };
+
+/** Output share a worker adds per point of the stat that drives a resource (DESIGN §4.1). */
+export const STAT_YIELD = 0.03;
+/** The worker attribute that drives a resource: Strength for raw materials and honor, Intellect for research and gold. */
+export const YIELD_STAT: Partial<Record<ResourceId, 'str' | 'int'>> = {
+  wood: 'str', stone: 'str', iron: 'str', crystal: 'str', honor: 'str', research: 'int', gold: 'int',
+};
+
+/** What `worker`'s attributes multiply resource `k` of its building by: +3% per point of the driving stat. */
+export function statYieldMult(worker: Unit, k: ResourceId): number {
+  const stat = YIELD_STAT[k];
+  if (!stat) return 1;
+  return 1 + STAT_YIELD * Math.max(0, statsOf(worker)[stat]);
+}
 
 /** Output multiplier of a building worked by a unit with Builder's Tools (before its efficiencies). */
 export const WORKER_MULT = 2.5;
@@ -344,8 +364,12 @@ function leaderOnCastle(state: GameState, faction: FactionId): boolean {
   return isFunctional(b) && b.type === 'castle' && b.owner === faction;
 }
 
-/** True when the building type produces something a worker can boost (castle, farm, library…; not a forge, wall or training ground). */
-export function hasWorkableOutput(type: BuildingId): boolean {
+/**
+ * True when the building type produces something a worker can boost (castle, farm, library…; not a
+ * forge or wall). With `f`, for that house (an orc house yields nothing, an orc Arena yields honor).
+ */
+export function hasWorkableOutput(type: BuildingId, f?: FactionId | null): boolean {
+  if (f !== undefined) return producesFor(type, f);
   return Object.values(BUILDINGS[type]?.output ?? {}).some((v) => (v ?? 0) > 0);
 }
 
@@ -355,7 +379,7 @@ export function hasWorkableOutput(type: BuildingId): boolean {
  * better (WORKER_MULT vs BARE_WORKER_MULT). DESIGN §5.
  */
 export function workerOf(state: GameState, b: Building): Unit | null {
-  if (!isFunctional(b) || !hasWorkableOutput(b.type)) return null;
+  if (!isFunctional(b) || !producesFor(b.type, b.owner)) return null;
   const u = unitOn(state, b.pos);
   if (!u || u.faction !== b.owner || u.monster || u.summonTurns !== undefined) return null;
   return u;
@@ -372,7 +396,7 @@ export function workerMult(worker: Unit): number {
  * whole output). buildingOutput and the tile panel's "worked by" line both read it.
  */
 export function workerResourceMult(worker: Unit, k: ResourceId): number {
-  return workerMult(worker) * eff(worker, 'building') * eff(worker, RESOURCE_EFF[k]);
+  return workerMult(worker) * eff(worker, 'building') * eff(worker, RESOURCE_EFF[k]) * statYieldMult(worker, k);
 }
 
 /**
@@ -383,7 +407,7 @@ export function workerResourceMult(worker: Unit, k: ResourceId): number {
  */
 export function workXpCategory(u: Unit, b: Building): XpCategory {
   if (b.type === 'castle') return u.isLeader ? 'leader' : 'civic';
-  const out = BUILDINGS[b.type].output;
+  const out = baseOutput(b.type, b.owner);
   if ((out.research ?? 0) > 0 || (out.mana ?? 0) > 0) return 'magic';
   return 'civic';
 }
@@ -394,12 +418,15 @@ export function buildingOutput(state: GameState, b: Building): ResourceCost {
   const owner = b.owner!;
   const def = BUILDINGS[b.type];
   const tile = state.tiles[tileIndex(b.pos, state.width)];
-  const base: ResourceCost = { ...def.output };
+  // In the owner's own resources (DESIGN §2): honor for orcs, no food for the undead.
+  const base: ResourceCost = baseOutput(b.type, owner);
   if (def.fertileBonus && tile?.deposit === 'fertile') {
-    for (const k of RESOURCE_ORDER) if (def.fertileBonus[k]) base[k] = (base[k] ?? 0) + def.fertileBonus[k]!;
+    const bonus = factionCost(owner, def.fertileBonus);
+    for (const k of RESOURCE_ORDER) if (bonus[k]) base[k] = (base[k] ?? 0) + bonus[k]!;
   }
   const levelMult = 1 + 0.5 * (b.level - 1);
   const worker = workerOf(state, b);
+  if (!worker && workedOnly(b.type, owner)) return {}; // an empty Arena yields nothing
   const castleMult = leaderOnCastle(state, owner) ? 1.1 : 1;
   const diff = difficultyMult(state, owner);
   const out: ResourceCost = {};
@@ -431,16 +458,10 @@ export function unitIncome(state: GameState, u: Unit): ResourceCost {
   if (rank('harvester')) out.food = rank('harvester');
   if (rank('prospector')) out.iron = rank('prospector');
   if (rank('scholar')) out.research = rank('scholar');
-  return out;
+  return factionCost(u.faction, out); // the undead's Harvester brings no food
 }
 
-/** Food eaten by one unit per turn (leader, summons and monsters are free). */
-export function unitUpkeep(u: Unit): number {
-  if (u.isLeader || u.monster || u.summonTurns) return 0;
-  return FACTIONS[u.faction]?.foodUpkeep ?? 1;
-}
-
-/** Net per-turn income: buildings + items/passives (mana, harvester…) − food upkeep. */
+/** Net per-turn income: buildings + items/passives (mana, harvester…) − unit upkeep (food, honor, mana; DESIGN §2). */
 export function factionIncome(state: GameState, faction: FactionId): Resources {
   const inc = emptyResources();
   if (faction === 'neutral') return inc;
@@ -451,20 +472,26 @@ export function factionIncome(state: GameState, faction: FactionId): Resources {
     for (const r of RESOURCE_ORDER) if (o[r]) inc[r] += o[r]!;
   }
   const diff = difficultyMult(state, faction);
-  let upkeep = 0;
   for (const k in state.units) {
     const u = state.units[k];
     if (u.faction !== faction) continue;
     const o = unitIncome(state, u);
     for (const r of RESOURCE_ORDER) if (o[r]) inc[r] += o[r]! * diff;
-    upkeep += unitUpkeep(u);
+    const up = unitUpkeep(u);
+    for (const r of RESOURCE_ORDER) if (up[r]) inc[r] -= up[r]!;
   }
-  inc.food -= upkeep;
   for (const r of RESOURCE_ORDER) inc[r] = round2(inc[r]);
   return inc;
 }
 
-/** Add income at turn start; starvation if food < 0; clamp mana to cap. Updates faction.income. Research points are not stockpiled: turn.startTurn feeds `income.research` into the current project. */
+/** Upkeep a house can run short of, and what its people are told. */
+const UPKEEP_SHORTFALL: { res: ResourceId; text: (hp: number) => string }[] = [
+  { res: 'food', text: (hp) => `Your people are starving! Every unit loses ${hp} HP. Build farms or reduce your army.` },
+  { res: 'honor', text: (hp) => `Without honor your warriors turn on each other! Every unit loses ${hp} HP. Fight, work an Arena or reduce your warband.` },
+  { res: 'mana', text: (hp) => `The binding magic fails! Every risen unit loses ${hp} HP. Raise more mana or reduce your host.` },
+];
+
+/** Add income at turn start; an unpaid upkeep (food, honor, mana) hurts the units that draw it; clamp mana to cap. Updates faction.income. Research points are not stockpiled: turn.startTurn feeds `income.research` into the current project. */
 export function applyProduction(state: GameState, faction: FactionId): GameEvent[] {
   const fs = state.factions[faction];
   if (!fs || !fs.alive || faction === 'neutral') return [];
@@ -477,14 +504,16 @@ export function applyProduction(state: GameState, faction: FactionId): GameEvent
   }
   const cap = manaCap(state, faction);
   if (fs.resources.mana > cap) fs.resources.mana = cap;
-  if (fs.resources.mana < 0) fs.resources.mana = 0;
-  if (fs.resources.food < 0) {
-    fs.resources.food = 0;
-    // Starvation: every mouth that eats loses STARVATION_DAMAGE hp, never below 1.
-    const hungry = Object.values(state.units).filter((u) => u.faction === faction && !u.monster && !u.summonTurns)
+  // An upkeep the house cannot pay (food, honor or mana) costs every unit that draws it
+  // STARVATION_DAMAGE hp, never below 1 (DESIGN §2).
+  const short = UPKEEP_SHORTFALL.filter((x) => fs.resources[x.res] < 0);
+  for (const x of short) {
+    fs.resources[x.res] = 0;
+    const hit = Object.values(state.units).filter((u) => u.faction === faction && (unitUpkeep(u)[x.res] ?? 0) > 0)
       .sort((a, b) => a.id - b.id);
-    for (const u of hungry) events.push(...applyDamage(state, u, STARVATION_DAMAGE, 'starvation', null, 1));
-    events.push(...logFor(state, [faction], `Your people are starving! Every unit loses ${STARVATION_DAMAGE} HP. Build farms or reduce your army.`, 'warning', faction));
+    if (!hit.length) continue;
+    for (const u of hit) events.push(...applyDamage(state, u, STARVATION_DAMAGE, 'starvation', null, 1));
+    events.push(...logFor(state, [faction], x.text(STARVATION_DAMAGE), 'warning', faction));
   }
   for (const r of RESOURCE_ORDER) if (fs.resources[r] < 0 && r !== 'research') fs.resources[r] = 0;
   return events;
@@ -549,7 +578,8 @@ export function progressConstruction(state: GameState, faction: FactionId): Game
     }
     if (!isFunctional(b)) continue;
     // A unit that appeared this turn (recruit, summon) has not worked a whole turn yet.
-    if (!u.acted && !u.justSpawned && workerOf(state, b) === u) events.push(...giveXp(state, u, workXpCategory(u, b), WORK_XP));
+    // An Arena's fighters learn from its drill below, not as workers.
+    if (!u.acted && !u.justSpawned && workerOf(state, b) === u && b.type !== 'training') events.push(...giveXp(state, u, workXpCategory(u, b), WORK_XP));
     const drill = buildingXpPerTurn(b, u);
     if (drill) events.push(...giveXp(state, u, drill.cat, drill.amount));
   }
@@ -594,10 +624,9 @@ export function captureBuildings(state: GameState, faction: FactionId): GameEven
 
 // ───────────────────────────── recruiting ─────────────────────────────
 
-export function presetCost(preset: PresetId): ResourceCost {
-  let cost: ResourceCost = { ...COMMONER_COST };
-  for (const it of PRESETS[preset].items) cost = addCost(cost, ITEMS[it].cost);
-  return cost;
+/** Recruit cost of `preset` for house `faction`: its commoner plus the preset's items, in its own resources (DESIGN §2). */
+export function presetCost(preset: PresetId, faction: FactionId = 'valen'): ResourceCost {
+  return recruitCost(faction, preset);
 }
 
 /** Spawn hex for a recruit at `site`: the site itself if free, else the first free passable neighbour that holds no building of someone else (a recruit never appears on, and so takes, a foreign building). */
@@ -624,7 +653,7 @@ export function canRecruit(state: GameState, site: BuildingInstanceId, preset: P
   if (!fs || !fs.alive) return 'Faction is gone';
   if (!PRESETS[preset]) return 'Unknown unit type';
   const def = BUILDINGS[b.type];
-  if (!def.recruits?.includes(preset)) return `A ${def.name} cannot train ${PRESETS[preset].name}s`;
+  if (!def.recruits?.includes(preset)) return `A ${buildingName(b.type, f)} cannot train ${PRESETS[preset].name}s`;
   if (!isFunctional(b)) return 'Still under construction';
   if (b.type === 'castle') {
     const leader = fs.leaderId != null ? state.units[String(fs.leaderId)] : undefined;
@@ -639,7 +668,7 @@ export function canRecruit(state: GameState, site: BuildingInstanceId, preset: P
       .filter((t): t is TechId => !!t))];
     return `Requires research: ${techs.length ? techs.map((t) => TECHS[t].name).join(', ') : 'unknown'}`;
   }
-  const cost = presetCost(preset);
+  const cost = presetCost(preset, f);
   if (!canAfford(fs.resources, cost)) return missing(fs.resources, cost);
   if (!recruitSpawnHex(state, b, preset)) return 'No free space next to the building';
   return null;
@@ -650,7 +679,7 @@ export function recruit(state: GameState, site: BuildingInstanceId, preset: Pres
   const f = b.owner!;
   const fs = state.factions[f];
   const pos = recruitSpawnHex(state, b, preset)!;
-  pay(fs.resources, presetCost(preset));
+  pay(fs.resources, presetCost(preset, f));
   const u = createUnit(state, { faction: f, pos, preset });
   u.mp = 0;
   u.acted = true;
@@ -683,7 +712,8 @@ export function canCraft(state: GameState, forge: BuildingInstanceId, item: Item
   if (!def) return 'Unknown item';
   if (!itemUnlocked(state, b.owner, item)) return `Requires research: ${def.unlock ? TECHS[def.unlock].name : 'unknown'}`;
   if (forgeCapacity(b) <= 0) return `This forge has crafted its ${b.level + 1} items this turn`;
-  if (!canAfford(fs.resources, def.cost)) return missing(fs.resources, def.cost);
+  const cost = itemCost(b.owner, item);
+  if (!canAfford(fs.resources, cost)) return missing(fs.resources, cost);
   return null;
 }
 
@@ -691,7 +721,7 @@ export function craft(state: GameState, forge: BuildingInstanceId, item: ItemId)
   const b = state.buildings[String(forge)];
   const f = b.owner!;
   const fs = state.factions[f];
-  pay(fs.resources, ITEMS[item].cost);
+  pay(fs.resources, itemCost(f, item));
   fs.stockpile[item] = (fs.stockpile[item] ?? 0) + 1;
   b.craftedThisTurn++;
   const events: GameEvent[] = [{ type: 'itemCrafted', faction: f, item }];

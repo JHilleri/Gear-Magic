@@ -9,7 +9,7 @@ import { ITEM_LIST } from '../data/items';
 import { PRESETS } from '../data/presets';
 import { ACTIVES, LEVEL_OPTION_BY_ID } from '../data/skills';
 import { currentFaction, isEnemy } from './state';
-import { canEquip, canUnequip, equip, unequip } from './units';
+import { canCustomize, canEquip, canUnequip, customize, equip, unequip } from './units';
 import { findPath, inEnemyZoc, moveCost } from './pathfinding';
 import { canResearch, setResearch } from './research';
 import { applyLevelOption } from './progression';
@@ -24,6 +24,7 @@ import { endTurn } from './turn';
 import { exploreRuins } from './neutral';
 import { giveXp, isHumanFaction, logEvent, unitOn } from './ruleutil';
 import { canGiveOrder, setOrder } from './orders';
+import { canEmpower, empower } from './elites';
 
 const fail = (error: string): ActionResult => ({ ok: false, error, events: [] });
 
@@ -132,6 +133,16 @@ export function validateAction(state: GameState, action: Action): string | null 
       if (typeof u === 'string') return u;
       return canGiveOrder(state, u, action.order);
     }
+    case 'empower': {
+      const u = ownUnit(state, action.unit, f);
+      if (typeof u === 'string') return u;
+      return canEmpower(state, u, action.elite);
+    }
+    case 'customize': {
+      const u = ownUnit(state, action.unit, f);
+      if (typeof u === 'string') return u;
+      return canCustomize(state, u, action);
+    }
   }
   return 'Unknown action';
 }
@@ -206,6 +217,12 @@ export function applyAction(state: GameState, action: Action): ActionResult {
       break;
     case 'order':
       events = setOrder(state.units[String(action.unit)], action.order);
+      break;
+    case 'empower':
+      events = empower(state, state.units[String(action.unit)], action.elite);
+      break;
+    case 'customize':
+      events = customize(state.units[String(action.unit)], action);
       break;
     case 'endTurn':
       events = endTurn(state, action.faction);

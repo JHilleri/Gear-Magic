@@ -245,7 +245,7 @@ describe('building cost escalation', () => {
     // Another house's farms and other types do not count.
     makeTestBuilding(s, 'farm', 'thorn', at(11, 9));
     expect(buildingCost(s, 'valen', 'farm')).toEqual({ wood: 12, gold: 9 });
-    expect(buildingCost(s, 'thorn', 'farm')).toEqual({ wood: 10, gold: 8 });
+    expect(buildingCost(s, 'thorn', 'farm')).toEqual({ wood: 10, honor: 8 }); // orcs pay honor where others pay gold
     expect(buildingCost(s, 'valen', 'house')).toEqual(BUILDINGS.house.cost);
   });
 
@@ -363,19 +363,19 @@ describe('production', () => {
     expect(buildingOutput(s, hf).food).toBe(3); // the human is never scaled
   });
 
-  it('faction income: buildings + items/passives − upkeep (leader free, undead half)', () => {
+  it('faction income: buildings + items/passives − upkeep (leader free; undead pay mana, never food)', () => {
     const { s } = base();
     makeTestBuilding(s, 'farm', 'valen', step(C, 1, 0));
     makeTestUnit(s, 'valen', C, { isLeader: true });
     makeTestUnit(s, 'valen', step(C, -1, 0), { items: ['wand', 'robe'], passives: ['scholar', 'harvester'] });
     makeTestUnit(s, 'valen', step(C, 0, -1));
     const inc = factionIncome(s, 'valen');
-    // castle 3g 1f 3r ×2 (the leader works it bare-handed) ×1.1 (leader on it); farm 3 ×1.1;
-    // mana 2; research +1; food +1 − 2
-    expect(inc.gold).toBeCloseTo(3 * 2 * 1.1);
+    // castle 3g 1f 3r ×2 (the leader works it bare-handed) ×1.1 (leader on it), gold and research
+    // also ×1.15 for the leader's 5 Intellect (3% a point); farm 3 ×1.1; mana 2; research +1; food +1 − 2
+    expect(inc.gold).toBeCloseTo(3 * 2 * 1.15 * 1.1);
     expect(inc.food).toBeCloseTo(1 * 2 * 1.1 + 3.3 + 1 - 2);
     expect(inc.mana).toBe(2);
-    expect(inc.research).toBeCloseTo(3 * 2 * 1.1 + 1);
+    expect(inc.research).toBeCloseTo(3 * 2 * 1.15 * 1.1 + 1);
 
     const s2 = makeTestState(10, 8) as GameState;
     s2.factions.ashen = { ...structuredClone(s2.factions.thorn), id: 'ashen' };
@@ -383,7 +383,9 @@ describe('production', () => {
     makeTestUnit(s2, 'ashen', at(2, 2));
     makeTestUnit(s2, 'ashen', at(3, 2));
     makeTestUnit(s2, 'ashen', at(4, 2), { monster: 'elemental', summonTurns: 5 });
-    expect(factionIncome(s2, 'ashen').food).toBe(-1);
+    // Two risen dead at 0.5 mana each; the summoned elemental is free; nobody eats.
+    expect(factionIncome(s2, 'ashen').mana).toBe(-1);
+    expect(factionIncome(s2, 'ashen').food).toBe(0);
   });
 
   it('applyProduction adds income, starves, clamps mana', () => {

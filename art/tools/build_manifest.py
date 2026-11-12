@@ -3,7 +3,7 @@
 
     python3 art/tools/build_manifest.py [--assets DIR] [--check]
 
-* models/{units,items,mounts,buildings,props,monsters}/<key>.glb -> {"file": ...}; units also get
+* models/{units,items,mounts,buildings,props,monsters,hair,heads}/<key>.glb -> {"file": ...}; units also get
   "height" and mounts "saddle" from the <key>.meta.json sidecars written by the Blender scripts.
   Files that are not valid GLB (missing 'glTF' magic, partial writes, *.tmp.glb) are skipped.
 * textures/**.{jpg,png,webp}: key = path below textures/ without extension, "terrain/" stripped
@@ -20,10 +20,15 @@ import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 IMG_EXT = (".jpg", ".jpeg", ".png", ".webp")
-MODEL_KINDS = ("units", "items", "mounts", "buildings", "props", "monsters")
+MODEL_KINDS = ("units", "items", "mounts", "buildings", "props", "monsters", "hair", "heads")
 
 EXPECTED = {
-    "units": [f"{r}_{b}" for r in ("human", "orc", "undead") for b in ("commoner", "light", "heavy", "robe", "leader")],
+    # humans: a man's and a woman's (bald) body per armour, and the leader; the others: one body per armour
+    "units": [f"{r}_{b}" for r in ("orc", "undead") for b in ("commoner", "light", "heavy", "robe", "leader")]
+             + ["human_leader"] + [f"human_{g}_{b}" for g in ("m", "f") for b in ("commoner", "padded", "light", "heavy", "robe")],
+    "hair": [f"hair_{s}" for s in ("short", "crop", "swept", "tail", "curly", "long", "braid", "bun", "bob", "ponytail", "pixie")]
+            + [f"beard_{s}" for s in ("short", "full", "moustache", "goatee", "long")],
+    "heads": [f"head_{g}{i}" for g in ("m", "f") for i in (1, 2, 3)],
     "items": ["tools", "sword", "spear", "axe", "bow", "staff", "wand", "shield_human", "shield_orc", "shield_undead"],
     "mounts": ["horse", "wolf", "nightmare"],
     "buildings": ["castle_valen", "castle_thorn", "castle_ashen", "house", "farm", "lumber", "quarry", "forge", "training",
@@ -56,6 +61,17 @@ def read_meta(path):
     return {}
 
 
+def neck_ring(ring):
+    """A neck ring of a sidecar (blender/headmap.py, Blender axes) in glTF head-frame axes:
+    centre (cx, cz) and radii (rx, rz) of the neck under the throat line, plus its skin colour if bare."""
+    if not isinstance(ring, dict) or not all(isinstance(ring.get(k), (int, float)) for k in ("cx", "cy", "rx", "ry")):
+        return None
+    out = {"cx": round(float(ring["cx"]), 4), "cz": round(float(-ring["cy"]), 4), "rx": round(float(ring["rx"]), 4), "rz": round(float(ring["ry"]), 4)}
+    if isinstance(ring.get("skin"), list) and len(ring["skin"]) == 3:
+        out["skin"] = [round(float(c), 4) for c in ring["skin"]]
+    return out
+
+
 def rel(assets, path):
     return os.path.relpath(path, assets).replace(os.sep, "/")
 
@@ -77,6 +93,34 @@ def scan_models(assets, kind):
         meta = read_meta(p)
         if kind == "units":
             entry["height"] = float(meta.get("height", 1.0))
+            # bald bodies (blender/head_frame.py): where hair and beard pieces go, and the eyes
+            head = meta.get("head")
+            if isinstance(head, dict) and all(isinstance(head.get(k), (int, float)) for k in ("x", "y", "z", "depth")):
+                entry["head"] = {k: round(float(head[k]), 5) for k in ("x", "y", "z", "depth")}
+                if isinstance(head.get("neck"), (int, float)):
+                    entry["head"]["neck"] = round(float(head["neck"]), 4)
+                ring = neck_ring(head.get("ring"))
+                if ring:
+                    entry["neckRing"] = ring
+            if isinstance(meta.get("skin"), list) and len(meta["skin"]) == 3:
+                entry["skin"] = [round(float(c), 4) for c in meta["skin"]]
+            eyes = meta.get("eyes")
+            if isinstance(eyes, list) and len(eyes) == 2 and all(isinstance(e, list) and len(e) == 3 for e in eyes):
+                entry["eyes"] = [[round(float(c), 5) for c in e] for e in eyes]
+                entry["eyeR"] = round(float(meta.get("eye_r", 0.0105)), 5)
+        if kind == "heads":
+            # faces (blender/fit_head.py): iris centres + radius, throat line, skin colour — head-frame units
+            eyes = meta.get("eyes")
+            if isinstance(eyes, list) and len(eyes) == 2 and all(isinstance(e, list) and len(e) == 3 for e in eyes):
+                entry["eyes"] = [[round(float(c), 4) for c in e] for e in eyes]
+                entry["eyeR"] = round(float(meta.get("eye_r", 0.034)), 4)
+            if isinstance(meta.get("neck"), (int, float)):
+                entry["neck"] = round(float(meta["neck"]), 4)
+            ring = neck_ring(meta.get("neck_ring"))
+            if ring:
+                entry["neckRing"] = ring
+            if isinstance(meta.get("skin"), list) and len(meta["skin"]) == 3:
+                entry["skin"] = [round(float(c), 4) for c in meta["skin"]]
         if kind == "mounts" and isinstance(meta.get("saddle"), list) and len(meta["saddle"]) == 3:
             entry["saddle"] = [round(float(x), 4) for x in meta["saddle"]]
         out[key] = entry

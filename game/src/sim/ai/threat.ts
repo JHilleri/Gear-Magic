@@ -4,8 +4,8 @@ import type { AttackKind, Hex, Unit } from '../../core/types';
 import { hexDistance, inBounds, neighbors, spiral, tileIndex } from '../../core/hex';
 import { reachable } from '../pathfinding';
 import { castleHexes, monsterMayStand } from '../neutral';
-import { attackProfile, tileDefense } from '../combat';
-import { effectiveStats, getAttackDefs, isMounted } from '../units';
+import { AIM_PER_DEX, attackProfile, DODGE_PER_DEX, tileDefense } from '../combat';
+import { effectiveStats, getAttackDefs, isMounted, statsOf } from '../units';
 import type { Ctx, Threat } from './types';
 import { armorOf, blockOf } from './util';
 import { augmentRank, marksmanMin } from '../../data/ranks';
@@ -104,7 +104,9 @@ function hitsAt(ctx: Ctx, u: Unit, h: Hex): { id: number; v: number }[] {
   const memo = ctx.hits.get(key);
   if (memo) return memo;
   const def = tileDefense(s, u, h);
-  const physHit = Math.max(0.1, Math.min(0.9, (100 - def) / 100));
+  // The victim dodges weapons by its Dexterity, a shooter aims by its own (combat buildProfile).
+  const dodge = DODGE_PER_DEX * Math.max(0, statsOf(u).dex);
+  const physHit = Math.max(0.1, Math.min(0.9, (100 - def) / 100 - dodge));
   const out: { id: number; v: number }[] = [];
   for (const e of ctx.enemies) {
     if (!s.units[String(e.id)]) continue;
@@ -116,6 +118,7 @@ function hitsAt(ctx: Ctx, u: Unit, h: Hex): { id: number; v: number }[] {
     for (const d of getAttackDefs(e)) {
       if (d.kind === 'melee' ? !inM : !inR) continue;
       let hit = d.kind === 'magic' ? 0.7 : physHit;
+      if (d.kind === 'ranged') hit = Math.min(0.9, hit + AIM_PER_DEX * Math.max(0, statsOf(e).dex));
       const marks = augmentRank(e, 'marksman');
       if (d.kind === 'ranged' && marks > 0) hit = Math.max(hit, marksmanMin(marks));
       const v = rawDamage(ctx, e, u, d.kind) * hit;

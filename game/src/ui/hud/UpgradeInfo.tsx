@@ -37,7 +37,7 @@ export function UpgradeDetails({ s, b, have, builder, stationed }: { s: GameStat
           <td>Work</td>
           <td>{fmt(points)} build points{rate > 0 ? ` (~${plural(Math.max(1, Math.ceil(points / rate)), 'turn')})` : ''}</td>
         </tr>
-        {Object.keys(def.output).length > 0 && (
+        {Object.keys(outNow).length > 0 && (
           <tr><td>Output</td><td><Output out={outNow} /> → <Output out={outNext} /></td></tr>
         )}
         {defNext > defNow && <tr><td>Defense</td><td>+{defNow}% → +{defNext}%</td></tr>}

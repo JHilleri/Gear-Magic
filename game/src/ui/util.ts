@@ -48,9 +48,10 @@ export function safe<T>(fn: () => T, fallback: T): T {
 }
 
 // ───────────────────────────── state queries ─────────────────────────────
-export const RESOURCE_ORDER: ResourceId[] = ['gold', 'food', 'wood', 'stone', 'iron', 'crystal', 'mana', 'research'];
+export const RESOURCE_ORDER: ResourceId[] = ['gold', 'honor', 'food', 'wood', 'stone', 'iron', 'crystal', 'mana', 'research', 'dark'];
 export const RESOURCE_NAMES: Record<ResourceId, string> = {
   gold: 'Gold', food: 'Food', wood: 'Wood', stone: 'Stone', iron: 'Iron', crystal: 'Crystal', mana: 'Mana', research: 'Research',
+  honor: 'Honor', dark: 'Dark energy',
 };
 export const XP_CATS: readonly XpCategory[] = XP_CATEGORIES;
 export const XP_NAMES: Record<XpCategory, string> = XP_CATEGORY_NAMES;

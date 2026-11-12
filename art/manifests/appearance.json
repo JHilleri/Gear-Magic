@@ -1,0 +1,322 @@
+[
+ {
+  "id": "human_m_commoner",
+  "cat": "src_units",
+  "alpha": true,
+  "seed": 301,
+  "w": 896,
+  "h": 1152,
+  "prompt": "Full body stylized fantasy strategy game 3D character model with slightly chunky heroic proportions, standing in a strict T-pose with both arms straight out horizontally, palms down, open empty hands, legs slightly apart, front view at eye level, symmetrical, hand-painted PBR textures of a young human peasant man with a completely bald shaved head and a clean-shaven face, wearing a simple tan linen tunic with a rope belt, grey wool trousers and brown leather boots, centered with generous empty margins, on a plain flat light grey background, soft even studio lighting, clean 3D render",
+  "negative": "text, watermark, logo, cropped, cut off, multiple objects, scenery, landscape, ground plane, shadow, frame, border, weapon, holding objects, shield, sword, staff, bow, cape covering arms, extra limbs, sitting, hair, beard, stubble, moustache, hat, helmet, hood up"
+ },
+ {
+  "id": "human_f_commoner",
+  "cat": "src_units",
+  "alpha": true,
+  "seed": 302,
+  "w": 896,
+  "h": 1152,
+  "prompt": "Full body stylized fantasy strategy game 3D character model with slightly chunky heroic proportions, standing in a strict T-pose with both arms straight out horizontally, palms down, open empty hands, legs slightly apart, front view at eye level, symmetrical, hand-painted PBR textures of a young human peasant woman with a completely bald shaved head and a friendly face, wearing a simple tan linen dress tunic with a rope belt, grey wool trousers and brown leather boots, centered with generous empty margins, on a plain flat light grey background, soft even studio lighting, clean 3D render",
+  "negative": "text, watermark, logo, cropped, cut off, multiple objects, scenery, landscape, ground plane, shadow, frame, border, weapon, holding objects, shield, sword, staff, bow, cape covering arms, extra limbs, sitting, hair, beard, stubble, moustache, hat, helmet, hood up"
+ },
+ {
+  "id": "human_m_padded",
+  "cat": "src_units",
+  "alpha": true,
+  "seed": 303,
+  "w": 896,
+  "h": 1152,
+  "prompt": "Full body stylized fantasy strategy game 3D character model with slightly chunky heroic proportions, standing in a strict T-pose with both arms straight out horizontally, palms down, open empty hands, legs slightly apart, front view at eye level, symmetrical, hand-painted PBR textures of a young human militia soldier man with a completely bald shaved head and a clean-shaven face, wearing a thick quilted padded gambeson in faded royal blue and cream with stitched diamond quilting, a brown leather belt, linen trousers and leather boots, centered with generous empty margins, on a plain flat light grey background, soft even studio lighting, clean 3D render",
+  "negative": "text, watermark, logo, cropped, cut off, multiple objects, scenery, landscape, ground plane, shadow, frame, border, weapon, holding objects, shield, sword, staff, bow, cape covering arms, extra limbs, sitting, hair, beard, stubble, moustache, hat, helmet, hood up"
+ },
+ {
+  "id": "human_f_padded",
+  "cat": "src_units",
+  "alpha": true,
+  "seed": 304,
+  "w": 896,
+  "h": 1152,
+  "prompt": "Full body stylized fantasy strategy game 3D character model with slightly chunky heroic proportions, standing in a strict T-pose with both arms straight out horizontally, palms down, open empty hands, legs slightly apart, front view at eye level, symmetrical, hand-painted PBR textures of a young human militia soldier woman with a completely bald shaved head and a friendly face, wearing a fitted thick quilted padded gambeson in faded royal blue and cream with stitched diamond quilting, a brown leather belt, linen trousers and leather boots, centered with generous empty margins, on a plain flat light grey background, soft even studio lighting, clean 3D render",
+  "negative": "text, watermark, logo, cropped, cut off, multiple objects, scenery, landscape, ground plane, shadow, frame, border, weapon, holding objects, shield, sword, staff, bow, cape covering arms, extra limbs, sitting, hair, beard, stubble, moustache, hat, helmet, hood up"
+ },
+ {
+  "id": "human_m_light",
+  "cat": "src_units",
+  "alpha": true,
+  "seed": 305,
+  "w": 896,
+  "h": 1152,
+  "prompt": "Full body stylized fantasy strategy game 3D character model with slightly chunky heroic proportions, standing in a strict T-pose with both arms straight out horizontally, palms down, open empty hands, legs slightly apart, front view at eye level, symmetrical, hand-painted PBR textures of a young human ranger man with a completely bald shaved head and a clean-shaven face, wearing brown leather armor with a forest green hooded mantle down on the shoulders, leather bracers and tall boots, centered with generous empty margins, on a plain flat light grey background, soft even studio lighting, clean 3D render",
+  "negative": "text, watermark, logo, cropped, cut off, multiple objects, scenery, landscape, ground plane, shadow, frame, border, weapon, holding objects, shield, sword, staff, bow, cape covering arms, extra limbs, sitting, hair, beard, stubble, moustache, hat, helmet, hood up"
+ },
+ {
+  "id": "human_f_light",
+  "cat": "src_units",
+  "alpha": true,
+  "seed": 306,
+  "w": 896,
+  "h": 1152,
+  "prompt": "Full body stylized fantasy strategy game 3D character model with slightly chunky heroic proportions, standing in a strict T-pose with both arms straight out horizontally, palms down, open empty hands, legs slightly apart, front view at eye level, symmetrical, hand-painted PBR textures of a young human ranger woman with a completely bald shaved head and a friendly face, wearing fitted brown leather armor with a forest green hooded mantle down on the shoulders, leather bracers and tall boots, centered with generous empty margins, on a plain flat light grey background, soft even studio lighting, clean 3D render",
+  "negative": "text, watermark, logo, cropped, cut off, multiple objects, scenery, landscape, ground plane, shadow, frame, border, weapon, holding objects, shield, sword, staff, bow, cape covering arms, extra limbs, sitting, hair, beard, stubble, moustache, hat, helmet, hood up"
+ },
+ {
+  "id": "human_m_heavy",
+  "cat": "src_units",
+  "alpha": true,
+  "seed": 307,
+  "w": 896,
+  "h": 1152,
+  "prompt": "Full body stylized fantasy strategy game 3D character model with slightly chunky heroic proportions, standing in a strict T-pose with both arms straight out horizontally, palms down, open empty hands, legs slightly apart, front view at eye level, symmetrical, hand-painted PBR textures of a young human knight man with a completely bald shaved head and a clean-shaven face, in polished full steel plate armor with a royal blue tabard trimmed with gold, bare head with no helmet, centered with generous empty margins, on a plain flat light grey background, soft even studio lighting, clean 3D render",
+  "negative": "text, watermark, logo, cropped, cut off, multiple objects, scenery, landscape, ground plane, shadow, frame, border, weapon, holding objects, shield, sword, staff, bow, cape covering arms, extra limbs, sitting, hair, beard, stubble, moustache, hat, helmet, hood up"
+ },
+ {
+  "id": "human_f_heavy",
+  "cat": "src_units",
+  "alpha": true,
+  "seed": 308,
+  "w": 896,
+  "h": 1152,
+  "prompt": "Full body stylized fantasy strategy game 3D character model with slightly chunky heroic proportions, standing in a strict T-pose with both arms straight out horizontally, palms down, open empty hands, legs slightly apart, front view at eye level, symmetrical, hand-painted PBR textures of a young human knight woman with a completely bald shaved head and a friendly face, in polished full steel plate armor shaped for a woman with a royal blue tabard trimmed with gold, bare head with no helmet, centered with generous empty margins, on a plain flat light grey background, soft even studio lighting, clean 3D render",
+  "negative": "text, watermark, logo, cropped, cut off, multiple objects, scenery, landscape, ground plane, shadow, frame, border, weapon, holding objects, shield, sword, staff, bow, cape covering arms, extra limbs, sitting, hair, beard, stubble, moustache, hat, helmet, hood up"
+ },
+ {
+  "id": "human_m_robe",
+  "cat": "src_units",
+  "alpha": true,
+  "seed": 309,
+  "w": 896,
+  "h": 1152,
+  "prompt": "Full body stylized fantasy strategy game 3D character model with slightly chunky heroic proportions, standing in a strict T-pose with both arms straight out horizontally, palms down, open empty hands, legs slightly apart, front view at eye level, symmetrical, hand-painted PBR textures of a young human battle mage man with a completely bald shaved head and a clean-shaven face, in flowing royal blue robes with gold embroidery and a wide leather belt with pouches, no hood, centered with generous empty margins, on a plain flat light grey background, soft even studio lighting, clean 3D render",
+  "negative": "text, watermark, logo, cropped, cut off, multiple objects, scenery, landscape, ground plane, shadow, frame, border, weapon, holding objects, shield, sword, staff, bow, cape covering arms, extra limbs, sitting, hair, beard, stubble, moustache, hat, helmet, hood up"
+ },
+ {
+  "id": "human_f_robe",
+  "cat": "src_units",
+  "alpha": true,
+  "seed": 310,
+  "w": 896,
+  "h": 1152,
+  "prompt": "Full body stylized fantasy strategy game 3D character model with slightly chunky heroic proportions, standing in a strict T-pose with both arms straight out horizontally, palms down, open empty hands, legs slightly apart, front view at eye level, symmetrical, hand-painted PBR textures of a young human battle mage woman with a completely bald shaved head and a friendly face, in flowing royal blue robes with gold embroidery and a wide leather belt with pouches, no hood, centered with generous empty margins, on a plain flat light grey background, soft even studio lighting, clean 3D render",
+  "negative": "text, watermark, logo, cropped, cut off, multiple objects, scenery, landscape, ground plane, shadow, frame, border, weapon, holding objects, shield, sword, staff, bow, cape covering arms, extra limbs, sitting, hair, beard, stubble, moustache, hat, helmet, hood up"
+ },
+ {
+  "id": "hair_short",
+  "cat": "src_hair",
+  "alpha": true,
+  "seed": 311,
+  "w": 1024,
+  "h": 1024,
+  "prompt": "Stylized fantasy strategy game 3D asset, hand-painted textures: a smooth featureless bright pure green mannequin head with no face, no eyes, no nose, no mouth, wearing a wig of short tousled men's hair, the hair is pale platinum blonde, front view at eye level, symmetrical, head only, centered with generous empty margins, on a plain flat light grey background, soft even studio lighting, clean 3D render",
+  "negative": "text, watermark, logo, cropped, cut off, multiple objects, scenery, landscape, ground plane, shadow, frame, border, face, eyes, lips, eyebrows, skin, shoulders, body, clothes, hat, ribbon, jewelry"
+ },
+ {
+  "id": "hair_crop",
+  "cat": "src_hair",
+  "alpha": true,
+  "seed": 312,
+  "w": 1024,
+  "h": 1024,
+  "prompt": "Stylized fantasy strategy game 3D asset, hand-painted textures: a smooth featureless bright pure green mannequin head with no face, no eyes, no nose, no mouth, wearing a wig of very short cropped men's hair, a close military buzz cut covering the scalp, the hair is pale platinum blonde, front view at eye level, symmetrical, head only, centered with generous empty margins, on a plain flat light grey background, soft even studio lighting, clean 3D render",
+  "negative": "text, watermark, logo, cropped, cut off, multiple objects, scenery, landscape, ground plane, shadow, frame, border, face, eyes, lips, eyebrows, skin, shoulders, body, clothes, hat, ribbon, jewelry"
+ },
+ {
+  "id": "hair_swept",
+  "cat": "src_hair",
+  "alpha": true,
+  "seed": 313,
+  "w": 1024,
+  "h": 1024,
+  "prompt": "Stylized fantasy strategy game 3D asset, hand-painted textures: a smooth featureless bright pure green mannequin head with no face, no eyes, no nose, no mouth, wearing a wig of men's shoulder-length hair swept back from the forehead, the hair is pale platinum blonde, front view at eye level, symmetrical, head only, centered with generous empty margins, on a plain flat light grey background, soft even studio lighting, clean 3D render",
+  "negative": "text, watermark, logo, cropped, cut off, multiple objects, scenery, landscape, ground plane, shadow, frame, border, face, eyes, lips, eyebrows, skin, shoulders, body, clothes, hat, ribbon, jewelry"
+ },
+ {
+  "id": "hair_tail",
+  "cat": "src_hair",
+  "alpha": true,
+  "seed": 314,
+  "w": 1024,
+  "h": 1024,
+  "prompt": "Stylized fantasy strategy game 3D asset, hand-painted textures: a smooth featureless bright pure green mannequin head with no face, no eyes, no nose, no mouth, wearing a wig of men's hair pulled back tight into a short low ponytail at the nape, the hair is pale platinum blonde, front view at eye level, symmetrical, head only, centered with generous empty margins, on a plain flat light grey background, soft even studio lighting, clean 3D render",
+  "negative": "text, watermark, logo, cropped, cut off, multiple objects, scenery, landscape, ground plane, shadow, frame, border, face, eyes, lips, eyebrows, skin, shoulders, body, clothes, hat, ribbon, jewelry"
+ },
+ {
+  "id": "hair_curly",
+  "cat": "src_hair",
+  "alpha": true,
+  "seed": 315,
+  "w": 1024,
+  "h": 1024,
+  "prompt": "Stylized fantasy strategy game 3D asset, hand-painted textures: a smooth featureless bright pure green mannequin head with no face, no eyes, no nose, no mouth, wearing a wig of thick short curly hair, the hair is pale platinum blonde, front view at eye level, symmetrical, head only, centered with generous empty margins, on a plain flat light grey background, soft even studio lighting, clean 3D render",
+  "negative": "text, watermark, logo, cropped, cut off, multiple objects, scenery, landscape, ground plane, shadow, frame, border, face, eyes, lips, eyebrows, skin, shoulders, body, clothes, hat, ribbon, jewelry"
+ },
+ {
+  "id": "hair_long",
+  "cat": "src_hair",
+  "alpha": true,
+  "seed": 316,
+  "w": 1024,
+  "h": 1024,
+  "prompt": "Stylized fantasy strategy game 3D asset, hand-painted textures: a smooth featureless bright pure green mannequin head with no face, no eyes, no nose, no mouth, wearing a wig of long wavy women's hair falling to the shoulders, the hair is pale platinum blonde, front view at eye level, symmetrical, head only, centered with generous empty margins, on a plain flat light grey background, soft even studio lighting, clean 3D render",
+  "negative": "text, watermark, logo, cropped, cut off, multiple objects, scenery, landscape, ground plane, shadow, frame, border, face, eyes, lips, eyebrows, skin, shoulders, body, clothes, hat, ribbon, jewelry"
+ },
+ {
+  "id": "hair_braid",
+  "cat": "src_hair",
+  "alpha": true,
+  "seed": 317,
+  "w": 1024,
+  "h": 1024,
+  "prompt": "Stylized fantasy strategy game 3D asset, hand-painted textures: a smooth featureless bright pure green mannequin head with no face, no eyes, no nose, no mouth, wearing a wig of women's hair pulled back into one long thick braid hanging down the back, the hair is pale platinum blonde, front view at eye level, symmetrical, head only, centered with generous empty margins, on a plain flat light grey background, soft even studio lighting, clean 3D render",
+  "negative": "text, watermark, logo, cropped, cut off, multiple objects, scenery, landscape, ground plane, shadow, frame, border, face, eyes, lips, eyebrows, skin, shoulders, body, clothes, hat, ribbon, jewelry"
+ },
+ {
+  "id": "hair_bun",
+  "cat": "src_hair",
+  "alpha": true,
+  "seed": 318,
+  "w": 1024,
+  "h": 1024,
+  "prompt": "Stylized fantasy strategy game 3D asset, hand-painted textures: a smooth featureless bright pure green mannequin head with no face, no eyes, no nose, no mouth, wearing a wig of women's hair gathered up into a neat round bun at the back of the head, the hair is pale platinum blonde, front view at eye level, symmetrical, head only, centered with generous empty margins, on a plain flat light grey background, soft even studio lighting, clean 3D render",
+  "negative": "text, watermark, logo, cropped, cut off, multiple objects, scenery, landscape, ground plane, shadow, frame, border, face, eyes, lips, eyebrows, skin, shoulders, body, clothes, hat, ribbon, jewelry"
+ },
+ {
+  "id": "hair_bob",
+  "cat": "src_hair",
+  "alpha": true,
+  "seed": 319,
+  "w": 1024,
+  "h": 1024,
+  "prompt": "Stylized fantasy strategy game 3D asset, hand-painted textures: a smooth featureless bright pure green mannequin head with no face, no eyes, no nose, no mouth, wearing a wig of a women's chin-length bob haircut with a fringe, the hair is pale platinum blonde, front view at eye level, symmetrical, head only, centered with generous empty margins, on a plain flat light grey background, soft even studio lighting, clean 3D render",
+  "negative": "text, watermark, logo, cropped, cut off, multiple objects, scenery, landscape, ground plane, shadow, frame, border, face, eyes, lips, eyebrows, skin, shoulders, body, clothes, hat, ribbon, jewelry"
+ },
+ {
+  "id": "hair_ponytail",
+  "cat": "src_hair",
+  "alpha": true,
+  "seed": 320,
+  "w": 1024,
+  "h": 1024,
+  "prompt": "Stylized fantasy strategy game 3D asset, hand-painted textures: a smooth featureless bright pure green mannequin head with no face, no eyes, no nose, no mouth, wearing a wig of women's hair pulled back into a high ponytail, the hair is pale platinum blonde, front view at eye level, symmetrical, head only, centered with generous empty margins, on a plain flat light grey background, soft even studio lighting, clean 3D render",
+  "negative": "text, watermark, logo, cropped, cut off, multiple objects, scenery, landscape, ground plane, shadow, frame, border, face, eyes, lips, eyebrows, skin, shoulders, body, clothes, hat, ribbon, jewelry"
+ },
+ {
+  "id": "hair_pixie",
+  "cat": "src_hair",
+  "alpha": true,
+  "seed": 321,
+  "w": 1024,
+  "h": 1024,
+  "prompt": "Stylized fantasy strategy game 3D asset, hand-painted textures: a smooth featureless bright pure green mannequin head with no face, no eyes, no nose, no mouth, wearing a wig of a women's short pixie haircut, the hair is pale platinum blonde, front view at eye level, symmetrical, head only, centered with generous empty margins, on a plain flat light grey background, soft even studio lighting, clean 3D render",
+  "negative": "text, watermark, logo, cropped, cut off, multiple objects, scenery, landscape, ground plane, shadow, frame, border, face, eyes, lips, eyebrows, skin, shoulders, body, clothes, hat, ribbon, jewelry"
+ },
+ {
+  "id": "beard_short",
+  "cat": "src_hair",
+  "alpha": true,
+  "seed": 322,
+  "w": 1024,
+  "h": 1024,
+  "prompt": "Stylized fantasy strategy game 3D asset, hand-painted textures: a smooth featureless bright pure green mannequin head with no face, no eyes, no nose, no mouth, bald smooth green scalp on top, with a glued-on short trimmed boxed beard and moustache made of pale platinum blonde hair along the jaw and chin, the hair is pale platinum blonde, front view at eye level, symmetrical, head only, centered with generous empty margins, on a plain flat light grey background, soft even studio lighting, clean 3D render",
+  "negative": "text, watermark, logo, cropped, cut off, multiple objects, scenery, landscape, ground plane, shadow, frame, border, face, eyes, lips, eyebrows, skin, shoulders, body, clothes, hat, ribbon, jewelry"
+ },
+ {
+  "id": "beard_full",
+  "cat": "src_hair",
+  "alpha": true,
+  "seed": 323,
+  "w": 1024,
+  "h": 1024,
+  "prompt": "Stylized fantasy strategy game 3D asset, hand-painted textures: a smooth featureless bright pure green mannequin head with no face, no eyes, no nose, no mouth, bald smooth green scalp on top, with a glued-on thick full beard and moustache made of pale platinum blonde hair covering the jaw and chin, the hair is pale platinum blonde, front view at eye level, symmetrical, head only, centered with generous empty margins, on a plain flat light grey background, soft even studio lighting, clean 3D render",
+  "negative": "text, watermark, logo, cropped, cut off, multiple objects, scenery, landscape, ground plane, shadow, frame, border, face, eyes, lips, eyebrows, skin, shoulders, body, clothes, hat, ribbon, jewelry"
+ },
+ {
+  "id": "beard_moustache",
+  "cat": "src_hair",
+  "alpha": true,
+  "seed": 324,
+  "w": 1024,
+  "h": 1024,
+  "prompt": "Stylized fantasy strategy game 3D asset, hand-painted textures: a smooth featureless bright pure green mannequin head with no face, no eyes, no nose, no mouth, bald smooth green scalp on top, with only a glued-on thick handlebar moustache made of pale platinum blonde hair under the nose, bare green chin, the hair is pale platinum blonde, front view at eye level, symmetrical, head only, centered with generous empty margins, on a plain flat light grey background, soft even studio lighting, clean 3D render",
+  "negative": "text, watermark, logo, cropped, cut off, multiple objects, scenery, landscape, ground plane, shadow, frame, border, face, eyes, lips, eyebrows, skin, shoulders, body, clothes, hat, ribbon, jewelry"
+ },
+ {
+  "id": "beard_goatee",
+  "cat": "src_hair",
+  "alpha": true,
+  "seed": 325,
+  "w": 1024,
+  "h": 1024,
+  "prompt": "Stylized fantasy strategy game 3D asset, hand-painted textures: a smooth featureless bright pure green mannequin head with no face, no eyes, no nose, no mouth, bald smooth green scalp on top, with only a glued-on pointed goatee and moustache made of pale platinum blonde hair around the mouth and chin, bare green cheeks, the hair is pale platinum blonde, front view at eye level, symmetrical, head only, centered with generous empty margins, on a plain flat light grey background, soft even studio lighting, clean 3D render",
+  "negative": "text, watermark, logo, cropped, cut off, multiple objects, scenery, landscape, ground plane, shadow, frame, border, face, eyes, lips, eyebrows, skin, shoulders, body, clothes, hat, ribbon, jewelry"
+ },
+ {
+  "id": "beard_long",
+  "cat": "src_hair",
+  "alpha": true,
+  "seed": 326,
+  "w": 1024,
+  "h": 1024,
+  "prompt": "Stylized fantasy strategy game 3D asset, hand-painted textures: a smooth featureless bright pure green mannequin head with no face, no eyes, no nose, no mouth, bald smooth green scalp on top, with a glued-on very long thick beard and moustache made of pale platinum blonde hair hanging down to the chest, the hair is pale platinum blonde, front view at eye level, symmetrical, head only, centered with generous empty margins, on a plain flat light grey background, soft even studio lighting, clean 3D render",
+  "negative": "text, watermark, logo, cropped, cut off, multiple objects, scenery, landscape, ground plane, shadow, frame, border, face, eyes, lips, eyebrows, skin, shoulders, body, clothes, hat, ribbon, jewelry"
+ },
+ {
+  "id": "head_m1",
+  "cat": "src_heads",
+  "alpha": true,
+  "seed": 327,
+  "w": 1024,
+  "h": 1024,
+  "prompt": "Stylized fantasy strategy game 3D character head with slightly chunky heroic proportions, hand-painted PBR textures: the head and bare neck of a young man with a square jaw and a straight nose, fair skin, a completely bald shaved head, clean-shaven, neutral calm expression, closed mouth, pale grey eyes looking straight ahead, thin light brown eyebrows, front view at eye level, symmetrical, head and neck only, centered with generous empty margins, on a plain flat light grey background, soft even studio lighting, clean 3D render",
+  "negative": "text, watermark, logo, cropped, cut off, multiple objects, scenery, landscape, ground plane, shadow, frame, border, hair, beard, stubble, moustache, hat, helmet, hood, shoulders, clothes, collar, jewelry, earrings, makeup, teeth, open mouth, smile"
+ },
+ {
+  "id": "head_m2",
+  "cat": "src_heads",
+  "alpha": true,
+  "seed": 328,
+  "w": 1024,
+  "h": 1024,
+  "prompt": "Stylized fantasy strategy game 3D character head with slightly chunky heroic proportions, hand-painted PBR textures: the head and bare neck of a weathered middle-aged man with a broad face, a heavy brow and a slightly crooked nose, fair skin, a completely bald shaved head, clean-shaven, neutral calm expression, closed mouth, pale grey eyes looking straight ahead, thin light brown eyebrows, front view at eye level, symmetrical, head and neck only, centered with generous empty margins, on a plain flat light grey background, soft even studio lighting, clean 3D render",
+  "negative": "text, watermark, logo, cropped, cut off, multiple objects, scenery, landscape, ground plane, shadow, frame, border, hair, beard, stubble, moustache, hat, helmet, hood, shoulders, clothes, collar, jewelry, earrings, makeup, teeth, open mouth, smile"
+ },
+ {
+  "id": "head_m3",
+  "cat": "src_heads",
+  "alpha": true,
+  "seed": 329,
+  "w": 1024,
+  "h": 1024,
+  "prompt": "Stylized fantasy strategy game 3D character head with slightly chunky heroic proportions, hand-painted PBR textures: the head and bare neck of a lean young man with a narrow face, sharp cheekbones and a long nose, fair skin, a completely bald shaved head, clean-shaven, neutral calm expression, closed mouth, pale grey eyes looking straight ahead, thin light brown eyebrows, front view at eye level, symmetrical, head and neck only, centered with generous empty margins, on a plain flat light grey background, soft even studio lighting, clean 3D render",
+  "negative": "text, watermark, logo, cropped, cut off, multiple objects, scenery, landscape, ground plane, shadow, frame, border, hair, beard, stubble, moustache, hat, helmet, hood, shoulders, clothes, collar, jewelry, earrings, makeup, teeth, open mouth, smile"
+ },
+ {
+  "id": "head_f1",
+  "cat": "src_heads",
+  "alpha": true,
+  "seed": 330,
+  "w": 1024,
+  "h": 1024,
+  "prompt": "Stylized fantasy strategy game 3D character head with slightly chunky heroic proportions, hand-painted PBR textures: the head and bare neck of a young woman with a soft oval face and full cheeks, fair skin, a completely bald shaved head, clean-shaven, neutral calm expression, closed mouth, pale grey eyes looking straight ahead, thin light brown eyebrows, front view at eye level, symmetrical, head and neck only, centered with generous empty margins, on a plain flat light grey background, soft even studio lighting, clean 3D render",
+  "negative": "text, watermark, logo, cropped, cut off, multiple objects, scenery, landscape, ground plane, shadow, frame, border, hair, beard, stubble, moustache, hat, helmet, hood, shoulders, clothes, collar, jewelry, earrings, makeup, teeth, open mouth, smile"
+ },
+ {
+  "id": "head_f2",
+  "cat": "src_heads",
+  "alpha": true,
+  "seed": 331,
+  "w": 1024,
+  "h": 1024,
+  "prompt": "Stylized fantasy strategy game 3D character head with slightly chunky heroic proportions, hand-painted PBR textures: the head and bare neck of a mature woman with an angular face, high cheekbones and a firm jaw, fair skin, a completely bald shaved head, clean-shaven, neutral calm expression, closed mouth, pale grey eyes looking straight ahead, thin light brown eyebrows, front view at eye level, symmetrical, head and neck only, centered with generous empty margins, on a plain flat light grey background, soft even studio lighting, clean 3D render",
+  "negative": "text, watermark, logo, cropped, cut off, multiple objects, scenery, landscape, ground plane, shadow, frame, border, hair, beard, stubble, moustache, hat, helmet, hood, shoulders, clothes, collar, jewelry, earrings, makeup, teeth, open mouth, smile"
+ },
+ {
+  "id": "head_f3",
+  "cat": "src_heads",
+  "alpha": true,
+  "seed": 332,
+  "w": 1024,
+  "h": 1024,
+  "prompt": "Stylized fantasy strategy game 3D character head with slightly chunky heroic proportions, hand-painted PBR textures: the head and bare neck of a young woman with a heart-shaped face, a small upturned nose and light freckles, fair skin, a completely bald shaved head, clean-shaven, neutral calm expression, closed mouth, pale grey eyes looking straight ahead, thin light brown eyebrows, front view at eye level, symmetrical, head and neck only, centered with generous empty margins, on a plain flat light grey background, soft even studio lighting, clean 3D render",
+  "negative": "text, watermark, logo, cropped, cut off, multiple objects, scenery, landscape, ground plane, shadow, frame, border, hair, beard, stubble, moustache, hat, helmet, hood, shoulders, clothes, collar, jewelry, earrings, makeup, teeth, open mouth, smile"
+ }
+]

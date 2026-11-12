@@ -1,6 +1,6 @@
 // Unit creation, stats, equipment. See DESIGN §4.
 import type {
-  AttackDef, AttackKind, BodyVariant, Buff, Building, EquipSlot, FactionId, GameEvent, GameState, Hex, ItemId, MonsterKind, PresetId, RaceId,
+  Appearance, AttackDef, AttackKind, BodyVariant, Buff, Building, EliteId, EquipSlot, FactionId, GameEvent, GameState, Gender, Hex, ItemId, MonsterKind, PresetId, RaceId,
   ResourceCost, StatBreakdown, StatContribution, Unit, UnitStats,
 } from '../core/types';
 import { FACTIONS, MONSTERS } from '../data/factions';
@@ -10,9 +10,11 @@ import { PRESETS, COMMONER_STATS, LEADER_STATS } from '../data/presets';
 import { TECHS } from '../data/research';
 import { ACTIVES, LEVEL_OPTION_BY_ID, PASSIVES, zeroXp } from '../data/skills';
 import { augmentRank, extraMov, ironskinBlock, rankedName } from '../data/ranks';
+import { ELITES } from '../data/elites';
 import { SPELLS } from '../data/spells';
 import { tileIndex } from '../core/hex';
-import { rand } from '../core/rng';
+import { Rng, rand } from '../core/rng';
+import { NAME_MAX, appearanceError, hasAppearance, rollAppearance, rollGender } from '../data/appearance';
 import { buildingAt, isOperational, newId } from './state';
 import { itemUnlocked } from './research';
 
@@ -23,6 +25,8 @@ export interface CreateUnitOpts {
   isLeader?: boolean;
   preset?: PresetId;      // equips the preset's items (no cost paid here)
   monster?: MonsterKind;
+  /** Humans: force the gender instead of rolling it. */
+  gender?: Gender;
   name?: string;
   level?: number;
 }
@@ -34,12 +38,69 @@ const STAT_KEYS: (keyof UnitStats)[] = ['maxHp', 'str', 'dex', 'int', 'armor', '
 const ROMAN = ['II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'];
 
 /**
- * Is a unit created with this race and first body female? Human recruits in the light body
- * (leather: archers, spearmen) are drawn and portrayed as women (the `human_light` model), so they
- * get a woman's name; everyone else is male. Decided once, at creation (DESIGN §4.9).
+ * Uniform [0,1) draws for one unit's looks, from the game seed and the unit id alone: the game's
+ * own RNG is not advanced, so who a recruit is never changes what the dice do next.
  */
-export function isFemaleAtCreation(race: RaceId, body: BodyVariant): boolean {
-  return race === 'human' && body === 'light';
+export function appearanceRng(seed: number, id: number): () => number {
+  const rng = new Rng((Math.imul(seed | 0, 0x9e3779b1) ^ Math.imul(id | 0, 0x85ebca6b) ^ 0x5bd1e995) | 0);
+  rng.next();
+  return () => rng.next();
+}
+
+/**
+ * Give a unit of a gendered race (humans) its gender and looks when it has none: a leader takes
+ * its house's `leaderGender` and no looks (its own model); `gender` forces the roll's outcome.
+ * Also the migration of saves from before units had a gender (state.ts), which passes the gender
+ * the unit's name already implies.
+ */
+export function assignAppearance(seed: number, u: Unit, gender?: Gender): void {
+  if (u.monster || !hasAppearance(u.race)) return;
+  const next = appearanceRng(seed, u.id);
+  const rolled = rollGender(next());
+  if (u.isLeader) { u.gender ??= gender ?? FACTIONS[u.faction]?.leaderGender ?? rolled; return; }
+  u.gender ??= gender ?? rolled;
+  const look = rollAppearance(u.gender, next);
+  u.look ??= look;
+  // (faces came after the first looks: an older unit keeps its looks and gets the face it would have rolled)
+  if (!Number.isInteger(u.look.face)) u.look.face = look.face;
+}
+
+/** What a 'customize' action may change: any of the unit's name, gender and looks. */
+export interface Customization { name?: string; gender?: Gender; look?: Appearance }
+
+/**
+ * Null if `u` can be given this identity, else a reason. Only units that have looks (humans, not
+ * the leader, DESIGN §4.9); the looks must suit the gender the unit ends up with; a name is 1 to
+ * NAME_MAX characters and no other living unit of the house bears it.
+ */
+export function canCustomize(state: GameState, u: Unit, c: Customization): string | null {
+  if (u.monster || !hasAppearance(u.race)) return 'Only humans can change their looks';
+  if (u.isLeader) return `${u.name} keeps their own looks`;
+  if (c.gender !== undefined && c.gender !== 'male' && c.gender !== 'female') return 'Unknown gender';
+  const gender = c.gender ?? u.gender;
+  if (!gender) return 'This unit has no looks to change';
+  const look = c.look ?? u.look;
+  if (!look) return 'This unit has no looks to change';
+  const err = appearanceError(gender, look);
+  if (err) return err;
+  if (c.name !== undefined) {
+    const name = typeof c.name === 'string' ? c.name.trim() : '';
+    if (!name) return 'A unit needs a name';
+    if (name.length > NAME_MAX) return `A name has at most ${NAME_MAX} characters`;
+    for (const k in state.units) {
+      const o = state.units[k];
+      if (o.id !== u.id && o.faction === u.faction && o.name.toLowerCase() === name.toLowerCase()) return `${o.name} already bears that name`;
+    }
+  }
+  return null;
+}
+
+/** Apply a customisation (validated by canCustomize). Changes no stat and draws no dice. */
+export function customize(u: Unit, c: Customization): GameEvent[] {
+  if (c.gender) u.gender = c.gender;
+  if (c.look) u.look = { hair: c.look.hair, hairColor: c.look.hairColor, eyes: c.look.eyes, beard: c.look.beard, face: c.look.face };
+  if (c.name !== undefined) u.name = c.name.trim();
+  return [];
 }
 
 /**
@@ -70,7 +131,9 @@ export function createUnit(state: GameState, opts: CreateUnitOpts): Unit {
   const mdef = opts.monster ? MONSTERS[opts.monster] : undefined;
   const race: RaceId = opts.race ?? (mdef ? 'monster' : FACTIONS[opts.faction].race);
 
-  const base: UnitStats = mdef ? { ...mdef.stats } : { ...(isLeader ? LEADER_STATS : COMMONER_STATS) };
+  // The house's own unit body (undead: half the commoner's, DESIGN §2); leaders are leaders everywhere.
+  const fdef0 = FACTIONS[opts.faction];
+  const base: UnitStats = mdef ? { ...mdef.stats } : { ...(isLeader ? LEADER_STATS : fdef0?.unitBase ?? COMMONER_STATS) };
   if (!mdef) {
     const mods = FACTIONS[opts.faction]?.statMods ?? {};
     for (const k of STAT_KEYS) base[k] += mods[k] ?? 0;
@@ -97,7 +160,8 @@ export function createUnit(state: GameState, opts: CreateUnitOpts): Unit {
     levelUpOptions: [],
     equipment: { main: null, off: null, body: null, trinket: null, mount: null },
     efficiency: {},
-    passives: mdef?.passives ? [...mdef.passives] : [],
+    // Creatures keep their own passives; a house's units are born with its innate ones (orcs: Regeneration).
+    passives: mdef?.passives ? [...mdef.passives] : [...(FACTIONS[opts.faction]?.innatePassives ?? [])],
     actives: [],
     cooldowns: {},
     buffs: [],
@@ -117,9 +181,9 @@ export function createUnit(state: GameState, opts: CreateUnitOpts): Unit {
   if (opts.preset && !mdef) {
     for (const it of PRESETS[opts.preset].items) unit.equipment[ITEMS[it].slot] = it;
   }
-  // A recruit's name follows the body it is first drawn in (bodyVariant, as the portrait and
-  // the 3D model do): a woman's name for a human in the light body.
-  if (opts.name === undefined && !mdef && !isLeader) unit.name = pickUnitName(state, opts.faction, isFemaleAtCreation(race, bodyVariant(unit)));
+  // Who the recruit is comes first (gender, looks), then a name from the matching pool.
+  assignAppearance(state.settings?.seed ?? 1, unit, opts.gender);
+  if (opts.name === undefined && !mdef && !isLeader) unit.name = pickUnitName(state, opts.faction, unit.gender === 'female');
   const st = effectiveStats(state, unit);
   unit.hp = st.maxHp;
   unit.mp = st.mov;
@@ -182,6 +246,14 @@ function sumStats(unit: Unit, sink?: StatSink): UnitStats {
     s.mov += v;
     sink?.('mov', { source: rankedName(PASSIVES[p].name, r), kind: 'passive', value: v, passive: p });
   }
+  // Undead elite augments, bought with dark energy (DESIGN §2).
+  for (const [id, rank] of Object.entries(unit.elite ?? {}) as [EliteId, number][]) {
+    const def = ELITES[id];
+    if (!def || !rank) continue;
+    const v = def.per * rank;
+    s[def.stat] += v;
+    sink?.(def.stat, { source: rankedName(def.name, rank), kind: 'passive', value: v });
+  }
   for (const b of unit.buffs) {
     if (b.turns <= 0) continue;
     if (b.armor) {
@@ -198,6 +270,11 @@ function sumStats(unit: Unit, sink?: StatSink): UnitStats {
   clampStat(s, 'dex', 0, Infinity, sink);
   clampStat(s, 'int', 0, Infinity, sink);
   return s;
+}
+
+/** Stats of a unit without a game state at hand (the same sum as effectiveStats). */
+export function statsOf(unit: Unit): UnitStats {
+  return sumStats(unit);
 }
 
 /** Base + equipment + passives (ironskin) + buffs. armor clamped to [0, ARMOR_MAX = 70] (DESIGN §4.1), block ≥ 0, mov ≥ 1. */

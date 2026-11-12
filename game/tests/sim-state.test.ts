@@ -10,7 +10,7 @@ vi.mock('../src/sim/neutral', () => ({
 import { spawnInitialMonsters } from '../src/sim/neutral';
 import {
   createGame, getTile, unitAt, buildingAt, getUnit, getBuilding, unitsOf, buildingsOf, faction, currentFaction,
-  humanFaction, newId, addLog, isEnemy, cloneState, serialize, deserialize, STARTING_RESOURCES, LOG_CAP, migrateUnitBalance,
+  humanFaction, newId, addLog, isEnemy, cloneState, serialize, deserialize, STARTING_RESOURCES, startingResources, LOG_CAP, migrateUnitBalance,
 } from '../src/sim/state';
 import { COMMONER_STATS, LEADER_STATS } from '../src/data/presets';
 import { MONSTERS } from '../src/data/factions';
@@ -59,7 +59,10 @@ describe('createGame', () => {
     const s = createGame(settings());
     for (const f of s.turnOrder) {
       const fs = s.factions[f];
-      expect(fs.resources).toEqual(STARTING_RESOURCES);
+      // Each house's own stock (DESIGN §2): orcs start with honor for gold, the undead with mana for food.
+      expect(fs.resources).toEqual(startingResources(f));
+      if (f === 'thorn') expect([fs.resources.gold, fs.resources.honor]).toEqual([0, STARTING_RESOURCES.gold]);
+      if (f === 'ashen') expect([fs.resources.food, fs.resources.mana]).toEqual([0, STARTING_RESOURCES.food]);
       expect(fs.techs).toEqual(FACTIONS[f].startingTechs ?? []);
       expect(fs.stats.researched).toBe(0);
       expect(fs.researching).toBeNull();
@@ -70,7 +73,8 @@ describe('createGame', () => {
       expect(castle.owner).toBe(f);
       expect(castle.buildLeft).toBe(0);
       const blds = buildingsOf(s, f);
-      expect(blds.map((b) => b.type).sort()).toEqual(['castle', 'farm', 'house']);
+      // The undead never eat: no starting farm (DESIGN §2).
+      expect(blds.map((b) => b.type).sort()).toEqual(FACTIONS[f].eats ? ['castle', 'farm', 'house'] : ['castle', 'house']);
       for (const b of blds) {
         const tile = getTile(s, b.pos)!;
         expect(tile.building).toBe(b.id);
@@ -149,7 +153,7 @@ describe('createGame', () => {
           const s = createGame(settings({ mapSize, playerFaction, aiCount, seed: aiCount * 13 + mapSize.length }));
           expect(s.turnOrder).toHaveLength(aiCount + 1);
           expect(s.turnOrder[0]).toBe(playerFaction);
-          for (const f of s.turnOrder) expect(buildingsOf(s, f)).toHaveLength(3);
+          for (const f of s.turnOrder) expect(buildingsOf(s, f)).toHaveLength(FACTIONS[f].eats ? 3 : 2);
         }
       }
     }

@@ -104,7 +104,7 @@ export function LevelUpModal() {
 
   return (
     <Modal size="lg" class="levelup-modal" title={`${u.name} reached level ${reaching}`} onClose={() => store.closeModal()}
-      icon={<Portrait k={portraitKey(u, body)} name={u.name} color={fd.color} class="lu-portrait" />}
+      icon={<Portrait k={portraitKey(u, body)} unit={u} body={body} name={u.name} color={fd.color} class="lu-portrait" />}
       sub={<span>{unitRole(u)} · +4 max HP · choose one reward{u.pendingLevelUps > 1 ? ` (${u.pendingLevelUps} level-ups waiting)` : ''}</span>}
       footer={<Btn onClick={() => store.closeModal()} title="The choice waits by End Turn and on the unit panel; it will not reopen by itself">Decide later</Btn>}>
       <div class="lu-xp">

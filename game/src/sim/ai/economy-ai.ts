@@ -6,7 +6,8 @@ import type {
 import { hexDistance, hexEq, inBounds, indexToHex, neighbors, spiral, tileIndex } from '../../core/hex';
 import { BUILDINGS } from '../../data/buildings';
 import { ITEMS } from '../../data/items';
-import { COMMONER_COST, PRESETS } from '../../data/presets';
+import { PRESETS } from '../../data/presets';
+import { factionCost, houseForbids, itemCost, workedOnly } from '../houses';
 import { TERRAIN } from '../../data/terrain';
 import { FACTIONS } from '../../data/factions';
 import {
@@ -28,7 +29,16 @@ import { attempt, claim, claimedByOther, incomeOf, isHeldSite, reachOf } from '.
 
 const RES: ResourceId[] = ['gold', 'food', 'wood', 'stone', 'iron', 'crystal', 'mana'];
 /** Kept back for an emergency recruit (castle defence) unless the castle is actually threatened. */
+/** Kept back for an emergency recruit (in the house's own resources: defenseReserve). */
 const DEFENSE_RESERVE: ResourceCost = { gold: 15, food: 5 };
+const defenseReserve = (ctx: Ctx): ResourceCost => factionCost(ctx.f, DEFENSE_RESERVE);
+/** A finished building of ours that yields only while worked (the orc Arena) stands empty. */
+function emptyArena(ctx: Ctx): boolean {
+  return ctx.own.some((b) => workedOnly(b.type, ctx.f) && isOperational(b) && !unitOn(ctx.s, b.pos));
+}
+
+/** A commoner's recruit cost for the AI's house. */
+const commonerCost = (ctx: Ctx): ResourceCost => FACTIONS[ctx.f].recruitCost;
 
 const functional = (b: Building | undefined): b is Building => !!b && b.owner !== null && isOperational(b);
 
@@ -72,13 +82,14 @@ function workingSite(ctx: Ctx, u: Unit): Building | undefined {
 // ───────────────────────────── what to build ─────────────────────────────
 
 /** Buildings wanted next, most important first (one entry per building instance). */
-function desiredQueue(ctx: Ctx): BuildingId[] {
+export function desiredQueue(ctx: Ctx): BuildingId[] {
   const { s, f } = ctx;
   const c = countTypes(ctx);
   const planned: Partial<Record<BuildingId, number>> = {};
   const q: BuildingId[] = [];
   const n = (t: BuildingId) => (c[t] ?? 0) + (planned[t] ?? 0);
   const want = (t: BuildingId, upTo: number) => {
+    if (houseForbids(t, f)) return;
     if (BUILDINGS[t].unlockSkill) {
       if (!ctx.builders.some((b) => b.actives.includes(BUILDINGS[t].unlockSkill!))) return;
     } else if (!buildingUnlocked(s, f, t)) return;
@@ -88,10 +99,13 @@ function desiredQueue(ctx: Ctx): BuildingId[] {
   const strat = getStrategy(ctx);
   const inc = incomeOf(ctx);
   let food = inc.food;
-  const upkeep = FACTIONS[f].foodUpkeep;
+  const fdef = FACTIONS[f];
+  const upkeep = fdef.upkeep.food ?? 0;
   const growth = Math.max(0, strat.armyTarget - ctx.military.length);
   const foodNeed = 1 + Math.min(6, growth) * upkeep * 0.7;
+  // The dead never farm (DESIGN §2).
   const farm = () => {
+    if (!fdef.eats) return;
     if (food < foodNeed && n('farm') < 10) { want('farm', 99); food += 3; }
   };
   const threatened = strat.castleThreat > 0 || strat.intruders.some((e) => e.faction !== 'neutral');
@@ -102,16 +116,21 @@ function desiredQueue(ctx: Ctx): BuildingId[] {
   const scarce = {
     wood: res.wood < 40 && inc.wood < 14,
     stone: res.stone < 30 && inc.stone < 9 && (c.quarry ?? 0) >= 1,
-    // Recruits and most gear cost gold: demand grows with the army.
-    gold: res.gold < 60 && inc.gold < 12 + s.round / 5,
+    // Recruits and most gear cost gold (honor for orcs): demand grows with the army.
+    gold: fdef.coin === 'gold' && res.gold < 60 && inc.gold < 12 + s.round / 5,
+    honor: fdef.coin === 'honor' && res.honor < 60 && inc.honor < 8 + s.round / 5,
+    // The undead pay their host's upkeep in mana.
+    mana: !fdef.eats && inc.mana < 2 + ctx.military.length * (fdef.upkeep.mana ?? 0),
     iron: res.iron < 20,
   };
   const more = (t: BuildingId, max: number) => want(t, Math.min(max, (c[t] ?? 0) + (planned[t] ?? 0) + 1));
 
   farm();
-  want('farm', 2);
+  if (fdef.eats) want('farm', 2);
   want('lumber', 1);
   want('quarry', 1);
+  // Orcs: the Arena is their first honor mill (DESIGN §2).
+  if (fdef.coin === 'honor') want('training', 1);
   // The forge comes early: tunics/leather cost no iron, bows only one.
   want('forge', 1);
   if (has('writing')) want('library', 2);
@@ -131,6 +150,11 @@ function desiredQueue(ctx: Ctx): BuildingId[] {
   farm();
   if (scarce.wood) more('lumber', 4);
   if (scarce.gold) more('house', 5 + Math.floor(s.round / 40));
+  // Orcs: honor from Arenas (worked fighters) when the fights do not bring enough.
+  // An empty Arena yields nothing: another only once every one is worked (DESIGN §2).
+  if (scarce.honor && !emptyArena(ctx)) more('training', 2 + Math.floor(s.round / 25));
+  // Undead: mana for the host's upkeep from towers (and shrines).
+  if (scarce.mana && has('arcana')) more('magetower', 2 + Math.floor(s.round / 30));
   if (has('mining') && scarce.iron) want('mine', 2);
   if (threatened && has('masonry')) want('wall', Math.min(3, (c.wall ?? 0) + 1));
   if (has('crystallore') && (s.round >= 8 || has('writing'))) want('crystalmine', f === 'ashen' ? 2 : 1);
@@ -249,13 +273,22 @@ function siteScore(ctx: Ctx, type: BuildingId, idx: number, owners: (string | nu
 /** Producers worth pushing the border out for when no legal site is in reach. */
 const EXPANDABLE = new Set<BuildingId>(['lumber', 'quarry', 'mine', 'crystalmine', 'farm']);
 
+/**
+ * How far from home the border may grow toward a `type` site. A house's first crystal mine is
+ * worth a long reach: towers and mages need crystal, and the undead pay their host in tower mana.
+ */
+function expandReach(ctx: Ctx, type: BuildingId): number {
+  if (type === 'crystalmine' && !ctx.own.some((b) => b.type === 'crystalmine')) return 14;
+  return 9;
+}
+
 /** Nearest unclaimed tile (to home) where `type` could stand once our border reaches it. */
 function nearestSiteFor(ctx: Ctx, type: BuildingId, owners: (string | null)[]): Hex | null {
   const s = ctx.s;
   const def = BUILDINGS[type];
   let best: Hex | null = null;
   let bd = Infinity;
-  for (const h of spiral(ctx.home, 9)) {
+  for (const h of spiral(ctx.home, expandReach(ctx, type))) {
     if (!inBounds(h, s.width, s.height)) continue;
     const i = tileIndex(h, s.width);
     const t = s.tiles[i];
@@ -351,7 +384,8 @@ export function planTasks(ctx: Ctx): BuildTask[] {
     let best: { idx: number; b: Unit; v: number; kind: BuildingId } | null = null;
     const curD = Math.min(...cands.map((i) => hexDistance(indexToHex(i, s.width), goal)));
     for (const ex of ['farm', 'house', 'lumber', 'quarry'] as BuildingId[]) {
-      if (ex === type || !canAfford(ctx.fs.resources, buildingCost(s, ctx.f, ex))) continue;
+      // (the dead do not farm: a house may not raise every type)
+      if (ex === type || houseForbids(ex, ctx.f) || !canAfford(ctx.fs.resources, buildingCost(s, ctx.f, ex))) continue;
       for (const idx of cands) {
         if (used.has(idx)) continue;
         const sc = siteScore(ctx, ex, idx, owners);
@@ -387,7 +421,8 @@ export function planTasks(ctx: Ctx): BuildTask[] {
       if (b.level >= Math.min(BUILDINGS[b.type].maxLevel, maxLvl)) continue;
       let pr = UPGRADE_PRIORITY[b.type];
       if (!pr) continue;
-      if (b.type === 'house' && ctx.fs.resources.gold < 60) pr = 9;
+      if (b.type === 'house' && FACTIONS[ctx.f].coin === 'gold' && ctx.fs.resources.gold < 60) pr = 9;
+      if (b.type === 'training' && FACTIONS[ctx.f].coin === 'honor' && ctx.fs.resources.honor < 60) pr = 9;
       const occ = unitOn(s, b.pos);
       if (occ && !(occ.faction === ctx.f && pool.includes(occ))) continue;
       if (!canAfford(avail, upgradeCost(b))) continue;
@@ -453,7 +488,7 @@ export function spendable(ctx: Ctx, purpose: 'recruit' | 'craft' | 'builder'): R
   subtract(r, buildReserve(ctx));
   subtract(r, economyReserve(ctx, purpose === 'builder'));
   if (purpose === 'craft') {
-    subtract(r, DEFENSE_RESERVE);
+    subtract(r, defenseReserve(ctx));
     // Wands and robes must not eat the crystal of the first mage tower (nor while Arcana, which
     // unlocks it, is being researched).
     const tower = ctx.own.some((b) => b.type === 'magetower')
@@ -480,7 +515,7 @@ function canArmLevy(ctx: Ctx, unarmed: number, wanted: Track[]): boolean {
     const w = weaponForTrack(ctx, tr);
     if (!w || !itemUnlocked(ctx.s, ctx.f, w)) continue;
     let n = Infinity;
-    for (const [r, c] of Object.entries(ITEMS[w].cost) as [ResourceId, number][]) {
+    for (const [r, c] of Object.entries(itemCost(ctx.f, w)) as [ResourceId, number][]) {
       if (c) n = Math.min(n, ((res[r] ?? 0) + Math.max(0, inc[r] ?? 0) * 5) / c);
     }
     best = Math.max(best, n);
@@ -643,8 +678,8 @@ export function adaptedComposition(ctx: Ctx): Partial<Record<Track, number>> {
     // Limited by the scarcest ingredient (gold and food are shared by every track).
     let factor = Infinity;
     if (w) {
-      for (const [r, c] of Object.entries(ITEMS[w].cost) as [ResourceId, number][]) {
-        if (!c || r === 'gold' || r === 'food') continue;
+      for (const [r, c] of Object.entries(itemCost(ctx.f, w)) as [ResourceId, number][]) {
+        if (!c || r === 'gold' || r === 'honor' || r === 'food') continue;
         const f = (res[r] + inc[r] * 5) / (c * 4);
         factor = Math.min(factor, Math.max(0.3, Math.min(2, f)));
       }
@@ -701,7 +736,7 @@ export function craftPhase(ctx: Ctx): Action | null {
   for (const d of itemDemands(ctx)) {
     if ((stock[d.item] ?? 0) > 0) { stock[d.item]! -= 1; continue; }
     if (!itemUnlocked(s, ctx.f, d.item)) continue;
-    const cost = ITEMS[d.item].cost;
+    const cost = itemCost(ctx.f, d.item);
     // The replacement tools of a house left without builders are what the reserve was kept for.
     if (d.item === 'tools' && !ctx.builders.length && canAfford(ctx.fs.resources, cost)) {
       for (const fg of forges) {
@@ -789,13 +824,22 @@ function recruitSites(ctx: Ctx): Building[] {
   return out;
 }
 
-function foodOk(ctx: Ctx, emergency: boolean): boolean {
+/**
+ * Can the house feed one more unit? Every resource a unit draws (food; honor for orcs; mana for the
+ * undead) must stay paid: income after the new mouth ≥ 0, or a small shortfall the stock covers.
+ */
+function upkeepOk(ctx: Ctx, emergency: boolean): boolean {
   const inc = incomeOf(ctx);
-  const after = inc.food - FACTIONS[ctx.f].foodUpkeep;
-  const stock = ctx.fs.resources.food;
-  if (after >= 0) return true;
-  if (after >= -1 && stock >= 25) return true;
-  return emergency && stock >= 12 && after >= -3;
+  for (const [r, per] of Object.entries(FACTIONS[ctx.f].upkeep) as [ResourceId, number][]) {
+    if (!per) continue;
+    const after = (inc[r] ?? 0) - per;
+    const stock = ctx.fs.resources[r] ?? 0;
+    if (after >= 0) continue;
+    if (after >= -1 && stock >= 25) continue;
+    if (emergency && stock >= 12 && after >= -3) continue;
+    return false;
+  }
+  return true;
 }
 
 /** Flavour bonus for presets (DESIGN §2 faction identities). */
@@ -825,8 +869,8 @@ export function recruitPhase(ctx: Ctx): Action | null {
   if (wantBuilder) {
     // The economy reserve already keeps the forge's iron back (spendable 'builder').
     const budget = noBuilder ? { ...ctx.fs.resources } : spendable(ctx, 'builder');
-    const cost = presetCost('builder');
-    if (canAfford(budget, cost) && foodOk(ctx, noBuilder)) {
+    const cost = presetCost('builder', ctx.f);
+    if (canAfford(budget, cost) && upkeepOk(ctx, noBuilder)) {
       const order = sites.filter((b) => BUILDINGS[b.type].recruits!.includes('builder'))
         .sort((a, b) => (a.type === 'castle' ? 1 : 0) - (b.type === 'castle' ? 1 : 0) || a.id - b.id);
       for (const b of order) {
@@ -840,11 +884,11 @@ export function recruitPhase(ctx: Ctx): Action | null {
   const cap = (emergency ? strat.armyTarget + 3 : strat.armyTarget) + (channelersShort(ctx) > 0 ? 1 : 0);
   // Summoned elementals crumble within 8 turns: they do not fill a recruit's place.
   if (ctx.military.filter((u) => !u.summonTurns).length >= cap) return null;
-  if (!foodOk(ctx, emergency)) return null;
+  if (!upkeepOk(ctx, emergency)) return null;
   const budget: Resources = emergency ? { ...ctx.fs.resources } : spendable(ctx, 'recruit');
   // Even in an emergency the last builder's replacement tools are kept (no iron income).
   if (emergency && ctx.builders.length <= 1 && !ironIncome(ctx)) subtract(budget, ITEMS.tools.cost);
-  if (!emergency && ctx.military.length >= 3) subtract(budget, DEFENSE_RESERVE);
+  if (!emergency && ctx.military.length >= 3) subtract(budget, defenseReserve(ctx));
   const wanted = wantedTracks(ctx);
   const rank = (t: Track) => { const i = wanted.indexOf(t); return i === 0 ? 6 : i === 1 ? 3 : i < 0 ? -4 : 0; };
   const sp = ctx.fs.stockpile;
@@ -858,13 +902,13 @@ export function recruitPhase(ctx: Ctx): Action | null {
     for (const p of def.recruits ?? []) {
       if (p === 'builder' || p === 'commoner') continue;
       if (!presetUnlocked(s, ctx.f, p)) continue;
-      const cost = presetCost(p);
+      const cost = presetCost(p, ctx.f);
       if (!canAfford(budget, cost)) continue;
       const tr = trackOfItem(PRESETS[p].items.find((i) => ITEMS[i].slot === 'main'));
       consider({ type: 'recruit', site: site.id, preset: p },
         loadoutQuality(PRESETS[p].items) + rank(tr) + presetFlavor(ctx, p) - costValue(cost) * 0.12);
     }
-    if (def.recruits?.includes('commoner') && canAfford(budget, COMMONER_COST)) {
+    if (def.recruits?.includes('commoner') && canAfford(budget, commonerCost(ctx))) {
       // A commoner spawning on an armory can be armed from the stockpile right away.
       const spawn = recruitSpawnHex(s, site, 'commoner');
       const onArmory = !!spawn && hexEq(spawn, site.pos) && !!def.armory;
@@ -875,7 +919,7 @@ export function recruitPhase(ctx: Ctx): Action | null {
           const weapon = stockedWeapon(ctx, tr, s.nextId, sp);
           if (!weapon) continue;
           const bodies = (['plate', 'leather', 'robe', 'tunic'] as ItemId[]).filter((i) => (sp[i] ?? 0) > 0);
-          v = Math.max(v, loadoutQuality([weapon, bodies[0]]) + rank(tr) + 2 - costValue(COMMONER_COST) * 0.12);
+          v = Math.max(v, loadoutQuality([weapon, bodies[0]]) + rank(tr) + 2 - costValue(commonerCost(ctx)) * 0.12);
         }
       }
       // Plain militia: a couple to start with, more only when something can arm them soon (the
@@ -884,12 +928,16 @@ export function recruitPhase(ctx: Ctx): Action | null {
       const canArm = canArmLevy(ctx, unarmed, wanted);
       const armable = hasForge && canArm;
       // Treasury overflowing with nothing else to buy: raise a levy that will be armed shortly.
-      const rich = canArm && ctx.fs.resources.gold >= 70 && ctx.fs.resources.food >= 45 && unarmed < 4 + Math.floor(s.round / 12);
+      const coin = FACTIONS[ctx.f].coin;
+      const fed = !FACTIONS[ctx.f].eats || ctx.fs.resources.food >= 45;
+      const rich = canArm && ctx.fs.resources[coin] >= 70 && fed && unarmed < 4 + Math.floor(s.round / 12);
       // Castle under attack: a couple of fist-fighting levies to body-block, not one every turn
       // the threat lasts.
       const levy = emergency && unarmed < Math.max(2, Math.min(4, strat.castleThreat + 1));
-      if (!Number.isFinite(v) && (levy || ctx.military.length < 2 || (armable && unarmed < 3) || rich)) {
-        v = -2 - costValue(COMMONER_COST) * 0.12;
+      // An empty Arena while honor runs low: a commoner to work it.
+      const arenaHand = ctx.fs.resources.honor < 60 && emptyArena(ctx);
+      if (!Number.isFinite(v) && (levy || ctx.military.length < 2 || (armable && unarmed < 3) || rich || arenaHand)) {
+        v = -2 - costValue(commonerCost(ctx)) * 0.12;
       }
       if (Number.isFinite(v)) consider({ type: 'recruit', site: site.id, preset: 'commoner' }, v);
     }

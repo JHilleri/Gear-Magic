@@ -1,7 +1,7 @@
 // Turn-level strategy: which house to march on, attack or build up, army size, track plans
 // for unarmed recruits. Computed once on the first call of an AI turn (stateless across turns:
 // everything is re-derived from the game state, positions provide the hysteresis).
-import type { FactionId, Hex, Unit } from '../../core/types';
+import type { FactionId, Hex, ResourceId, Unit } from '../../core/types';
 import { hexDistance, tileIndex } from '../../core/hex';
 import { FACTIONS } from '../../data/factions';
 import { ITEMS } from '../../data/items';
@@ -131,8 +131,14 @@ function computeStrategy(ctx: Ctx): Strategy {
 
   // Army size target: grows with time, bounded by what the farms can feed.
   const inc = incomeOf(ctx);
-  const upkeep = Math.max(0.25, FACTIONS[f].foodUpkeep);
-  const foodRoom = Math.floor(Math.max(0, inc.food + (fs.resources.food >= 40 ? 1.5 : 0)) / upkeep);
+  // Room for more mouths in every resource a unit draws (food; honor for orcs; mana for the undead).
+  let foodRoom = Infinity;
+  for (const [r, per] of Object.entries(FACTIONS[f].upkeep) as [ResourceId, number][]) {
+    if (!per) continue;
+    const spare = Math.max(0, (inc[r] ?? 0) + ((fs.resources[r] ?? 0) >= 40 ? 1.5 : 0));
+    foodRoom = Math.min(foodRoom, Math.floor(spare / per));
+  }
+  if (!Number.isFinite(foodRoom)) foodRoom = 26;
   const base = (3 + Math.floor(s.round / 3)) * (DIFFICULTY_ARMY[s.settings.difficulty] ?? 1);
   const armyTarget = Math.max(1, Math.min(Math.round(base), ctx.military.length + foodRoom, 26));
 

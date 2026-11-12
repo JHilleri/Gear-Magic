@@ -1,6 +1,7 @@
 // Left panel: the selected unit — portrait, bars, stats, equipment, attacks, passive skills and
 // status. Its commands (attack, skills, orders, build…) are on the bottom command bar
 // (CommandBar.tsx); the portrait opens the full sheet.
+import { describeAppearance } from '../../data/appearance';
 import type { AttackDef, EquipSlot, GameState, Unit, UnitStats } from '../../core/types';
 import { BUILDINGS } from '../../data/buildings';
 import { FACTIONS, MONSTERS } from '../../data/factions';
@@ -78,9 +79,9 @@ function StatCell({ k, eff, base, extra }: { k: keyof UnitStats; eff: number; ba
 
 const STAT_HELP: Record<keyof UnitStats, string> = {
   maxHp: 'Hit points. The unit dies at 0.',
-  str: 'Melee damage: +1 per strike for every 2 points.',
-  dex: 'Ranged damage: +1 per strike for every 2 points.',
-  int: 'Damage of magic attacks (staff, wand: +1 per 2 points) and spell range from a Mage Tower (+1 per 3 points). Spell and Firebolt damage is fixed.',
+  str: 'Melee damage: +1 per strike for every 2 points. Working a building: +3% raw materials (wood, stone, iron, crystal) and honor per point.',
+  dex: 'Ranged damage: +1 per strike for every 2 points. Aim: +1% ranged hit chance per point. Dodge: enemy melee and ranged attacks hit 1% less per point.',
+  int: 'Damage of magic attacks (staff, wand: +1 per 2 points) and spell range from a Mage Tower (+1 per 3 points). Working a building: +3% research and gold per point. Spell and Firebolt damage is fixed.',
   armor: 'After block, takes this percentage off the damage of every strike that hits (at most 70). Spells, Firebolt, poison and starvation ignore it.',
   block: 'Flat damage taken off every strike that hits, before armor. Magic attacks and flanking strikes pass it by; so do spells, Firebolt, poison and starvation.',
   mov: 'Movement points per turn.',
@@ -145,7 +146,7 @@ export function UnitPanel() {
           <div class="up-portrait-btn" role="button" tabIndex={0} aria-label={`Details of ${name}`} onClick={openSheet}
             onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); openSheet(); } }}
             {...tip(<span>Details: stats, equipment, augments and experience <Kbd k="C" /></span>)}>
-            <Portrait k={portraitKey(u, body)} name={name} color={fd.color} class="up-portrait" />
+            <Portrait k={portraitKey(u, body)} unit={u} body={body} name={name} color={fd.color} class="up-portrait" />
           </div>
           <span class="level-badge" {...tip(`Level ${u.level}`)}>{u.level}</span>
           {own && u.pendingLevelUps > 0 && (
@@ -158,7 +159,7 @@ export function UnitPanel() {
         </div>
         <div class="up-id">
           <div class={cls('up-name', name.length > 18 && 'long')} {...tip(name)}>{name}</div>
-          <div class="up-role">{unitRole(u)}{mounted ? ' · mounted' : ''}</div>
+          <div class="up-role" {...(u.look ? tip(`${u.gender === 'female' ? 'Woman' : 'Man'}: ${describeAppearance(u.look).toLowerCase()}`) : {})}>{unitRole(u)}{u.gender && !u.isLeader ? (u.gender === 'female' ? ' ♀' : ' ♂') : ''}{mounted ? ' · mounted' : ''}</div>
           <div class="up-faction"><Emblem faction={u.faction} size={18} /><span>{fd.name}</span></div>
           <div class="up-status">
             {!own && <span class="pill pill-enemy">{u.faction === 'neutral' ? 'Hostile beast' : 'Enemy'}</span>}

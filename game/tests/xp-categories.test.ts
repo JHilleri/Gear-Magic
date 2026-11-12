@@ -1,6 +1,7 @@
 // The seven kinds of experience (DESIGN §4.7): where each XP source lands, bare-handed workers
 // (DESIGN §5), and loading saves made before 'fight' and 'civil' were split.
 import { describe, expect, it } from 'vitest';
+import { COMMONER_STATS } from '../src/data/presets';
 import type { GameEvent, Hex, Unit, XpCategory } from '../src/core/types';
 import { tileIndex } from '../src/core/hex';
 import { applyAction } from '../src/sim/actions';
@@ -238,7 +239,7 @@ describe('worker output', () => {
     expect(buildingOutput(s, farm).food).toBeCloseTo(9.38, 6);
     // The tile panel's "worked by" line reads the same multiplier, per resource.
     expect(workerResourceMult(w, 'food')).toBeCloseTo(2 * 1.25 * 1.25, 6);
-    expect(workerResourceMult(w, 'gold')).toBeCloseTo(2 * 1.25, 6);
+    expect(workerResourceMult(w, 'gold')).toBeCloseTo(2 * 1.25 * 1.09, 6); // and +3% a point of its 3 Intellect
     w.equipment.main = 'tools';
     expect(buildingOutput(s, farm).food).toBeCloseTo(11.72, 6); // 3 × 2.5 × 1.25 × 1.25 = 11.71875
     w.efficiency = {};
@@ -247,8 +248,25 @@ describe('worker output', () => {
     // The leader holding its castle works it (and still gives every building +10%).
     const castle = makeTestBuilding(s, 'castle', 'valen', at(8, 6));
     makeTestUnit(s, 'valen', castle.pos, { isLeader: true });
-    expect(buildingOutput(s, castle).gold).toBeCloseTo(3 * 2 * 1.1, 6);
+    expect(buildingOutput(s, castle).gold).toBeCloseTo(3 * 2 * 1.15 * 1.1, 6); // the leader's 5 Intellect: +15% gold
     expect(buildingOutput(s, farm).food).toBeCloseTo(3 * 2 * 1.1, 6);
+  });
+
+  it('a worker\'s Strength raises raw materials and honor, its Intellect research and gold (3% a point)', () => {
+    const s = makeTestState(14, 12);
+    const quarry = makeTestBuilding(s, 'quarry', 'valen', at(3, 3));
+    s.tiles[3 * s.width + 3].terrain = 'hills';
+    const lib = makeTestBuilding(s, 'library', 'valen', at(6, 6));
+    const strong = makeTestUnit(s, 'valen', quarry.pos, { base: { ...COMMONER_STATS, str: 10, int: 0 } });
+    const wise = makeTestUnit(s, 'valen', lib.pos, { base: { ...COMMONER_STATS, str: 0, int: 10 } });
+    expect(workerResourceMult(strong, 'stone')).toBeCloseTo(2 * 1.3, 6);
+    expect(workerResourceMult(strong, 'research')).toBeCloseTo(2, 6);
+    expect(workerResourceMult(wise, 'research')).toBeCloseTo(2 * 1.3, 6);
+    expect(workerResourceMult(wise, 'stone')).toBeCloseTo(2, 6);
+    expect(workerResourceMult(strong, 'honor')).toBeCloseTo(2 * 1.3, 6);
+    expect(workerResourceMult(strong, 'food')).toBeCloseTo(2, 6); // food and mana follow no stat
+    expect(buildingOutput(s, quarry).stone).toBeCloseTo(3 * 2 * 1.3, 6);
+    expect(buildingOutput(s, lib).research).toBeCloseTo(3 * 2 * 1.3, 6);
   });
 });
 

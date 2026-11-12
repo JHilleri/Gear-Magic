@@ -1,0 +1,8 @@
+[
+  {"id": "honor", "cat": "icons_resources", "alpha": false, "seed": 61311, "w": 1024, "h": 1024, "steps": 22,
+   "prompt": "A painted fantasy RPG inventory icon of a battered bronze war trophy medallion with crossed axes and a tusked orc skull emblem, single centered object filling most of the frame, bold clean silhouette, rich saturated colors, soft rim light, dark deep brown radial vignette background, digital painting, crisp details, no text, no border",
+   "negative": "text, letters, watermark, frame, border, multiple objects, photo, blurry"},
+  {"id": "dark", "cat": "icons_resources", "alpha": false, "seed": 61312, "w": 1024, "h": 1024, "steps": 22,
+   "prompt": "A painted fantasy RPG inventory icon of a swirling orb of dark purple necrotic energy with a faint glowing skull inside and green wisps, single centered object filling most of the frame, bold clean silhouette, rich saturated colors, soft rim light, dark deep brown radial vignette background, digital painting, crisp details, no text, no border",
+   "negative": "text, letters, watermark, frame, border, multiple objects, photo, blurry"}
+]

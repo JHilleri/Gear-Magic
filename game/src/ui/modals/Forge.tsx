@@ -4,6 +4,7 @@ import type { BuildingInstanceId, EquipSlot, ItemDef, ItemId } from '../../core/
 import { ITEM_LIST } from '../../data/items';
 import { TECH_LIST, TECHS } from '../../data/research';
 import { craftOptions } from '../../sim/actions';
+import { itemCost } from '../../sim/houses';
 import { Cost, TipCard } from '../common';
 import { act, useUi } from '../ctx';
 import { Icon, Sym } from '../icons';
@@ -92,7 +93,7 @@ export function ForgeModal() {
                       <span class="ic-main">
                         <span class="ic-name">{d.name}{!unlocked && <Sym name="lock" />}</span>
                         <span class="ic-sum">{itemSummary(d)}</span>
-                        <Cost cost={d.cost} have={fs.resources} compact />
+                        <Cost cost={safe(() => itemCost(f, d.id), d.cost)} have={fs.resources} compact />
                       </span>
                     </button>
                   );

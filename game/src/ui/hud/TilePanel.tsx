@@ -6,6 +6,7 @@ import { FACTIONS } from '../../data/factions';
 import { PRESETS } from '../../data/presets';
 import { TECH_LIST } from '../../data/research';
 import { TERRAIN } from '../../data/terrain';
+import { baseOutput, buildingDescription, buildingName, workedOnly } from '../../sim/houses';
 import {
   BARE_WORKER_MULT, buildingOutput, buildingXpPerTurn, hasWorkableOutput, maxBuildingLevel, siteError, territoryOwner, workerMult, workerOf,
   WORK_XP, WORKER_MULT, workerResourceMult,
@@ -62,20 +63,21 @@ function buildHint(s: GameState, f: FactionId, h: Hex): { text: string; tone: st
  * jumps when a unit steps on, and this says why. For an own building nobody works, how to.
  */
 function WorkerLine({ s, b, own }: { s: GameState; b: Building; own: boolean }) {
-  if (!safe(() => hasWorkableOutput(b.type), false)) return null;
+  if (!safe(() => hasWorkableOutput(b.type, b.owner), false)) return null;
   const w = safe(() => workerOf(s, b), null);
   if (!w) {
     return own ? (
       <div class="tp-note t-dim" {...tip(`Any of your units (not a creature) standing on a finished building that produces something works it. Builder's Tools work it better, a worker's efficiencies add on top, and it earns ${WORK_XP} XP each turn it does not act.`)}>
         <Sym name="hammer" />
-        <span>Nobody works it: a unit here adds {fmtMult(BARE_WORKER_MULT)} ({fmtMult(WORKER_MULT)} with Builder's Tools).</span>
+        <span>{workedOnly(b.type, b.owner) ? 'Nobody works it, so it yields nothing: a unit here makes it' : 'Nobody works it: a unit here adds'} {fmtMult(BARE_WORKER_MULT)} ({fmtMult(WORKER_MULT)} with Builder's Tools).</span>
       </div>
     ) : null;
   }
   const tools = safe(() => canBuildWith(w), false);
   const base = safe(() => workerMult(w), BARE_WORKER_MULT);
   // With efficiencies the multiplier can differ per resource (a castle: gold, food, research).
-  const res = (Object.keys(BUILDINGS[b.type].output) as ResourceId[]).filter((k) => (BUILDINGS[b.type].output[k] ?? 0) > 0);
+  const yields = safe(() => baseOutput(b.type, b.owner), BUILDINGS[b.type].output);
+  const res = (Object.keys(yields) as ResourceId[]).filter((k) => (yields[k] ?? 0) > 0);
   const totals = res.map((k) => safe(() => workerResourceMult(w, k), base));
   const lo = Math.min(...totals);
   const hi = Math.max(...totals);
@@ -121,7 +123,7 @@ function BuildingSection({ s, b, visible }: { s: GameState; b: Building; visible
       <div class="tp-bhead">
         <Icon k={def.icon} size={44} />
         <div class="tp-bname">
-          <div class="tp-btitle">{def.name} <span class="lvl" {...tip(`Level ${b.level} of ${def.maxLevel}${maxLvl < def.maxLevel ? ` (research allows ${maxLvl})` : ''}`)}>Lv {b.level}</span></div>
+          <div class="tp-btitle">{safe(() => buildingName(b.type, b.owner), def.name)} <span class="lvl" {...tip(`Level ${b.level} of ${def.maxLevel}${maxLvl < def.maxLevel ? ` (research allows ${maxLvl})` : ''}`)}>Lv {b.level}</span></div>
           <div class="tp-owner" style={owner ? { color: owner.color } : undefined}>
             {owner ? <><Emblem faction={b.owner!} size={16} />{owner.name}</> : <span class="t-dim">Abandoned — capture it by ending a turn here</span>}
           </div>
@@ -145,7 +147,7 @@ function BuildingSection({ s, b, visible }: { s: GameState; b: Building; visible
         </div>
       )}
       {complete && visible && b.owner && <WorkerLine s={s} b={b} own={own} />}
-      <div class="tp-desc">{def.description}</div>
+      <div class="tp-desc">{safe(() => buildingDescription(b.type, b.owner), def.description)}</div>
       <div class="tp-tags">
         {defense ? <span class="tag" {...tip('Defense bonus for units standing here')}>+{defense}% defense</span> : null}
         {def.heal ? <span class="tag" {...tip('Healing for own units at the start of each turn')}>Heals {def.heal}</span> : null}
@@ -188,7 +190,7 @@ function BuildingSection({ s, b, visible }: { s: GameState; b: Building; visible
         <div class="tp-actions">
           {def.recruits && (
             <Btn icon="recruit" disabled={!myTurn} reason={b.recruitedThisTurn ? 'Already recruited here this turn' : !myTurn ? 'Not your turn' : null}
-              onClick={() => store.openModal('recruit', { site: b.id })} title={`Recruit at this ${def.name}`}>Recruit</Btn>
+              onClick={() => store.openModal('recruit', { site: b.id })} title={`Recruit at this ${safe(() => buildingName(b.type, b.owner), def.name)}`}>Recruit</Btn>
           )}
           {b.type === 'forge' && (
             <Btn icon="forge" disabled={!myTurn} reason={!myTurn ? 'Not your turn' : null}

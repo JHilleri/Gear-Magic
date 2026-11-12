@@ -182,8 +182,8 @@ const fogCols = new Set([20, 21]);
 
 for (const f of ['valen', 'thorn', 'ashen', 'neutral'] as FactionId[]) {
   state.factions[f] = {
-    id: f, isHuman: f === 'valen', alive: true, resources: { gold: 0, food: 0, wood: 0, stone: 0, iron: 0, crystal: 0, mana: 0, research: 0 },
-    income: { gold: 0, food: 0, wood: 0, stone: 0, iron: 0, crystal: 0, mana: 0, research: 0 }, stockpile: {}, techs: [], researching: null, researchProgress: 0,
+    id: f, isHuman: f === 'valen', alive: true, resources: { gold: 0, food: 0, wood: 0, stone: 0, iron: 0, crystal: 0, mana: 0, research: 0, honor: 0, dark: 0 },
+    income: { gold: 0, food: 0, wood: 0, stone: 0, iron: 0, crystal: 0, mana: 0, research: 0, honor: 0, dark: 0 }, stockpile: {}, techs: [], researching: null, researchProgress: 0,
     spellCooldowns: {}, explored: new Array(W * H).fill(1), visible: new Array(W * H).fill(1), farsight: [], leaderId: null, castleId: null,
     stats: { kills: 0, lost: 0, built: 0, researched: 0, spellsCast: 0 },
   };

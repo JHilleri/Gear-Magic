@@ -8,7 +8,13 @@ export type TerrainId =
   | 'grass' | 'plains' | 'forest' | 'hills' | 'mountain'
   | 'swamp' | 'shallows' | 'water' | 'crystal' | 'ruins';
 export type DepositId = 'iron' | 'crystal' | 'stone' | 'fertile';
-export type ResourceId = 'gold' | 'food' | 'wood' | 'stone' | 'iron' | 'crystal' | 'mana' | 'research';
+/**
+ * Every stock a house can hold. `honor` is the Thornwild's coin (it replaces gold for them) and `dark`
+ * the Ashen Covenant's dark energy (from kills, spent on elite augments). DESIGN §2.
+ */
+export type ResourceId = 'gold' | 'food' | 'wood' | 'stone' | 'iron' | 'crystal' | 'mana' | 'research' | 'honor' | 'dark';
+/** Undead elite augments, bought with dark energy (DESIGN §2): Unholy Vigor, Grave Might, Deadeye, Dark Wisdom. */
+export type EliteId = 'vigor' | 'might' | 'deadeye' | 'wisdom';
 export type BuildingId =
   | 'castle' | 'house' | 'farm' | 'lumber' | 'quarry' | 'forge' | 'training'
   | 'mine' | 'crystalmine' | 'library' | 'magetower' | 'wall' | 'watchtower' | 'shrine';
@@ -41,6 +47,17 @@ export type PresetId =
   | 'apprentice' | 'battlemage';
 /** Visual body variant of a unit model (chosen from the body item). */
 export type BodyVariant = 'commoner' | 'light' | 'heavy' | 'robe' | 'leader';
+export type Gender = 'male' | 'female';
+export type HairStyle = 'short' | 'crop' | 'swept' | 'tail' | 'curly' | 'bald' | 'long' | 'braid' | 'bun' | 'bob' | 'ponytail' | 'pixie';
+export type BeardStyle = 'none' | 'short' | 'full' | 'moustache' | 'goatee' | 'long';
+export type HairColor = 'black' | 'darkbrown' | 'brown' | 'auburn' | 'ginger' | 'blonde' | 'platinum' | 'grey';
+export type EyeColor = 'brown' | 'hazel' | 'amber' | 'green' | 'blue' | 'grey';
+/** A unit's looks beyond its armour (data/appearance.ts): part of its identity, rolled at creation. */
+export interface Appearance {
+  hair: HairStyle; hairColor: HairColor; eyes: EyeColor; beard: BeardStyle;
+  /** Which of its gender's faces (data/appearance.ts FACES): 0-based. */
+  face: number;
+}
 /** Neutral monster kinds and summons (non-humanoid or special models). */
 export type MonsterKind = 'wolf' | 'golem' | 'spider' | 'elemental';
 export type AttackKind = 'melee' | 'ranged' | 'magic';
@@ -213,10 +230,25 @@ export interface FactionDef {
   meleeMult?: number;
   rangedMult?: number;
   magicMult?: number;
-  foodUpkeep: number;        // per non-leader unit
+  /** What the house pays where costs say gold: gold, or honor for the Thornwild (DESIGN §2). */
+  coin: 'gold' | 'honor';
+  /** Eats food: false (undead) drops food from every cost and output, and farms mean nothing to it. */
+  eats: boolean;
+  /** Upkeep of every non-leader unit per turn (food, honor, mana). */
+  upkeep: ResourceCost;
+  /** A commoner recruit's cost; presets add their items (in the house's own resources). */
+  recruitCost: ResourceCost;
+  /** Passives every unit of the house is born with (Thornwild: Regeneration). */
+  innatePassives?: PassiveId[];
+  /** Base stats of the house's units other than the leader, when not the commoner's (undead: half). */
+  unitBase?: UnitStats;
+  /** Poison never takes hold (undead). */
+  poisonImmune?: boolean;
   leaderName: string;
+  /** The leader's gender, for houses whose units have one (humans). */
+  leaderGender?: Gender;
   unitNames: string[];       // random name pool (male units: every unit not covered below)
-  /** Name pool for female units: human recruits whose first body is the light body (DESIGN §4.9). Falls back to unitNames. */
+  /** Name pool for female units (humans, DESIGN §4.9). Falls back to unitNames. */
   femaleUnitNames?: string[];
   emblem: string;            // icon path
   researchPriority: TechId[];
@@ -256,6 +288,10 @@ export interface Unit {
   faction: FactionId;
   name: string;
   race: RaceId;
+  /** Humans only (DESIGN §4.9): decided at creation, for life. It picks the name pool and the body model of every armour. */
+  gender?: Gender;
+  /** Hair, eyes and beard of a unit that has a gender; a leader has none (its own model). */
+  look?: Appearance;
   monster?: MonsterKind;     // set for neutral monsters & summons
   isLeader: boolean;
   pos: Hex;
@@ -303,6 +339,8 @@ export interface Unit {
   ranks?: Partial<Record<PassiveId | ActiveId, number>>;
   /** Damage per turn of the poison on this unit (Venom Blades rank of whoever poisoned it); absent = POISON_DAMAGE. */
   poisonDamage?: number;
+  /** Ranks of undead elite augments bought with dark energy (DESIGN §2); absent = none. */
+  elite?: Partial<Record<EliteId, number>>;
 }
 
 /** One resolved level-up: the level the offer belonged to and the SkillOptionDef id picked. */
@@ -389,6 +427,10 @@ export type Action =
   | { type: 'levelup'; unit: UnitId; option: string }
   /** Set (or with null cancel) a standing order. Free: spends no movement or action. */
   | { type: 'order'; unit: UnitId; order: UnitOrder | null }
+  /** Undead: buy one rank of an elite augment with dark energy, on the castle or a mage tower. Free. */
+  | { type: 'empower'; unit: UnitId; elite: EliteId }
+  /** Change who a unit is (humans, DESIGN §4.9): any of its name, gender and looks. Free, changes no rule. */
+  | { type: 'customize'; unit: UnitId; name?: string; gender?: Gender; look?: Appearance }
   | { type: 'endTurn'; faction: FactionId };
 
 export interface StrikeEvent {
@@ -408,6 +450,7 @@ export type GameEvent =
   | { type: 'unitSpawned'; unit: UnitId; pos: Hex; reason: 'recruit' | 'summon' | 'monster' }
   | { type: 'unitEquipped'; unit: UnitId; item: ItemId | null; slot: EquipSlot }
   | { type: 'unitLeveled'; unit: UnitId; level: number }
+  | { type: 'unitEmpowered'; unit: UnitId; elite: EliteId; rank: number }
   | { type: 'skillUsed'; unit: UnitId; skill: ActiveId; target?: Hex; targets?: UnitId[] }
   | { type: 'buildingStarted'; building: BuildingInstanceId }
   | { type: 'buildingProgress'; building: BuildingInstanceId; left: number }

@@ -2,7 +2,7 @@
 """Batch image→3D with the TRELLIS.2 gallery template (local ComfyUI).
 
 Usage: python3 tools/i2m.py <cat> [<cat> ...] [--only id1,id2] [--force]
-  cat = src_units | src_items | src_mounts | src_monsters | src_buildings | src_props
+  cat = src_units | src_items | src_mounts | src_monsters | src_buildings | src_props | src_hair | src_heads
 Reads art/outputs/<cat>/<id>_alpha.png, writes art/outputs/3d/<cat-without-src_>/<id>.glb.
 Slots are edited with `comfy workflow set-slot` on a per-job copy of the fetched template
 (TRELLIS.2 mode, upsample 1024, 2048 textures). Resumable: existing GLBs are skipped.
@@ -23,7 +23,7 @@ COMFY_OUT = "/home/jeanh/ComfyUI-Shared/output"
 COMFY_IN = "/home/jeanh/ComfyUI-Shared/input"
 
 REMESH = {"src_units": 640, "src_buildings": 640}
-FACES = {"src_units": 50000, "src_items": 20000, "src_mounts": 40000, "src_monsters": 40000, "src_buildings": 60000, "src_props": 25000}
+FACES = {"src_heads": 60000, "src_units": 50000, "src_items": 20000, "src_mounts": 40000, "src_monsters": 40000, "src_buildings": 60000, "src_props": 25000}
 
 
 def comfy(*args):
