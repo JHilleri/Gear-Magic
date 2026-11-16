@@ -46,6 +46,17 @@ export interface SkinnedAsset {
 /** A neck as an ellipse (head-frame units, +Z forward) and its skin colour when bare. */
 export interface NeckRing { cx: number; cz: number; rx: number; rz: number; skin?: [number, number, number] }
 
+/** Continuous body/head assets. Coordinates are in the body's bind space, Y up, +Z forward. */
+export interface UnifiedBodyMeta {
+  version: 2;
+  eyes: { center: [number, number, number]; radius: number; irisRadius?: number; aperture?: [number, number] }[];
+  /** Texture's reference skin albedo in sRGB; omitted for neutral detail modulation. */
+  skin?: [number, number, number];
+  hairPrefix?: string;
+  /** Which explicitly named Skin_* material regions a fitted armor covers. */
+  coveredRegions?: Partial<Record<'tunic' | 'leather' | 'plate' | 'robe', string[]>>;
+}
+
 export interface AssetManifest {
   /** `walkSpeed` / `runSpeed`: planted-foot speed of the walk / run cycle (sidecar `walk_speed` / `run_speed`, model heights/s). */
   units: Record<string, {
@@ -58,6 +69,7 @@ export interface AssetManifest {
     neckRing?: NeckRing;
     /** Bald bodies: the two iris centres (model units) and the iris radius, for the eye colour. */
     eyes?: [number, number, number][]; eyeR?: number;
+    unified?: UnifiedBodyMeta;
   }>;
   /** Hair and beard pieces ('hair_<style>', 'beard_<style>'), modelled in the head frame, grey (tinted per unit). */
   hair: Record<string, { file: string }>;

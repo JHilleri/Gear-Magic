@@ -21,7 +21,7 @@ declare global { interface Window { __characterStudio?: StudioDebug } }
 
 const CLIPS: Record<string, string> = { idle: 'Idle', walk: 'Walk', attack_melee: 'Melee', attack_ranged: 'Archery', cast: 'Cast', work: 'Work', hit: 'Hit', death: 'Death' };
 const ARMORS: { id: ItemId | null; name: string; note: string; glyph: string }[] = [
-  { id: null, name: 'Travel clothes', note: 'Everyday wear', glyph: '◇' },
+  { id: null, name: 'Base body', note: 'No armor attachments', glyph: '◇' },
   { id: 'tunic', name: 'Padded tunic', note: 'Quilted cloth', glyph: '◈' },
   { id: 'leather', name: 'Leather armor', note: 'Hardened hide', glyph: '⬡' },
   { id: 'plate', name: 'Plate armor', note: 'Forged steel', glyph: '♜' },

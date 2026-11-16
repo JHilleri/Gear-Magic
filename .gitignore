@@ -21,6 +21,7 @@ art/outputs/
 art/blueprints/i2m_jobs/
 # comfy CLI's machine-owned run journal.
 art/.comfy/runs.jsonl
+art/.comfy/assets.lock.json
 
 # --- Playtesting ---
 # Screenshots from headless playtests (~950 MB). Notes and reports are kept.

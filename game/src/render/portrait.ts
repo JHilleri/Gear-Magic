@@ -9,6 +9,7 @@ import { bodyPaintKey, dressHead, patchBodyShader } from './appearance';
 import type { AssetLibrary, PortraitOpts } from './types';
 import { firstAvailable, unitBodyKeys } from './units';
 import { attachCharacterRegalia } from './character-regalia';
+import { availableUnifiedBody, isUnifiedBody, dressUnifiedCharacter, disposeUnifiedCharacter } from './unified-character';
 
 const W = 320, H = 400;
 /** Cached portraits (data URLs): the customisation screen walks through many looks. */
@@ -64,7 +65,7 @@ export function createPortraitRenderer(renderer: THREE.WebGLRenderer, assets: As
     const w = W * scale, h = H * scale;
     const target = targetFor(rig, scale);
     const model = skeletonClone(sk.scene);
-    if (u.race === 'human') attachCharacterRegalia(assets, model, u.equipment.body, u.gender);
+    if (u.race === 'human' && !isUnifiedBody(entry)) attachCharacterRegalia(assets, model, u.equipment.body, u.gender);
     const mats: THREE.Material[] = [];
     const own = (root: THREE.Object3D): THREE.Material[] => {
       const out: THREE.Material[] = [];
@@ -78,12 +79,16 @@ export function createPortraitRenderer(renderer: THREE.WebGLRenderer, assets: As
       return out;
     };
     const bodyMats = own(model);
-    const paint = dressHead(assets, model, entry, u.gender, u.look, (piece) => { own(piece); });
-    if (paint) {
-      for (const m of bodyMats) {
-        m.onBeforeCompile = (sh) => patchBodyShader(sh, paint);
-        m.customProgramCacheKey = () => `portrait-${bodyPaintKey(paint)}`;
-        if (paint.hide) m.side = THREE.DoubleSide;
+    if (isUnifiedBody(entry) && u.gender) {
+      dressUnifiedCharacter(assets, model, entry, u.gender, u.look, u.equipment.body, (piece) => { own(piece); });
+    } else {
+      const paint = dressHead(assets, model, entry, u.gender, u.look, (piece) => { own(piece); });
+      if (paint) {
+        for (const m of bodyMats) {
+          m.onBeforeCompile = (sh) => patchBodyShader(sh, paint);
+          m.customProgramCacheKey = () => `portrait-${bodyPaintKey(paint)}`;
+          if (paint.hide) m.side = THREE.DoubleSide;
+        }
       }
     }
     scene.add(model);
@@ -123,6 +128,7 @@ export function createPortraitRenderer(renderer: THREE.WebGLRenderer, assets: As
       renderer.setClearColor(prevColor, prevAlpha);
       renderer.autoClear = prevAuto;
       scene.remove(model);
+      disposeUnifiedCharacter(model);
       for (const m of mats) m.dispose();
       model.traverse((o) => { const s = (o as THREE.SkinnedMesh).skeleton; if (s) s.dispose(); });
     }
@@ -131,11 +137,12 @@ export function createPortraitRenderer(renderer: THREE.WebGLRenderer, assets: As
 
   return (u, body, opts = {}) => {
     if (u.monster || !u.look || !u.gender) return null;
-    const keys = unitBodyKeys(u.race, body, u.equipment?.body, u.gender);
+    const unifiedKey = u.race === 'human' ? availableUnifiedBody(assets, u.gender) : null;
+    const keys = unifiedKey ? [unifiedKey] : unitBodyKeys(u.race, body, u.equipment?.body, u.gender);
     const key = firstAvailable(keys, (k) => !!assets.skinned(k));
     if (!key) return null;
     const l = u.look;
-    const id = `${key}|${l.hair}|${l.hairColor}|${l.eyes}|${l.beard}|${l.face}|${l.skin ?? ''}|${opts.large ? 2 : 1}|${Math.round(opts.yaw ?? 0)}`;
+    const id = `${key}|${u.equipment?.body ?? ''}|${l.hair}|${l.hairColor}|${l.eyes}|${l.beard}|${l.face}|${l.skin ?? ''}|${opts.large ? 2 : 1}|${Math.round(opts.yaw ?? 0)}`;
     let url = cache.get(id);
     if (url === undefined) {
       url = render(key, u, opts);

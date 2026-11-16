@@ -1,0 +1,26 @@
+{
+  "date": "2026-11-16",
+  "route": "actual UI New Game -> Begin -> select human unit",
+  "settings": {
+    "mapSize": "normal",
+    "seed": 459604,
+    "playerFaction": "valen",
+    "aiCount": 2,
+    "difficulty": "normal"
+  },
+  "selected_unit": {
+    "id": 5,
+    "name": "Wynne",
+    "gender": "female",
+    "skin": "deep",
+    "hair": "bun",
+    "hairColor": "platinum"
+  },
+  "observations": [
+    "Map loaded",
+    "Human unit rendered",
+    "Dynamic portrait rendered",
+    "No browser exceptions or WebGL errors observed"
+  ],
+  "scope": "Loading/rendering smoke check, not a campaign playthrough"
+}

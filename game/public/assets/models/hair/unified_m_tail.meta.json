@@ -1,0 +1,34 @@
+{
+ "sourceBody": "human_m_base.glb",
+ "sourceSha256": "093e857424ec7359c7b49d82dd27cb1577cb58e5d1a3eb86e2e7a741e317bf31",
+ "space": "model-bind",
+ "head": {
+  "x": 0.00038960017263889313,
+  "y": 0.9999918937683105,
+  "z": -0.010020292364060879,
+  "depth": 0.10628298576921225
+ },
+ "style": "tail",
+ "triangles": 6288,
+ "boundsBlender": [
+  [
+   -0.052558,
+   0.049131
+  ],
+  [
+   -0.098022,
+   0.045695
+  ],
+  [
+   0.867946,
+   1.005007
+  ]
+ ],
+ "dynamicNodes": [
+  "swing_tail"
+ ],
+ "scalpClearance": {
+  "min": 0.0005,
+  "max": 0.005288
+ }
+}

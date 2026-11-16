@@ -8,6 +8,7 @@ import { FACTIONS } from '../data/factions';
 import { ITEMS } from '../data/items';
 import { bodyPaintKey, dressHead, patchBodyShader, type BodyPaint } from './appearance';
 import { attachCharacterRegalia, createCharacterTrinket } from './character-regalia';
+import { availableUnifiedBody, isUnifiedBody, dressUnifiedCharacter, updateUnifiedHair, disposeUnifiedCharacter } from './unified-character';
 import { bodyVariant, effectiveStats } from '../sim/units';
 import { DEFAULT_RUN_SPEED, DEFAULT_WALK_SPEED, FOOT_SPEED, UNIT_HEIGHT, walkTimeScale } from './types';
 import type { CreateUnitLayer, FxLayerApi, RenderContext, UnitLayerApi } from './types';
@@ -166,6 +167,7 @@ interface UnitView {
   unitSpace: THREE.Group;
   rider: THREE.Group;
   model: THREE.Object3D | null;
+  unifiedRoot: THREE.Object3D | null;
   procedural: boolean;
   mixer: THREE.AnimationMixer | null;
   clips: Map<string, THREE.AnimationClip>;
@@ -609,7 +611,7 @@ export const createUnitLayer: CreateUnitLayer = (ctx: RenderContext, fx: FxLayer
     rootG.add(bar);
     const v: UnitView = {
       id: u.id, faction, race: u.race, monster: u.monster ?? null, equipment: { ...u.equipment }, pos: { ...u.pos }, sig: '',
-      root: rootG, body, unitSpace, rider, model: null, procedural: true, mixer: null, clips: new Map(), actions: new Map(),
+      root: rootG, body, unitSpace, rider, model: null, unifiedRoot: null, procedural: true, mixer: null, clips: new Map(), actions: new Map(),
       current: null, currentName: '', style: null,
       material: createPaletteMaterial(unitPalette(u.race, faction, seed)),
       glbMats: [], mount: null, monsterRig: null, mainItem: null, offItem: null, trinket: null, gripR: null, gripL: null, chest: null,
@@ -628,6 +630,8 @@ export const createUnitLayer: CreateUnitLayer = (ctx: RenderContext, fx: FxLayer
   }
 
   function clearModel(v: UnitView): void {
+    if (v.unifiedRoot) disposeUnifiedCharacter(v.unifiedRoot);
+    v.unifiedRoot = null;
     if (v.mixer) { v.mixer.stopAllAction(); v.mixer.uncacheRoot(v.mixer.getRoot()); }
     v.mixer = null;
     // Every view owns its skeletons (SkeletonUtils / asset clones, procedural rigs): free their bone textures.
@@ -932,21 +936,29 @@ export const createUnitLayer: CreateUnitLayer = (ctx: RenderContext, fx: FxLayer
 
     // body
     // House leaders without a customizable look keep their authored identity mesh.
-    const bodyKeys = unitBodyKeys(u.race, body, u.equipment.body, u.isLeader && !u.look ? undefined : u.gender);
+    const unifiedKey = u.race === 'human' && u.look ? availableUnifiedBody(ctx.assets, u.gender) : null;
+    const bodyKeys = unifiedKey ? [unifiedKey] : unitBodyKeys(u.race, body, u.equipment.body, u.isLeader && !u.look ? undefined : u.gender);
     const key = firstAvailable(bodyKeys, (k) => !!ctx.assets.skinned(k)) ?? bodyKeys[bodyKeys.length - 1];
     const sk = ctx.assets.skinned(key);
     let hipsH = 0.5;
     let H = 1;
     if (sk) {
       const model = skeletonClone(sk.scene);
-      if (u.race === 'human') attachCharacterRegalia(ctx.assets, model, u.equipment.body, u.gender);
       const entry = ctx.assets.manifest.units?.[key];
+      const unified = isUnifiedBody(entry) && !!u.gender && !!u.look;
+      if (u.race === 'human' && !unified) attachCharacterRegalia(ctx.assets, model, u.equipment.body, u.gender);
       const before = v.glbMats.length;
       adoptMaterials(v, model, undefined, 'body', u.isLeader);
       const bodyMats = v.glbMats.slice(before);
       // Looks: the face model, hair and beard on the head bone; then the body's own head is hidden or painted.
-      const paint = dressHead(ctx.assets, model, entry, u.gender, u.look, (piece) => adoptMaterials(v, piece, undefined, 'other'));
-      if (paint) for (const m of bodyMats) { m.userData.paint = paint; if (paint.hide) m.side = THREE.DoubleSide; m.needsUpdate = true; }
+      if (unified) {
+        dressUnifiedCharacter(ctx.assets, model, entry, u.gender!, u.look!, u.equipment.body,
+          (piece) => adoptMaterials(v, piece, undefined, 'other'));
+        v.unifiedRoot = model;
+      } else {
+        const paint = dressHead(ctx.assets, model, entry, u.gender, u.look, (piece) => adoptMaterials(v, piece, undefined, 'other'));
+        if (paint) for (const m of bodyMats) { m.userData.paint = paint; if (paint.hide) m.side = THREE.DoubleSide; m.needsUpdate = true; }
+      }
       H = ctx.assets.manifest.units?.[key]?.height ?? measureHeight(model);
       const holder = new THREE.Group();
       holder.add(model);
@@ -1677,6 +1689,7 @@ export const createUnitLayer: CreateUnitLayer = (ctx: RenderContext, fx: FxLayer
       if (v.flash > 0) { v.flash = Math.max(0, v.flash - dt * 5); applyFlash(v); }
       // skeleton
       v.mixer?.update(dt);
+      if (v.unifiedRoot) updateUnifiedHair(v.unifiedRoot, dt);
       // mounts
       let bob = 0;
       if (v.mount && !v.dying) {

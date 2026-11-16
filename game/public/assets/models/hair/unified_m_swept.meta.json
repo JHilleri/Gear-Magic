@@ -1,0 +1,51 @@
+{
+ "sourceBody": "human_m_base.glb",
+ "sourceSha256": "093e857424ec7359c7b49d82dd27cb1577cb58e5d1a3eb86e2e7a741e317bf31",
+ "space": "model-bind",
+ "head": {
+  "x": 0.00038960017263889313,
+  "y": 0.9999918937683105,
+  "z": -0.010020292364060879,
+  "depth": 0.10628298576921225
+ },
+ "style": "swept",
+ "triangles": 7488,
+ "boundsBlender": [
+  [
+   -0.063939,
+   0.064703
+  ],
+  [
+   -0.097854,
+   0.032744
+  ],
+  [
+   0.826695,
+   1.006859
+  ]
+ ],
+ "dynamicNodes": [
+  "swing_layer_-1_0",
+  "swing_layer_-1_1",
+  "swing_layer_-1_2",
+  "swing_layer_-1_3",
+  "swing_layer_-1_4",
+  "swing_layer_-1_5",
+  "swing_layer_-1_6",
+  "swing_layer_-1_7",
+  "swing_layer_-1_8",
+  "swing_layer_1_0",
+  "swing_layer_1_1",
+  "swing_layer_1_2",
+  "swing_layer_1_3",
+  "swing_layer_1_4",
+  "swing_layer_1_5",
+  "swing_layer_1_6",
+  "swing_layer_1_7",
+  "swing_layer_1_8"
+ ],
+ "scalpClearance": {
+  "min": 0.0005,
+  "max": 0.006287
+ }
+}

@@ -1,5 +1,47 @@
 {
  "units": {
+  "human_f_base": {
+   "file": "models/units/human_f_base.glb",
+   "height": 1.0,
+   "unified": {
+    "version": 2,
+    "eyes": [
+     {
+      "center": [
+       -0.019898,
+       0.931305,
+       0.055835
+      ],
+      "radius": 0.011915,
+      "irisRadius": 0.003125,
+      "aperture": [
+       0.007268,
+       0.002383
+      ]
+     },
+     {
+      "center": [
+       0.019421,
+       0.931305,
+       0.055746
+      ],
+      "radius": 0.011915,
+      "irisRadius": 0.003125,
+      "aperture": [
+       0.007268,
+       0.002383
+      ]
+     }
+    ],
+    "hairPrefix": "unified_f_"
+   },
+   "head": {
+    "x": -0.00024,
+    "y": 0.99999,
+    "z": -0.04145,
+    "depth": 0.11915
+   }
+  },
   "human_f_commoner": {
    "file": "models/units/human_f_commoner.glb",
    "height": 1.0,
@@ -193,6 +235,53 @@
   "human_leader": {
    "file": "models/units/human_leader.glb",
    "height": 1.0
+  },
+  "human_m_base": {
+   "file": "models/units/human_m_base.glb",
+   "height": 1.0,
+   "unified": {
+    "version": 2,
+    "eyes": [
+     {
+      "center": [
+       -0.017147,
+       0.936594,
+       0.075595
+      ],
+      "radius": 0.010628,
+      "irisRadius": 0.002788,
+      "aperture": [
+       0.006483,
+       0.002126
+      ]
+     },
+     {
+      "center": [
+       0.017926,
+       0.936594,
+       0.075482
+      ],
+      "radius": 0.010628,
+      "irisRadius": 0.002788,
+      "aperture": [
+       0.006483,
+       0.002126
+      ]
+     }
+    ],
+    "hairPrefix": "unified_m_"
+   },
+   "head": {
+    "x": 0.00039,
+    "y": 0.99999,
+    "z": -0.01002,
+    "depth": 0.10628
+   },
+   "skin": [
+    0.651,
+    0.4,
+    0.2863
+   ]
   },
   "human_m_commoner": {
    "file": "models/units/human_m_commoner.glb",
@@ -424,6 +513,30 @@
   }
  },
  "items": {
+  "armor_f_leather": {
+   "file": "models/items/armor_f_leather.glb"
+  },
+  "armor_f_plate": {
+   "file": "models/items/armor_f_plate.glb"
+  },
+  "armor_f_robe": {
+   "file": "models/items/armor_f_robe.glb"
+  },
+  "armor_f_tunic": {
+   "file": "models/items/armor_f_tunic.glb"
+  },
+  "armor_m_leather": {
+   "file": "models/items/armor_m_leather.glb"
+  },
+  "armor_m_plate": {
+   "file": "models/items/armor_m_plate.glb"
+  },
+  "armor_m_robe": {
+   "file": "models/items/armor_m_robe.glb"
+  },
+  "armor_m_tunic": {
+   "file": "models/items/armor_m_tunic.glb"
+  },
   "axe": {
    "file": "models/items/axe.glb"
   },
@@ -637,6 +750,87 @@
   },
   "hair_tail": {
    "file": "models/hair/hair_tail.glb"
+  },
+  "unified_f_bob": {
+   "file": "models/hair/unified_f_bob.glb"
+  },
+  "unified_f_braid": {
+   "file": "models/hair/unified_f_braid.glb"
+  },
+  "unified_f_bun": {
+   "file": "models/hair/unified_f_bun.glb"
+  },
+  "unified_f_crop": {
+   "file": "models/hair/unified_f_crop.glb"
+  },
+  "unified_f_curly": {
+   "file": "models/hair/unified_f_curly.glb"
+  },
+  "unified_f_long": {
+   "file": "models/hair/unified_f_long.glb"
+  },
+  "unified_f_pixie": {
+   "file": "models/hair/unified_f_pixie.glb"
+  },
+  "unified_f_ponytail": {
+   "file": "models/hair/unified_f_ponytail.glb"
+  },
+  "unified_f_short": {
+   "file": "models/hair/unified_f_short.glb"
+  },
+  "unified_f_swept": {
+   "file": "models/hair/unified_f_swept.glb"
+  },
+  "unified_f_tail": {
+   "file": "models/hair/unified_f_tail.glb"
+  },
+  "unified_m_beard_full": {
+   "file": "models/hair/unified_m_beard_full.glb"
+  },
+  "unified_m_beard_goatee": {
+   "file": "models/hair/unified_m_beard_goatee.glb"
+  },
+  "unified_m_beard_long": {
+   "file": "models/hair/unified_m_beard_long.glb"
+  },
+  "unified_m_beard_moustache": {
+   "file": "models/hair/unified_m_beard_moustache.glb"
+  },
+  "unified_m_beard_short": {
+   "file": "models/hair/unified_m_beard_short.glb"
+  },
+  "unified_m_bob": {
+   "file": "models/hair/unified_m_bob.glb"
+  },
+  "unified_m_braid": {
+   "file": "models/hair/unified_m_braid.glb"
+  },
+  "unified_m_bun": {
+   "file": "models/hair/unified_m_bun.glb"
+  },
+  "unified_m_crop": {
+   "file": "models/hair/unified_m_crop.glb"
+  },
+  "unified_m_curly": {
+   "file": "models/hair/unified_m_curly.glb"
+  },
+  "unified_m_long": {
+   "file": "models/hair/unified_m_long.glb"
+  },
+  "unified_m_pixie": {
+   "file": "models/hair/unified_m_pixie.glb"
+  },
+  "unified_m_ponytail": {
+   "file": "models/hair/unified_m_ponytail.glb"
+  },
+  "unified_m_short": {
+   "file": "models/hair/unified_m_short.glb"
+  },
+  "unified_m_swept": {
+   "file": "models/hair/unified_m_swept.glb"
+  },
+  "unified_m_tail": {
+   "file": "models/hair/unified_m_tail.glb"
   }
  },
  "heads": {

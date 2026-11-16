@@ -93,6 +93,8 @@ def scan_models(assets, kind):
         meta = read_meta(p)
         if kind == "units":
             entry["height"] = float(meta.get("height", 1.0))
+            if isinstance(meta.get("unified"), dict) and meta["unified"].get("version") == 2:
+                entry["unified"] = meta["unified"]
             # bald bodies (blender/head_frame.py): where hair and beard pieces go, and the eyes
             head = meta.get("head")
             if isinstance(head, dict) and all(isinstance(head.get(k), (int, float)) for k in ("x", "y", "z", "depth")):

@@ -1,61 +1,82 @@
 # Character system
 
-The `codex/character-studio` branch adds a Warcraft-inspired character workshop and shares its
-appearance, fitted bodies, equipment sockets and armor modules with the game and its portraits.
-Run `cd game && npm run dev`, then open `/characters.html`. This worktree's preview runs on
-`http://127.0.0.1:5197/characters.html` independently of the main checkout.
+The `codex/unified-characters` worktree rebuilds human assembly around an intact body and head.
+Run `cd game && npm run dev`, then open `/characters.html`. This worktree's independent preview
+uses `http://127.0.0.1:5197/characters.html`.
 
-## Included
+## Assembly
 
-- Male and female body meshes, each fitted for travel clothes, padded tunic, leather, plate and robe.
-- Three face meshes per body type; eleven hair meshes plus bald, five beards plus clean-shaven,
-  eight hair colors, six eye colors, and six skin tones.
-- Seven visible main-hand items, shield, hand-worn ring and chest-worn amulet. Two-handed weapons
-  clear the offhand. New blue-steel/gold plate pauldrons follow the arm bones on both body types.
-- Full-body/portrait/back cameras, orbit/zoom, idle/walk/combat/cast/work/hit/death previews,
-  turntable, pause, PNG capture, four loadout presets, local save/load and validated JSON exchange.
-- Title/pause-menu entry. The unit Appearance dialog can load a saved Forge appearance. Applying
-  it changes name/body type/look through the existing simulation action without granting equipment.
-- Gendered human leaders retain their face and display their actual equipped armor.
+- `human_m_base.glb` and `human_f_base.glb` contain a continuous bald body/head surface, a standard
+  20-bone rig, face-shape morphs and animation clips. There is no runtime head/neck splice.
+- Skin material regions permit coverage underneath equipment. The mesh shares positions and smooth
+  normals across those region borders. Bare skin uses one tint response, including the neck.
+- Four outfits per body are separate skinned attachments: padded tunic, leather, plate and robe.
+  They rebind to the base skeleton by bone name and retain the exact inverse bind matrices.
+  Equipping armor never selects a different body or head. Missing armor is reported and leaves
+  the base visible rather than hiding it.
+- Leather has tailored panels, sleeves, a belt, layered hip protection and closed boots. Plate
+  includes its own shoulders. The old shoulder module is not added again on unified bodies.
+- Two real eyeballs, curved iris caps and pupils sit inside openings in the face. They use ordinary
+  depth-tested, nonemissive PBR materials. Globe depth is fitted against the complete eyelid rim;
+  the upper lid covers part of the iris. There is no painted-iris overlay on the unified route.
+- Hair is fitted against each base's actual scalp. Neutral strand textures take the chosen hair
+  color; authored loose groups have restrained spring motion while the scalp roots stay fixed.
+  See [blender/UNIFIED_GROOM.md](blender/UNIFIED_GROOM.md).
+- Three face shapes, bald/hair/beard options, eight hair colors, six eye colors and six skin tones
+  are available in the Forge. Weapons, shields, rings and amulets remain visible attachments.
 
-Skin is optional in saved appearances. Old saves retain their original painted skin; new units get
-a deterministic tone from their private appearance RNG, without advancing gameplay randomness.
-Skin tint preserves texture variation and eye whites. Clothing keeps its authored color.
+`game/src/render/unified-character.ts` owns shared assembly for the Forge, map and portraits.
+`character.ts` loads character assets and creates instances. Instances own their materials,
+procedural eye geometry and skeleton clones; source geometry/textures stay cached. Nonhuman and
+older assets retain their existing assembly path.
 
-## Code and assets
+The Forge supports orbit/zoom, full-body/portrait/back views, animation previews, pause, turntable,
+PNG capture, presets, local save/load and validated JSON exchange. Loading a saved Forge design
+through a unit's Appearance dialog changes its name/body/look through the normal simulation
+action; equipment continues to follow the game's armory rules.
 
-`game/src/render/character.ts` provides `loadCharacterAssets()` and `createCharacter()`. Its loader
-decodes only character assets, two at a time. Instances clone materials and skeletons; shared source
-geometry/textures stay cached. `dispose()` releases instance-owned resources.
+## Rebuilding
 
-`game/src/render/character-regalia.ts` supplies bone-mounted plate shoulders and visible jewelry.
-The same helpers run in the studio, map and portrait renderer. `render/appearance.ts` fits faces,
-hair and beards to the selected body/head, and handles color shaders.
+The modeling references are in `art/assets/unified/`. They are bald T-poses with neutral close-fitting
+reference clothing; processing replaces that surface coloring with skin. The base has smooth,
+non-detailed anatomy. Local ComfyUI/TRELLIS.2 produced the complete meshes. The user's Hunyuan3D
+example was inspected from front/side/back as a comparison; it is not a shipped runtime dependency.
+The user's leather concept guided the revised tailored silhouette.
 
-The studio caps rendering at 30 fps and DPR 1.5, and skips rendering while hidden. It does not start
-ComfyUI or a local image model. The new shoulder module was authored in Blender; existing character
-GLBs and animations are reused. Original character GLBs are preserved.
-
-Rebuild the new assets from the repository root:
+Comfy blueprints remain editable source; compiled workflows and raw meshes are ignored outputs:
 
 ```bash
-blender -b -t 2 --factory-startup -P blender/character_regalia.py -- --out game/public/assets/models/characters
-python3 blender/repair_robe_weights.py
-python3 art/tools/build_manifest.py --check
+cd art
+comfy --json assets push
+comfy --json workflow compose blueprints/unified/male.yaml --lib fragments --out outputs/unified/male.compiled.json
+comfy --json workflow validate --workflow outputs/unified/male.compiled.json
+# Run locally, collect its GLB as outputs/unified/male-source.glb; repeat female.yaml.
 ```
 
-`blender/regalia-source.blend` keeps the editable shoulder parts and modifiers. The exported GLB
-merges parts into four material groups. It is centered on a shoulder, +X outward/+Y up/+Z forward,
-with dimensions relative to a 1.0-high human. The female fit scales the module to 85%; the opposite
-shoulder mirrors X.
+From the repository root, for each `male/m` or `female/f` pair:
 
-The female robe's original skirt weights crossed both legs, shins and feet, pulling its dark
-inner faces through the front in idle. `repair_robe_weights.py` writes a sibling `human_f_robe_v2.glb`
-that binds the continuous skirt to the pelvis and blends at the waist. Boots retain leg weights.
-The same recipe repairs the hanging front tabard in `human_f_heavy_v2.glb`, leaving metal legs
-and side plates articulated.
-Only joint/weight buffer bytes change; geometry, textures, skeleton and animations are identical.
-The manifest builder keeps the canonical `human_f_robe` key and points it at this repair.
+```bash
+blender -b -t 2 --factory-startup -P blender/rig_humanoid.py -- \
+  art/outputs/unified/male-source.glb art/outputs/unified/male-rigged.glb \
+  --tris 30000 --tex 2048 --quality 92 --voxel 0.006
+blender -b -t 2 --factory-startup -P blender/unified_body.py -- \
+  --input art/outputs/unified/male-rigged.glb --gender m
+blender -b -t 2 --factory-startup -P blender/unified_armor.py -- \
+  --body game/public/assets/models/units/human_m_base.glb --gender m --out game/public/assets/models/items
+blender -b -t 2 --factory-startup -P blender/unified_groom.py -- \
+  --body game/public/assets/models/units/human_m_base.glb --gender m --out game/public/assets/models/hair
+python3 art/tools/build_manifest.py
+```
+
+The body builder welds imported UV seam duplicates before editing topology, clears imported split
+normals, relaxes reconstruction noise locally on the face, cuts eyelid apertures, preserves facial
+color detail as neutral skin modulation, adds fitted brows and exports two face morphs at zero.
+Original source assets and the previous head/body generation remain available.
+
+For a raw reconstruction whose proportions look compressed, `blender/body_proportions.py` creates
+a separate unrigged study with independent leg/torso factors before fitting any equipment. The
+provided comparison uses `--legs 1.14 --torso 1.05`, keeping the head and feet dimensions before
+normalizing height. This study is not substituted into the shipped body without a new rig/refit.
 
 ## Verification
 
@@ -64,40 +85,21 @@ cd game
 npm run typecheck
 npm test -- --maxWorkers=2
 npm run build
-cd ..
-python3 blender/validate_characters.py
-python3 blender/repair_robe_weights.py --check
+node tools/verify-unified-assets.mjs
+CDP_PORT=19479 node tools/verify-characters.mjs http://127.0.0.1:5197/characters.html ../playtest/unified-characters
 ```
 
-The Python checks inspect 41 actual GLBs for geometry, skins, clips and sockets, and reproduce the
-cloth repairs byte-for-byte. Tests cover appearance/save compatibility, material/resource isolation,
-equipment attachment rules, mirrored armor modules and JSON validation.
+The binary check verifies connected body/head geometry, matching seam normals, normalized skin
+weights, neutral face morphs, eyelid/globe clearance, groom source hashes and compatible armor inverse binds in shipped
+GLBs. Runtime tests cover attachment remapping, material/resource ownership, coverage fallback,
+eye orientation/physical lid occlusion and fixed-root hair motion. The browser matrix loads real
+assets and exercises both bodies, outfits/walks, face/hair/color choices, equipment, animation,
+save/load and desktop/mobile layout. Screenshots require visual review as well as automated checks.
 
-With a separate CDP browser and the dev server running:
+## Current art limits
 
-```bash
-cd game
-CDP_PORT=19479 node tools/verify-characters.mjs http://127.0.0.1:5197/characters.html ../playtest/characters
-```
-
-This runs 85 browser checks over the real rendered models: both bodies in all outfits and their walks, all faces,
-hair/beards/colors/skin tones, weapons, animations, UI save/load and two-handed equipment changes.
-It checks missing assets, browser exceptions and desktop/mobile overflow. Screenshots and
-`verification.json` go into `playtest/characters/`. Visual checks remain necessary: counts alone
-cannot establish that a hairstyle or armor fits well.
-
-Verified on 2026-11-16: the complete simulation/UI/renderer suite passed **516 tests** (3 opt-in
-tests skipped); after the final cloth/leader changes, **32 focused tests** and the production build
-passed again. The final browser matrix passed **85 checks** with no missing assets, shader errors
-or exceptions. The packaged production page loaded the fitted female plate model successfully.
-An actual new-game session also loaded a saved Forge appearance through the Appearance dialog,
-applied it, and retained identical equipment and base stats. Evidence is in `playtest/characters/`.
-
-## Art quality boundary
-
-This is a functioning, stylized character system and an inspectable art iteration environment.
-The inherited generated meshes still have coarse hands, rigid fingers, some hair/neck seams and
-baked surface irregularities visible in extreme close-ups. The robe uses a pelvis-driven skirt,
-without cloth simulation. Hair is mesh-based. There is no facial animation or expression system.
-Those areas need authored retopology, textures and animation work before claiming AAA character
-quality. The full-body strategy-game view is the current strongest presentation.
+This is an integrated stylized character rebuild, not finished AAA character art. Generated facial
+forms and hands still need authored retopology and texture polish for close portraits. Face choices
+are restrained shape variants; there is no expression rig. Hair uses textured mesh locks/cards and
+limited secondary motion, not strand simulation. Robes and hip panels follow bones rather than
+simulated cloth. The strategy camera remains the strongest presentation.

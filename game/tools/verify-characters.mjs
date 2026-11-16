@@ -79,7 +79,8 @@ try {
     for (const [armor, suffix] of [[null, 'commoner'], ['tunic', 'padded'], ['leather', 'light'], ['plate', 'heavy'], ['robe', 'robe']]) {
       const draft = { ...base, equipment: { ...base.equipment, body: armor } };
       const stats = await set(draft, `${gender}-${suffix}`, 'full', true);
-      assert.equal(stats.bodyKey, `human_${gender === 'male' ? 'm' : 'f'}_${suffix}`);
+      // Equipment must remain an attachment on the same continuous body.
+      assert.equal(stats.bodyKey, `human_${gender === 'male' ? 'm' : 'f'}_base`);
       await evaluate('window.__characterStudio.play("walk")');
       await pause(450);
       await shot(`${gender}-${suffix}-walk`);

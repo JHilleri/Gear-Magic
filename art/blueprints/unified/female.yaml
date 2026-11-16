@@ -1,0 +1,19 @@
+pipeline:
+  - fragment: unified_body_i2m
+    alias: body
+    inputs:
+      remove_background_image: $asset.unified/female-reference.png
+      switch_remove_background_on_false: $asset.unified/female-reference.png
+      crop_image_to_mask_images: $asset.unified/female-reference.png
+    params:
+      boolean_switch_to_trellis2_value: true
+      switch_remove_background_switch: true
+      texture_resolution_value: 2048
+      render_uv_atlas_resolution: 2048
+      trellis2_upsample_stage_target_resolution: 1024
+      remesh_mesh_narrow_band_dc_resolution: 640
+      decimate_mesh_target_face_count: 80000
+      bake_normal_map_from_mesh_resolution: 2048
+      bake_ambient_occlusion_resolution: 512
+      bake_ambient_occlusion_samples: 16
+      save_3d_advanced_filename_prefix: magic4x/unified/female

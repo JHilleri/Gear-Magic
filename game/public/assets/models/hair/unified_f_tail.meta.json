@@ -1,0 +1,34 @@
+{
+ "sourceBody": "human_f_base.glb",
+ "sourceSha256": "7c63266420b1bcc1a3bb595e30b8bf2b1cef971397b50499895d039bdd76e7af",
+ "space": "model-bind",
+ "head": {
+  "x": -0.00023867934942245483,
+  "y": 0.9999948740005493,
+  "z": -0.04145381599664688,
+  "depth": 0.11914942413568497
+ },
+ "style": "tail",
+ "triangles": 6288,
+ "boundsBlender": [
+  [
+   -0.053389,
+   0.053221
+  ],
+  [
+   -0.078301,
+   0.081282
+  ],
+  [
+   0.852078,
+   1.005508
+  ]
+ ],
+ "dynamicNodes": [
+  "swing_tail"
+ ],
+ "scalpClearance": {
+  "min": 0.0005,
+  "max": 0.005288
+ }
+}

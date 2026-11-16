@@ -14,7 +14,7 @@ export const HAIR_STYLES: HairStyleDef[] = [
   { id: 'swept', name: 'Shoulder-length', genders: ['male'], weight: 3 },
   { id: 'tail', name: 'Tied back', genders: ['male'], weight: 2 },
   { id: 'curly', name: 'Curly', genders: ['male', 'female'], weight: 2 },
-  { id: 'bald', name: 'Bald', genders: ['male'], weight: 1 },
+  { id: 'bald', name: 'Bald', genders: ['male', 'female'], weight: 1 },
   { id: 'long', name: 'Long', genders: ['female'], weight: 4 },
   { id: 'braid', name: 'Braided', genders: ['female'], weight: 4 },
   { id: 'bun', name: 'Bun', genders: ['female'], weight: 3 },
@@ -33,10 +33,10 @@ export const BEARDS: BeardDef[] = [
   { id: 'long', name: 'Long beard', weight: 1 },
 ];
 
-/** Faces: each gender has its own set of head models ('head_<m|f><n>'); `Appearance.face` indexes it. */
+/** Face choices index unified morphs, with separate head models retained for legacy assets. */
 export const FACES: Record<Gender, string[]> = {
-  male: ['Square-jawed', 'Weathered', 'Lean'],
-  female: ['Soft', 'Stern', 'Freckled'],
+  male: ['Balanced', 'Broad-jawed', 'Lean'],
+  female: ['Balanced', 'Defined', 'Fine'],
 };
 /** Longest name a unit can be given (the customisation screen). */
 export const NAME_MAX = 18;

@@ -12,6 +12,7 @@ import { bodyPaintKey, dressHead, hairPieceKeys, headModelKey, patchBodyShader }
 import type { AssetLibrary, AssetManifest, SkinnedAsset } from './types';
 import { firstAvailable, unitBodyKeys } from './units';
 import { attachCharacterRegalia, createCharacterTrinket } from './character-regalia';
+import { availableUnifiedBody, isUnifiedBody, dressUnifiedCharacter, updateUnifiedHair, disposeUnifiedCharacter } from './unified-character';
 
 type Section = 'units' | 'heads' | 'hair' | 'items';
 export interface CharacterSpec {
@@ -43,9 +44,18 @@ export async function loadCharacterAssets(onProgress: (fraction: number, label: 
   const cache = new Map<string, SkinnedAsset>();
   const loader = new GLTFLoader();
   const jobs: { section: Section; key: string; file: string }[] = [];
+  const unified = new Set(['m', 'f'].filter((g) => isUnifiedBody(source.units?.[`human_${g}_base`])));
   for (const section of ['units', 'heads', 'hair', 'items'] as const) {
     for (const [key, entry] of Object.entries(source[section] ?? {})) {
-      if (section === 'units' && !/^human_[mf]_(commoner|padded|light|heavy|robe)$/.test(key)) continue;
+      if (section === 'units') {
+        const match = /^human_([mf])_(base|commoner|padded|light|heavy|robe)$/.exec(key);
+        if (!match || (unified.has(match[1]) ? match[2] !== 'base' : match[2] === 'base')) continue;
+      }
+      if (section === 'heads' && /^head_([mf])/.test(key) && unified.has(key[5])) continue;
+      if (section === 'hair') {
+        const match = /^unified_([mf])_/.exec(key);
+        if (match ? !unified.has(match[1]) : unified.size === 2) continue;
+      }
       if (section === 'items' && key.startsWith('shield_') && key !== 'shield_human') continue;
       if (!entry || typeof entry.file !== 'string') continue;
       (manifest[section] as Record<string, unknown>)[key] = { ...entry };
@@ -118,13 +128,14 @@ export function createCharacter(assets: AssetLibrary, spec: CharacterSpec): Char
   if (invalid) throw new Error(invalid);
   const bodyItem = spec.equipment.body;
   const body = (bodyItem && ITEMS[bodyItem]?.body) || 'commoner';
-  const keys = unitBodyKeys('human', body, bodyItem, spec.gender);
+  const unifiedKey = availableUnifiedBody(assets, spec.gender);
+  const keys = unifiedKey ? [unifiedKey] : unitBodyKeys('human', body, bodyItem, spec.gender);
   const bodyKey = firstAvailable(keys, (key) => !!assets.skinned(key));
   if (!bodyKey) throw new Error(`Missing character body: ${keys[0]}`);
   const source = assets.skinned(bodyKey)!;
   const entry = assets.manifest.units[bodyKey];
   const model = skeletonClone(source.scene);
-  attachCharacterRegalia(assets, model, bodyItem, spec.gender);
+  if (!isUnifiedBody(entry)) attachCharacterRegalia(assets, model, bodyItem, spec.gender);
   const root = new THREE.Group();
   root.name = 'character';
   root.add(model);
@@ -157,16 +168,20 @@ export function createCharacter(assets: AssetLibrary, spec: CharacterSpec): Char
     return out;
   };
   const bodyMaterials = own(model);
-  const faceKey = headModelKey(spec.gender, look);
-  for (const [section, key] of [['heads', faceKey], ...hairPieceKeys(look).map((key) => ['hair', key])] as ['heads' | 'hair', string][]) {
-    // Presence checks should not allocate orphaned clones from AssetLibrary.model().
-    if (!assets.manifest[section]?.[key]) missing.push(key);
-  }
-  const paint = dressHead(assets, model, entry, spec.gender, look, (piece) => { own(piece); });
-  if (paint) for (const material of bodyMaterials) {
-    material.onBeforeCompile = (shader) => patchBodyShader(shader, paint);
-    material.customProgramCacheKey = () => `character-${bodyPaintKey(paint)}`;
-    if (paint.hide) material.side = THREE.DoubleSide;
+  if (isUnifiedBody(entry)) {
+    missing.push(...dressUnifiedCharacter(assets, model, entry, spec.gender, look, bodyItem, (piece) => { own(piece); }));
+  } else {
+    const faceKey = headModelKey(spec.gender, look);
+    for (const [section, key] of [['heads', faceKey], ...hairPieceKeys(look).map((key) => ['hair', key])] as ['heads' | 'hair', string][]) {
+      // Presence checks should not allocate orphaned clones from AssetLibrary.model().
+      if (!assets.manifest[section]?.[key]) missing.push(key);
+    }
+    const paint = dressHead(assets, model, entry, spec.gender, look, (piece) => { own(piece); });
+    if (paint) for (const material of bodyMaterials) {
+      material.onBeforeCompile = (shader) => patchBodyShader(shader, paint);
+      material.customProgramCacheKey = () => `character-${bodyPaintKey(paint)}`;
+      if (paint.hide) material.side = THREE.DoubleSide;
+    }
   }
 
   for (const slot of ['main', 'off', 'trinket'] as const) {
@@ -224,12 +239,17 @@ export function createCharacter(assets: AssetLibrary, spec: CharacterSpec): Char
     root, bodyKey, clips, missingAssets: missing,
     diagnostics: { meshes, triangles: Math.round(triangles), missing },
     play,
-    update(dt) { if (!disposed && Number.isFinite(dt) && dt >= 0) mixer.update(Math.min(dt, 0.1)); },
+    update(dt) {
+      if (disposed || !Number.isFinite(dt) || dt < 0) return;
+      mixer.update(Math.min(dt, 0.1));
+      updateUnifiedHair(model, dt);
+    },
     dispose() {
       if (disposed) return;
       disposed = true;
       mixer.stopAllAction();
       mixer.uncacheRoot(model);
+      disposeUnifiedCharacter(model);
       root.removeFromParent();
       root.traverse((node) => { const skeleton = (node as THREE.SkinnedMesh).skeleton; if (skeleton) skeleton.dispose(); });
       for (const material of materials) material.dispose();
