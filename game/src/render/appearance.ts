@@ -7,8 +7,8 @@
 // skull, on the centre line, at the occiput; one skull depth per unit; +Y up, +Z forward. A body's
 // manifest entry gives that frame in its bind space (`head`); faces and hair are modelled in it.
 import * as THREE from 'three';
-import type { Appearance, Gender } from '../core/types';
-import { eyeColorDef, hairColorDef } from '../data/appearance';
+import type { Appearance, Gender, SkinTone } from '../core/types';
+import { eyeColorDef, hairColorDef, skinToneDef } from '../data/appearance';
 import type { AssetLibrary, AssetManifest } from './types';
 
 type UnitEntry = AssetManifest['units'][string];
@@ -30,6 +30,13 @@ const FIT_CLEARANCE = 0.012;
 
 /** GLSL shared by the body and the face: the hairline, the neck line. Frame-space position `h`. */
 const FRAME_GLSL = `
+// Generated albedos contain baked highlights/shadows and the original metadata sampled near
+// the lips. A free multiplicative gain can therefore drive the forehead above white. Compress
+// texture detail around the chosen albedo, preserving freckles/lips without changing its tone.
+vec3 unitSkinColor(vec3 texel, vec3 source, vec3 target) {
+  vec3 detail = pow(max(texel / max(source, vec3(0.001)), vec3(0.001)), vec3(0.55));
+  return target * clamp(detail, vec3(0.18), vec3(1.22));
+}
 // Scalp under a hair cut: above a hairline that runs from the forehead over the temple, round the
 // top of the ear and down behind it to the nape. Never the ear itself.
 float unitScalp(vec3 h) {
@@ -63,6 +70,20 @@ export interface BodyPaint {
   hide: boolean; neck: number;     // throat line (frame units)
   eyeA: THREE.Vector3; eyeB: THREE.Vector3; eyeR: number; eyeColor: THREE.Color;   // eyeR 0: none
   scalp: boolean; hair: THREE.Color;
+  skinTint: THREE.Color; skinSource: THREE.Color; skinOn: boolean;
+  skinTarget: THREE.Color; neckSkinSource: THREE.Color;
+}
+
+/** Texture-relative colour adjustment, in linear space. Missing/invalid metadata stays neutral. */
+export function skinTintFor(source: readonly number[] | undefined, tone: SkinTone | undefined): THREE.Color {
+  const target = skinToneDef(tone);
+  if (!target || !source || source.length !== 3 || source.some((c) => !Number.isFinite(c) || c <= 0 || c > 1)) return new THREE.Color(1, 1, 1);
+  const to = new THREE.Color(target.color);
+  return new THREE.Color().setRGB(
+    to.r / Math.max(1e-4, srgbToLinear(source[0])),
+    to.g / Math.max(1e-4, srgbToLinear(source[1])),
+    to.b / Math.max(1e-4, srgbToLinear(source[2])),
+  );
 }
 
 /** A body's throat line (frame units): where its neck begins under the chin; a measure out of range is not trusted. */
@@ -83,6 +104,11 @@ export function bodyPaintFor(entry: UnitEntry | undefined, look: Appearance | un
     eyeA: new THREE.Vector3(...(ownEyes?.[0] ?? [0, 0, 0])), eyeB: new THREE.Vector3(...(ownEyes?.[1] ?? [0, 0, 0])),
     eyeR: ownEyes ? entry?.eyeR ?? 0.007 : 0, eyeColor: new THREE.Color(eye?.color ?? '#6b4423'),
     scalp: !hasFace && look.hair !== 'bald', hair: new THREE.Color(hairColorDef(look.hairColor)?.color ?? '#7a5233'),
+    skinTint: skinTintFor(entry?.skin, look.skin),
+    skinSource: entry?.skin ? new THREE.Color().setRGB(...entry.skin, THREE.SRGBColorSpace) : new THREE.Color(1, 1, 1),
+    skinOn: !!skinToneDef(look.skin) && !!entry?.skin,
+    skinTarget: new THREE.Color(skinToneDef(look.skin)?.color ?? '#ffffff'),
+    neckSkinSource: new THREE.Color().setRGB(...(entry?.neckRing?.skin ?? entry?.skin ?? [1, 1, 1]), THREE.SRGBColorSpace),
   };
 }
 
@@ -100,6 +126,8 @@ export function patchBodyShader(sh: ShaderParams, p: BodyPaint): void {
     uHeadFrame: { value: p.frame }, uNeck: { value: p.neck },
     uEyeA: { value: p.eyeA }, uEyeB: { value: p.eyeB }, uEyeR: { value: p.eyeR }, uEyeColor: { value: p.eyeColor },
     uScalpOn: { value: p.scalp ? 1 : 0 }, uHairColor: { value: p.hair },
+    uSkinTint: { value: p.skinTint }, uSkinSource: { value: p.skinSource }, uSkinOn: { value: p.skinOn ? 1 : 0 },
+    uSkinTarget: { value: p.skinTarget }, uNeckSkinSource: { value: p.neckSkinSource },
   });
   sh.vertexShader = sh.vertexShader
     .replace('#include <common>', '#include <common>\nvarying vec3 vBindPos;')
@@ -107,6 +135,8 @@ export function patchBodyShader(sh: ShaderParams, p: BodyPaint): void {
   const head = `#include <common>
 varying vec3 vBindPos; uniform vec4 uHeadFrame; uniform float uNeck;
 uniform vec3 uEyeA; uniform vec3 uEyeB; uniform float uEyeR; uniform vec3 uEyeColor; uniform float uScalpOn; uniform vec3 uHairColor;
+uniform vec3 uSkinTint; uniform vec3 uSkinSource; uniform float uSkinOn;
+uniform vec3 uSkinTarget; uniform vec3 uNeckSkinSource;
 ${FRAME_GLSL}
 vec4 unitEye(vec3 p, vec3 c) {
   vec3 d = p - c;
@@ -123,11 +153,26 @@ vec4 unitEye(vec3 p, vec3 c) {
   col = mix(col, vec3(0.2, 0.13, 0.1), 0.7 * smoothstep(0.84, 1.0, edge)); // lash line
   return vec4(col, ball);
 }`;
+  // The existing bodies use a single painted texture for skin and clothing. Only tint the
+  // head/neck and hands in bind space, and only skin-coloured texels there. Leather, the torso,
+  // weapons and the rest of the armour must retain their authored colours.
+  const skin = `#include <map_fragment>
+  if (uSkinOn > 0.5) {
+    vec3 hs = (vBindPos - uHeadFrame.xyz) / uHeadFrame.w;
+    float headSkin = smoothstep(-1.65, -1.4, hs.y) * (1.0 - smoothstep(0.65, 0.8, abs(hs.x)));
+    float handSkin = smoothstep(0.32, 0.37, abs(vBindPos.x)) * smoothstep(0.65, 0.7, vBindPos.y) * (1.0 - smoothstep(0.87, 0.92, vBindPos.y));
+    vec3 source = mix(uSkinSource, uNeckSkinSource, headSkin);
+    vec3 chroma = diffuseColor.rgb / max(1e-4, diffuseColor.r + diffuseColor.g + diffuseColor.b);
+    vec3 sourceChroma = source / max(1e-4, source.r + source.g + source.b);
+    float matchesSkin = 1.0 - smoothstep(0.075, 0.17, distance(chroma, sourceChroma));
+    float exposedSkin = max(headSkin, handSkin) * matchesSkin;
+    diffuseColor.rgb = mix(diffuseColor.rgb, unitSkinColor(diffuseColor.rgb, source, uSkinTarget), exposedSkin);
+  }`;
   const body = p.hide
-    ? `#include <map_fragment>
+    ? `${skin}
   { vec3 h = (vBindPos - uHeadFrame.xyz) / uHeadFrame.w;
-    if (h.y > unitNeckLine(h.z, uNeck) && length(vec2(h.x, h.z - 0.5)) < 0.8) discard; }`
-    : `#include <map_fragment>
+    if (h.y > unitNeckLine(h.z, uNeck) - 0.08 && length(vec2(h.x, h.z - 0.5)) < 0.8) discard; }`
+    : `${skin}
   { if (uEyeR > 0.0) { vec4 eA = unitEye(vBindPos, uEyeA); vec4 eB = unitEye(vBindPos, uEyeB); vec4 e = eA.a > eB.a ? eA : eB; diffuseColor.rgb = mix(diffuseColor.rgb, e.rgb, e.a); }
     if (uScalpOn > 0.5) { vec3 hs = (vBindPos - uHeadFrame.xyz) / uHeadFrame.w; diffuseColor.rgb = mix(diffuseColor.rgb, unitScalpColor(hs, uHairColor), unitScalp(hs)); } }`;
   sh.fragmentShader = sh.fragmentShader.replace('#include <common>', head).replace('#include <map_fragment>', body);
@@ -287,6 +332,8 @@ export function attachHead(
   const ratio = (to: number[], from: number[], lo: number, hi: number) =>
     new THREE.Color().setRGB(...([0, 1, 2].map((i) => THREE.MathUtils.clamp(srgbToLinear(to[i]) / Math.max(1e-3, srgbToLinear(from[i])), lo, hi)) as [number, number, number]));
   if (skinLike(body.skin) && skinLike(face?.skin)) tint.copy(ratio(body.skin!, face!.skin!, 0.72, 1.4));
+  const customSkin = !!skinToneDef(look.skin);
+  if (customSkin) tint.copy(skinTintFor(face?.skin, look.skin));
 
   // the neck: the face's ring → the body's (in the face's own frame units), or drawn in
   const from = face?.neckRing ?? { cx: 0, cz: 0.4, rx: 0.28, rz: 0.28 };
@@ -297,7 +344,8 @@ export function attachHead(
     : new THREE.Vector4(from.cx, from.cz, from.rx * 0.8, from.rz * 0.8);
   const neckTint = new THREE.Color(1, 1, 1);
   if (bare) {
-    const want = ratio(to!.skin!, face!.neckRing!.skin!, 0.6, 1.6);
+    // With a chosen tone both meshes aim for the same colour at the seam, independent of armour.
+    const want = customSkin ? skinTintFor(face!.neckRing!.skin!, look.skin) : ratio(to!.skin!, face!.neckRing!.skin!, 0.6, 1.6);
     neckTint.setRGB(want.r / tint.r, want.g / tint.g, want.b / tint.b);
   }
 
@@ -307,9 +355,13 @@ export function attachHead(
     uScalpOn: { value: look.hair !== 'bald' ? 1 : 0 }, uHairColor: { value: new THREE.Color(hairColorDef(look.hairColor)?.color ?? '#7a5233') },
     uNeckH: { value: faceNeck }, uNeckFrom: { value: new THREE.Vector4(from.cx, from.cz, from.rx, from.rz) }, uNeckTo: { value: neckTo },
     uNeckTint: { value: neckTint },
+    uFaceSkinTint: { value: tint }, uFaceCustomSkin: { value: customSkin ? 1 : 0 },
+    uFaceSkinSource: { value: new THREE.Color().setRGB(...(face?.skin ?? [1, 1, 1]), THREE.SRGBColorSpace) },
+    uFaceNeckSkinSource: { value: new THREE.Color().setRGB(...(face?.neckRing?.skin ?? face?.skin ?? [1, 1, 1]), THREE.SRGBColorSpace) },
+    uFaceSkinTarget: { value: new THREE.Color(skinToneDef(look.skin)?.color ?? '#ffffff') },
   };
   eachMaterial(piece, (m) => {
-    if (m.color) m.color.multiply(tint);
+    if (m.color && !customSkin) m.color.multiply(tint);
     m.side = THREE.DoubleSide;
     m.onBeforeCompile = (sh) => {
       Object.assign(sh.uniforms, uniforms);
@@ -334,6 +386,8 @@ ${FRAME_GLSL}`)
         .replace('#include <common>', `#include <common>
 varying vec3 vFramePos; uniform vec3 uEyeA; uniform vec3 uEyeB; uniform float uEyeR; uniform vec3 uEyeColor; uniform float uScalpOn; uniform vec3 uHairColor;
 uniform float uNeckH; uniform vec3 uNeckTint;
+uniform vec3 uFaceSkinTint; uniform float uFaceCustomSkin;
+uniform vec3 uFaceSkinSource; uniform vec3 uFaceNeckSkinSource; uniform vec3 uFaceSkinTarget;
 ${FRAME_GLSL}
 // An iris drawn round its centre: coloured ring, darker rim, pupil, a glint.
 vec4 unitIris(vec3 p, vec3 c) {
@@ -351,7 +405,19 @@ vec4 unitIris(vec3 p, vec3 c) {
   return vec4(col, (1.0 - smoothstep(0.92, 1.05, rr)) * lids);
 }`)
         .replace('#include <map_fragment>', `#include <map_fragment>
-  { if (uEyeR > 0.0) {
+  { if (uFaceCustomSkin > 0.5) {
+      // Preserve the whites of both eyes; skin, lip colour and freckles keep their texture detail.
+      vec3 dA = vFramePos - uEyeA, dB = vFramePos - uEyeB;
+      float eyeArea = uEyeR > 0.0 ? 1.0 - smoothstep(1.4, 2.2, min(length(vec2(dA.x, dA.y * 1.6)), length(vec2(dB.x, dB.y * 1.6))) / uEyeR) : 0.0;
+      eyeArea *= 1.0 - smoothstep(0.15, 0.3, min(abs(dA.z), abs(dB.z)));
+      float mxSkin = max(diffuseColor.r, max(diffuseColor.g, diffuseColor.b));
+      float mnSkin = min(diffuseColor.r, min(diffuseColor.g, diffuseColor.b));
+      float whiteEye = eyeArea * (1.0 - smoothstep(0.2, 0.42, (mxSkin - mnSkin) / max(mxSkin, 1e-4)));
+      float neckBlend = 1.0 - smoothstep(-0.03, 0.22, vFramePos.y - unitNeckLine(vFramePos.z, uNeckH));
+      vec3 skinSource = mix(uFaceSkinSource, uFaceNeckSkinSource, neckBlend);
+      diffuseColor.rgb = mix(unitSkinColor(diffuseColor.rgb, skinSource, uFaceSkinTarget), diffuseColor.rgb, whiteEye);
+    }
+    if (uEyeR > 0.0) {
       vec4 iA = unitIris(vFramePos, uEyeA); vec4 iB = unitIris(vFramePos, uEyeB);
       vec4 iris = iA.a > iB.a ? iA : iB;
       #ifdef USE_MAP
@@ -367,9 +433,9 @@ vec4 unitIris(vec3 p, vec3 c) {
     if (uScalpOn > 0.5) diffuseColor.rgb = mix(diffuseColor.rgb, unitScalpColor(vFramePos, uHairColor), unitScalp(vFramePos));
     // toward the body's neck colour, from under the jaw down to the join
     float g = 1.0 - smoothstep(-0.03, 0.22, vFramePos.y - unitNeckLine(vFramePos.z, uNeckH));
-    diffuseColor.rgb *= mix(vec3(1.0), uNeckTint, g); }`);
+    if (uFaceCustomSkin < 0.5) diffuseColor.rgb *= mix(vec3(1.0), uNeckTint, g); }`);
     };
-    m.customProgramCacheKey = () => 'unit-face';
+    m.customProgramCacheKey = () => 'unit-face-skin-v3';
   });
   // the face's frame on this body: crown on crown, scaled about it, centred front to back
   const frame = new THREE.Matrix4().compose(

@@ -7,6 +7,7 @@ import { hexToWorld, inBounds, tileIndex, worldToHex } from '../core/hex';
 import { FACTIONS } from '../data/factions';
 import { ITEMS } from '../data/items';
 import { bodyPaintKey, dressHead, patchBodyShader, type BodyPaint } from './appearance';
+import { attachCharacterRegalia, createCharacterTrinket } from './character-regalia';
 import { bodyVariant, effectiveStats } from '../sim/units';
 import { DEFAULT_RUN_SPEED, DEFAULT_WALK_SPEED, FOOT_SPEED, UNIT_HEIGHT, walkTimeScale } from './types';
 import type { CreateUnitLayer, FxLayerApi, RenderContext, UnitLayerApi } from './types';
@@ -111,10 +112,15 @@ const PADDED_ITEM: ItemId = 'tunic';
  * Rigged GLB keys a unit's body may use, best first: a commoner in the padded tunic wears the
  * '<race>_padded' model once it ships, else the plain commoner body. A unit with a gender wears
  * that armour's own cut ('<race>_<m|f>_<body>', bald: its hair is a separate piece) before the
- * shared model; a leader has one model.
+ * shared model. Gendered human leaders use the equipped armour too, so their appearance and
+ * equipment remain visible; old saves without a gender retain the original leader model.
  */
 export function unitBodyKeys(race: RaceId, body: BodyVariant, bodyItem: ItemId | null | undefined, gender?: Gender): string[] {
   const keys: string[] = [];
+  if (body === 'leader' && race === 'human' && gender) {
+    const equippedBody = (bodyItem && ITEMS[bodyItem]?.body) || 'commoner';
+    return [...unitBodyKeys(race, equippedBody, bodyItem, gender), `${race}_leader`];
+  }
   const g = gender && body !== 'leader' ? (gender === 'female' ? 'f' : 'm') : null;
   const padded = body === 'commoner' && bodyItem === PADDED_ITEM;
   if (g && padded) keys.push(`${race}_${g}_padded`);
@@ -173,7 +179,7 @@ interface UnitView {
   monsterRig: MonsterRig | null;
   mainItem: Attachment | null;
   offItem: Attachment | null;
-  trinket: { obj: THREE.Object3D; glow: THREE.Sprite } | null;
+  trinket: { obj: THREE.Object3D; glow: THREE.Sprite; geometry: THREE.BufferGeometry[] } | null;
   gripR: THREE.Object3D | null;
   gripL: THREE.Object3D | null;
   chest: THREE.Object3D | null;
@@ -501,8 +507,6 @@ export const createUnitLayer: CreateUnitLayer = (ctx: RenderContext, fx: FxLayer
   let lastState: GameState | null = null;
   let visibleFn: (h: Hex) => boolean = () => true;
   const ext = hasFxExtras(fx) ? fx : null;
-  const gemGeo = new THREE.OctahedronGeometry(0.022);
-  const gemMats = new Map<string, THREE.MeshStandardMaterial>();
   const frustum = new THREE.Frustum();
   const projScreen = new THREE.Matrix4();
   const tmpV = new THREE.Vector3();
@@ -558,7 +562,7 @@ export const createUnitLayer: CreateUnitLayer = (ctx: RenderContext, fx: FxLayer
     // the body item, not only the body variant: the padded tunic has its own model (unitBodyKeys)
     const l = u.look;
     return [u.race, u.monster ?? '', u.faction, u.monster ? '' : safeBody(u), e.body, e.main, e.off, e.trinket, e.mount, u.isLeader ? 1 : 0,
-      u.gender ?? '', l ? `${l.hair},${l.hairColor},${l.eyes},${l.beard},${l.face}` : ''].join('|');
+      u.gender ?? '', l ? `${l.hair},${l.hairColor},${l.eyes},${l.beard},${l.face},${l.skin ?? ''}` : ''].join('|');
   }
 
   function statusOf(u: Unit, state: GameState | null): StatusData {
@@ -638,7 +642,10 @@ export const createUnitLayer: CreateUnitLayer = (ctx: RenderContext, fx: FxLayer
     v.glbMats = [];
     if (v.mainItem?.glow) (v.mainItem.glow.material as THREE.Material).dispose();
     if (v.offItem?.glow) (v.offItem.glow.material as THREE.Material).dispose();
-    if (v.trinket) (v.trinket.glow.material as THREE.Material).dispose();
+    if (v.trinket) {
+      (v.trinket.glow.material as THREE.Material).dispose();
+      for (const geometry of v.trinket.geometry) geometry.dispose();
+    }
     v.rider.clear();
     if (v.mount) v.unitSpace.remove(v.mount.obj);
     v.unitSpace.clear();
@@ -924,13 +931,15 @@ export const createUnitLayer: CreateUnitLayer = (ctx: RenderContext, fx: FxLayer
     }
 
     // body
-    const bodyKeys = unitBodyKeys(u.race, body, u.equipment.body, u.gender);
+    // House leaders without a customizable look keep their authored identity mesh.
+    const bodyKeys = unitBodyKeys(u.race, body, u.equipment.body, u.isLeader && !u.look ? undefined : u.gender);
     const key = firstAvailable(bodyKeys, (k) => !!ctx.assets.skinned(k)) ?? bodyKeys[bodyKeys.length - 1];
     const sk = ctx.assets.skinned(key);
     let hipsH = 0.5;
     let H = 1;
     if (sk) {
       const model = skeletonClone(sk.scene);
+      if (u.race === 'human') attachCharacterRegalia(ctx.assets, model, u.equipment.body, u.gender);
       const entry = ctx.assets.manifest.units?.[key];
       const before = v.glbMats.length;
       adoptMaterials(v, model, undefined, 'body', u.isLeader);
@@ -1013,28 +1022,29 @@ export const createUnitLayer: CreateUnitLayer = (ctx: RenderContext, fx: FxLayer
     const off = u.equipment.off;
     if (off && v.gripL) v.offItem = attachItem(v, off, v.gripL, true);
     const trinket = u.equipment.trinket;
-    if (trinket && v.chest) {
+    const trinketSocket = trinket === 'ring' ? v.gripR : v.chest;
+    if ((trinket === 'ring' || trinket === 'amulet') && trinketSocket) {
       const col = TRINKET_COLOR[trinket] ?? '#ffd76a';
-      let gm = gemMats.get(col);
-      if (!gm) {
-        gm = new THREE.MeshStandardMaterial({ color: col, emissive: col, emissiveIntensity: 2.2, roughness: 0.15, metalness: 0.2 });
-        gemMats.set(col, gm);
-      }
-      const holder = new THREE.Group();
-      const gem = new THREE.Mesh(gemGeo, gm);
-      gem.scale.set(1, 1.3, 0.7);
-      holder.add(gem);
+      const holder = createCharacterTrinket(trinket);
+      const geometry: THREE.BufferGeometry[] = [];
+      holder.traverse((node) => {
+        const mesh = node as THREE.Mesh;
+        if (!mesh.isMesh) return;
+        geometry.push(mesh.geometry);
+        // These are newly authored materials rather than shared library materials.
+        for (const material of Array.isArray(mesh.material) ? mesh.material : [mesh.material]) v.glbMats.push(material);
+      });
       const sm = new THREE.SpriteMaterial({ map: softDotTexture(), color: col, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, fog: false });
       const glow = new THREE.Sprite(sm);
       glow.scale.setScalar(0.14);
       glow.renderOrder = 8;
       holder.add(glow);
-      v.chest.add(holder);
+      trinketSocket.add(holder);
       v.unitSpace.updateWorldMatrix(true, true);
-      const gs = v.chest.getWorldScale(tmpV).x, us = v.unitSpace.getWorldScale(tmpV2).x;
+      const gs = trinketSocket.getWorldScale(tmpV).x, us = v.unitSpace.getWorldScale(tmpV2).x;
       if (gs > 1e-6) holder.scale.setScalar(us / gs);
-      if (!v.procedural && v.chest.name !== 'chest_socket') holder.position.set(0, 0.06, 0.09).multiplyScalar(gs > 1e-6 ? us / gs : 1);
-      v.trinket = { obj: holder, glow };
+      if (trinket === 'amulet' && !v.procedural && trinketSocket.name !== 'chest_socket') holder.position.set(0, 0.06, 0.09).multiplyScalar(gs > 1e-6 ? us / gs : 1);
+      v.trinket = { obj: holder, glow, geometry };
     }
     addXray(v);
     // start the base loop at a random phase so groups don't animate in lockstep
@@ -1781,9 +1791,6 @@ export const createUnitLayer: CreateUnitLayer = (ctx: RenderContext, fx: FxLayer
     sched.clear();
     for (const v of [...views.values()]) disposeView(v);
     views.clear();
-    gemGeo.dispose();
-    for (const m of gemMats.values()) m.dispose();
-    gemMats.clear();
     for (const m of xrayMats.values()) m.dispose();
     xrayMats.clear();
     ctx.scene.remove(root);

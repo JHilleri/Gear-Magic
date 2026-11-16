@@ -80,6 +80,8 @@ export function MenuModal() {
         {inGame && <Btn icon="check" onClick={() => { store.saveGame(); setSaved(true); }} disabled={!!store.state?.gameOver} reason={store.state?.gameOver ? 'The game is over' : null}>{saveLabel}</Btn>}
         <Btn icon="upgrade" disabled={!ui.hasSave} reason={!ui.hasSave ? 'No saved game' : null} onClick={() => setConfirm('load')}>Load game</Btn>
         <Btn icon="menu" onClick={() => store.openModal('settings')}>Settings</Btn>
+        <a class="btn" href={`${import.meta.env.BASE_URL}characters.html`} target="_blank" rel="noopener noreferrer"
+          title="Inspect and customize a character in a separate tab"><span class="btn-text">Character Forge ↗</span></a>
         <Btn icon="help" onClick={() => store.openModal('help')} hotkey="H">Help</Btn>
         {inGame && <Btn danger icon="castle" onClick={() => setConfirm('quit')}>Quit to title</Btn>}
       </div>

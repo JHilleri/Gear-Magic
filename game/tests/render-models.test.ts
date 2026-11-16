@@ -38,8 +38,12 @@ describe('unit body models', () => {
       expect(unitBodyKeys('human', body, null, 'male')[0]).toBe(`human_m_${body}`);
       expect(unitBodyKeys('human', body, null, 'female')[0]).toBe(`human_f_${body}`);
     }
-    // a leader has one model
-    expect(unitBodyKeys('human', 'leader', 'plate', 'female')).toEqual(['human_leader']);
+    // a gendered human leader keeps her face and wears the plate she equipped
+    expect(unitBodyKeys('human', 'leader', 'plate', 'female')).toEqual(['human_f_heavy', 'human_heavy', 'human_leader']);
+    expect(unitBodyKeys('human', 'leader', 'robe', 'male')).toEqual(['human_m_robe', 'human_robe', 'human_leader']);
+    expect(unitBodyKeys('human', 'leader', 'tunic', 'female')[0]).toBe('human_f_padded');
+    expect(unitBodyKeys('human', 'leader', null, 'female')[0]).toBe('human_f_commoner');
+    expect(unitBodyKeys('human', 'leader', 'plate')).toEqual(['human_leader']);
     // a missing cut falls back to the shared body
     expect(firstAvailable(unitBodyKeys('human', 'robe', 'robe', 'male'), lib('human_robe'))).toBe('human_robe');
   });

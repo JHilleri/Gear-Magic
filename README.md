@@ -16,6 +16,17 @@ cd game && npm install && npm run dev
 
 Then open http://127.0.0.1:5180.
 
+## Character Forge
+
+Open [characters.html](http://127.0.0.1:5180/characters.html) from the title screen or pause menu.
+Inspect male/female characters with three faces per body type, hairstyles, beards, hair/eye colors,
+six skin tones, five fitted outfits, and visible weapons, shields and jewelry. Rotate, zoom,
+preview animations, save a character locally or export/import JSON. In a human unit's Appearance
+dialog, **Load Forge appearance** loads the saved design for confirmation; equipment still follows
+the game's normal armory rules.
+
+See [CHARACTERS.md](CHARACTERS.md) for the asset recipes, verification and remaining art limitations.
+
 ## Layout
 
 | path | what |

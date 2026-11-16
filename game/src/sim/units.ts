@@ -98,7 +98,10 @@ export function canCustomize(state: GameState, u: Unit, c: Customization): strin
 /** Apply a customisation (validated by canCustomize). Changes no stat and draws no dice. */
 export function customize(u: Unit, c: Customization): GameEvent[] {
   if (c.gender) u.gender = c.gender;
-  if (c.look) u.look = { hair: c.look.hair, hairColor: c.look.hairColor, eyes: c.look.eyes, beard: c.look.beard, face: c.look.face };
+  if (c.look) u.look = {
+    hair: c.look.hair, hairColor: c.look.hairColor, eyes: c.look.eyes, beard: c.look.beard, face: c.look.face,
+    ...(c.look.skin === undefined ? {} : { skin: c.look.skin }),
+  };
   if (c.name !== undefined) u.name = c.name.trim();
   return [];
 }

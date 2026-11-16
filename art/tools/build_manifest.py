@@ -29,7 +29,7 @@ EXPECTED = {
     "hair": [f"hair_{s}" for s in ("short", "crop", "swept", "tail", "curly", "long", "braid", "bun", "bob", "ponytail", "pixie")]
             + [f"beard_{s}" for s in ("short", "full", "moustache", "goatee", "long")],
     "heads": [f"head_{g}{i}" for g in ("m", "f") for i in (1, 2, 3)],
-    "items": ["tools", "sword", "spear", "axe", "bow", "staff", "wand", "shield_human", "shield_orc", "shield_undead"],
+    "items": ["tools", "sword", "spear", "axe", "bow", "staff", "wand", "shield_human", "shield_orc", "shield_undead", "pauldron_plate"],
     "mounts": ["horse", "wolf", "nightmare"],
     "buildings": ["castle_valen", "castle_thorn", "castle_ashen", "house", "farm", "lumber", "quarry", "forge", "training",
                   "mine", "crystalmine", "library", "magetower", "wall", "watchtower", "shrine"],
@@ -181,6 +181,14 @@ def main():
     if "--assets" in args:
         assets = os.path.abspath(args[args.index("--assets") + 1])
     manifest = {k: scan_models(assets, k) for k in MODEL_KINDS}
+    # Keep the original canonical key and all its appearance metadata, using the
+    # repaired skirt skinning when present. Avoid preloading a duplicate unit.
+    for key in ("human_f_robe", "human_f_heavy"):
+        repaired = manifest["units"].pop(key + "_v2", None)
+        if repaired and key in manifest["units"]:
+            manifest["units"][key]["file"] = repaired["file"]
+    # Authored character modules use the existing item loader/socket pipeline.
+    manifest["items"].update(scan_models(assets, "characters"))
     manifest["textures"] = scan_textures(assets)
     manifest["icons"] = scan_icons(assets)
     manifest["portraits"] = scan_portraits(assets)

@@ -1,7 +1,7 @@
 // What a unit looks like beyond its armour: gender, hair cut and colour, eye colour, beard
 // (DESIGN §4.9). Rolled once when the unit is created and kept for life; the renderer puts a hair
 // and a beard piece on the head of the gendered body and tints them (render/units.ts).
-import type { Appearance, BeardStyle, EyeColor, Gender, HairColor, HairStyle, RaceId } from '../core/types';
+import type { Appearance, BeardStyle, EyeColor, Gender, HairColor, HairStyle, RaceId, SkinTone } from '../core/types';
 
 export interface HairStyleDef { id: HairStyle; name: string; genders: Gender[]; weight: number }
 export interface BeardDef { id: BeardStyle; name: string; weight: number }
@@ -61,6 +61,16 @@ export const EYE_COLORS: ColorDef<EyeColor>[] = [
   { id: 'grey', name: 'Grey', color: '#8fa3b3', weight: 2 },
 ];
 
+/** Albedo colours, in sRGB; the renderer retains each face's painted detail and shading. */
+export const SKIN_TONES: ColorDef<SkinTone>[] = [
+  { id: 'porcelain', name: 'Porcelain', color: '#c59c88', weight: 2 },
+  { id: 'fair', name: 'Fair', color: '#bb8a6c', weight: 3 },
+  { id: 'warm', name: 'Warm', color: '#ae7353', weight: 3 },
+  { id: 'olive', name: 'Olive', color: '#a77855', weight: 3 },
+  { id: 'brown', name: 'Brown', color: '#805039', weight: 3 },
+  { id: 'deep', name: 'Deep', color: '#523326', weight: 2 },
+];
+
 /** Races whose units have a gender and a rolled appearance (humans, for now). */
 export function hasAppearance(race: RaceId): boolean {
   return race === 'human';
@@ -79,7 +89,7 @@ export function rollGender(r: number): Gender {
   return r < 0.5 ? 'female' : 'male';
 }
 
-/** An appearance for `gender` from a source of uniform [0,1) draws (five are taken, always). */
+/** An appearance for `gender` from six draws. Skin comes last so existing identity rolls remain stable. */
 export function rollAppearance(gender: Gender, next: () => number): Appearance {
   const hair = weighted(HAIR_STYLES.filter((h) => h.genders.includes(gender)), next()).id;
   const hairColor = weighted(HAIR_COLORS, next()).id;
@@ -87,7 +97,8 @@ export function rollAppearance(gender: Gender, next: () => number): Appearance {
   const b = next();
   const beard: BeardStyle = gender === 'male' ? weighted(BEARDS, b).id : 'none';
   const face = Math.min(FACES[gender].length - 1, Math.floor(next() * FACES[gender].length));
-  return { hair, hairColor, eyes, beard, face };
+  const skin = weighted(SKIN_TONES, next()).id;
+  return { hair, hairColor, eyes, beard, face, skin };
 }
 
 const byId = <T extends { id: string }>(list: readonly T[], id: string | undefined): T | undefined => list.find((e) => e.id === id);
@@ -96,6 +107,7 @@ export const hairStyleDef = (id: string | undefined) => byId(HAIR_STYLES, id);
 export const beardDef = (id: string | undefined) => byId(BEARDS, id);
 export const hairColorDef = (id: string | undefined) => byId(HAIR_COLORS, id);
 export const eyeColorDef = (id: string | undefined) => byId(EYE_COLORS, id);
+export const skinToneDef = (id: string | undefined) => byId(SKIN_TONES, id);
 
 /** Hair cuts a gender can wear. */
 export function hairStylesFor(gender: Gender): HairStyleDef[] {
@@ -113,6 +125,7 @@ export function appearanceError(gender: Gender, look: Appearance): string | null
   if (!style.genders.includes(gender)) return `${style.name} is not a ${gender === 'female' ? "woman's" : "man's"} hair cut`;
   if (!hairColorDef(look.hairColor)) return 'Unknown hair colour';
   if (!eyeColorDef(look.eyes)) return 'Unknown eye colour';
+  if (look.skin !== undefined && !skinToneDef(look.skin)) return 'Unknown skin tone';
   if (!beardDef(look.beard)) return 'Unknown beard';
   if (gender === 'female' && look.beard !== 'none') return 'Only men wear a beard';
   if (!Number.isInteger(look.face) || look.face < 0 || look.face >= FACES[gender].length) return 'Unknown face';
@@ -128,6 +141,7 @@ export function fitAppearance(gender: Gender, look: Appearance): Appearance {
     eyes: look.eyes,
     beard: gender === 'male' ? look.beard : 'none',
     face: Math.max(0, Math.min(FACES[gender].length - 1, Math.floor(look.face) || 0)),
+    ...(look.skin === undefined ? {} : { skin: look.skin }),
   };
 }
 
@@ -142,5 +156,7 @@ export function describeAppearance(look: Appearance): string {
   if (eyes) parts.push(`${eyes.name.toLowerCase()} eyes`);
   const beard = beardDef(look.beard);
   if (beard && look.beard !== 'none') parts.push(`${look.hair === 'bald' && color ? `${color.name.toLowerCase()} ` : ''}${beard.name.toLowerCase()}`);
+  const skin = skinToneDef(look.skin);
+  if (skin) parts.push(`${skin.name.toLowerCase()} skin`);
   return parts.join(', ');
 }

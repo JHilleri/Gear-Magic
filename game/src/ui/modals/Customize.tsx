@@ -2,9 +2,10 @@
 // and beard, with a live bust of the result that can be turned. Nothing here changes a rule: it
 // is one free 'customize' action, applied when the player confirms.
 import { useState } from 'preact/hooks';
+import { CHARACTER_STORAGE_KEY, parseCharacterDraft } from '../../characters/state';
 import type { Appearance, BodyVariant, Gender, Unit } from '../../core/types';
 import {
-  BEARDS, EYE_COLORS, FACES, HAIR_COLORS, NAME_MAX, describeAppearance, fitAppearance, hairStylesFor, rollAppearance,
+  BEARDS, EYE_COLORS, FACES, HAIR_COLORS, NAME_MAX, SKIN_TONES, describeAppearance, fitAppearance, hairStylesFor, rollAppearance,
 } from '../../data/appearance';
 import { FACTIONS } from '../../data/factions';
 import { bodyVariant, canCustomize } from '../../sim/units';
@@ -44,6 +45,7 @@ export function CustomizeModal() {
   const [draft, setDraft] = useState<Draft | null>(null);
   const [yaw, setYaw] = useState(0);
   const [drag, setDrag] = useState<{ x: number; yaw: number } | null>(null);
+  const [forgeNote, setForgeNote] = useState('');
   if (!u || u.hp <= 0 || !u.look || !u.gender) {
     return <Modal size="sm" title="Appearance" onClose={close}><div class="empty-note">This unit's looks cannot be changed.</div></Modal>;
   }
@@ -68,6 +70,15 @@ export function CustomizeModal() {
     set({ gender: g, look: fitAppearance(g, d.look), name: pooled ? freeName(units, u, g) ?? d.name : d.name });
   };
   const randomize = () => set({ look: rollAppearance(d.gender, Math.random) });
+  const loadForge = () => {
+    try {
+      const saved = localStorage.getItem(CHARACTER_STORAGE_KEY);
+      if (!saved) { setForgeNote('Save a character in the Character Forge first.'); return; }
+      const character = parseCharacterDraft(JSON.parse(saved));
+      set({ name: character.name, gender: character.gender, look: character.look });
+      setForgeNote('Forge appearance loaded. Apply to confirm.');
+    } catch { setForgeNote('The saved Forge character could not be read. Save it again in the Forge.'); }
+  };
   const apply = async () => {
     if (!changed) { close(); return; }
     const r = await act(store, {
@@ -116,6 +127,9 @@ export function CustomizeModal() {
             <Btn small onClick={() => turn(-45)} title="Turn right" disabled={!live}>›</Btn>
           </div>
           <Btn icon="star" onClick={randomize} title="Roll a new face, hair, eyes and beard">Randomise</Btn>
+          <Btn onClick={loadForge} title="Use the appearance saved in the Character Forge">Load Forge appearance</Btn>
+          <a class="btn" href={`${import.meta.env.BASE_URL}characters.html`} target="_blank" rel="noopener noreferrer">Open Character Forge ↗</a>
+          {forgeNote && <small role="status">{forgeNote}</small>}
         </div>
         <div class="cz-form">
           <Row label="Name">
@@ -142,6 +156,15 @@ export function CustomizeModal() {
               {hairStylesFor(d.gender).map((h) => (
                 <button type="button" key={h.id} class={cls('cz-chip', d.look.hair === h.id && 'on')} onClick={() => setLook({ hair: h.id })}>{h.name}</button>
               ))}
+            </div>
+          </Row>
+          <Row label="Skin tone">
+            <div class="cz-swatches">
+              {SKIN_TONES.map((c) => (
+                <button type="button" key={c.id} class={cls('cz-swatch', d.look.skin === c.id && 'on')} style={{ background: c.color }}
+                  aria-label={`Skin tone: ${c.name}`} aria-pressed={d.look.skin === c.id} onClick={() => setLook({ skin: c.id })} {...tip(c.name)} />
+              ))}
+              <button type="button" class={cls('cz-chip', !d.look.skin && 'on')} onClick={() => setLook({ skin: undefined })}>Original</button>
             </div>
           </Row>
           <Row label="Hair colour" note={d.look.hair === 'bald' && d.look.beard === 'none' ? 'nothing to colour' : undefined}>

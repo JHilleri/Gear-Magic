@@ -52,11 +52,14 @@ export type HairStyle = 'short' | 'crop' | 'swept' | 'tail' | 'curly' | 'bald' |
 export type BeardStyle = 'none' | 'short' | 'full' | 'moustache' | 'goatee' | 'long';
 export type HairColor = 'black' | 'darkbrown' | 'brown' | 'auburn' | 'ginger' | 'blonde' | 'platinum' | 'grey';
 export type EyeColor = 'brown' | 'hazel' | 'amber' | 'green' | 'blue' | 'grey';
+export type SkinTone = 'porcelain' | 'fair' | 'warm' | 'olive' | 'brown' | 'deep';
 /** A unit's looks beyond its armour (data/appearance.ts): part of its identity, rolled at creation. */
 export interface Appearance {
   hair: HairStyle; hairColor: HairColor; eyes: EyeColor; beard: BeardStyle;
   /** Which of its gender's faces (data/appearance.ts FACES): 0-based. */
   face: number;
+  /** Omitted in older saves: retain the skin painted on the original model. */
+  skin?: SkinTone;
 }
 /** Neutral monster kinds and summons (non-humanoid or special models). */
 export type MonsterKind = 'wolf' | 'golem' | 'spider' | 'elemental';

@@ -41,7 +41,7 @@
    "eyeR": 0.0062
   },
   "human_f_heavy": {
-   "file": "models/units/human_f_heavy.glb",
+   "file": "models/units/human_f_heavy_v2.glb",
    "height": 1.0,
    "head": {
     "x": 0.00013,
@@ -156,7 +156,7 @@
    "eyeR": 0.007
   },
   "human_f_robe": {
-   "file": "models/units/human_f_robe.glb",
+   "file": "models/units/human_f_robe_v2.glb",
    "height": 1.0,
    "head": {
     "x": -0.00016,
@@ -453,6 +453,9 @@
   },
   "wand": {
    "file": "models/items/wand.glb"
+  },
+  "pauldron_plate": {
+   "file": "models/characters/pauldron_plate.glb"
   }
  },
  "mounts": {

@@ -100,6 +100,7 @@ export function TitleScreen() {
             {...tip(continueTip(ui.saves), 'right')}><span>Continue</span></button>
           <button type="button" class="title-btn" onClick={() => store.openModal('help')}><span>Field Manual</span></button>
           <button type="button" class="title-btn" onClick={() => store.openModal('settings')}><span>Settings</span></button>
+          <a class="title-btn" href={`${import.meta.env.BASE_URL}characters.html`} target="_blank" rel="noopener noreferrer"><span>Character Forge ↗</span></a>
         </nav>
       </div>
       <div class="title-foot">Inspired by Battle for Wesnoth &amp; Millennia · v0.1</div>
