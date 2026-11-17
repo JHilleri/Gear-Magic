@@ -54,7 +54,7 @@ export interface UnifiedBodyMeta {
   skin?: [number, number, number];
   hairPrefix?: string;
   /** Which explicitly named Skin_* material regions a fitted armor covers. */
-  coveredRegions?: Partial<Record<'tunic' | 'leather' | 'plate' | 'robe', string[]>>;
+  coveredRegions?: Partial<Record<'commoner' | 'tunic' | 'leather' | 'plate' | 'robe', string[]>>;
 }
 
 export interface AssetManifest {

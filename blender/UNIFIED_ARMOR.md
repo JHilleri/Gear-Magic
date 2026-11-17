@@ -1,6 +1,7 @@
 # Unified fitted armor
 
-`unified_armor.py` generates eight standalone skinned outfits against the final
+`unified_armor.py` generates ten standalone skinned outfits (five styles: `commoner`, `tunic`,
+`leather`, `plate`, `robe`) against the final
 continuous human base bodies. It uses no additional ComfyUI jobs.
 
 ```sh
@@ -72,3 +73,38 @@ simple panel topology and should be reviewed separately from gameplay scale.
 The final posed female preview is `art/outputs/unified/armor-qa/female-leather-posed.png`.
 The collar-facing junction is closed; close views can still reveal the simple
 neckline topology and triangular skin/material boundary.
+
+## Generated outfits (all five shipped styles)
+
+The shipped `armor_<gender>_<style>.glb` files are no longer tailored by this script. Each is a
+textured mesh from image-to-3D, fitted by `unified_clothes.py`. The tailor above remains as a
+fallback: running it overwrites the generated file of the same style.
+
+```bash
+blender -b -t 2 --factory-startup -P blender/render_mannequin.py -- \
+  game/public/assets/models/units/human_f_base.glb art/outputs/unified/clothes/mannequin_f.png   # and _m
+cd art
+python3 tools/gen.py manifests/clothes.json    # Qwen Image 2.1 edit dresses the mannequin ("refs"), ~1.5 min each
+python3 tools/i2m.py src_clothes               # TRELLIS.2, ~1 min each
+cd ..
+blender/fit_clothes.sh [preview-dir]           # unified_clothes.py for every style and both bodies
+```
+
+The picture the edit model dresses is a render of the body itself, so the generated mesh comes
+back in the body's pose and proportions and only needs registering (floor, top of the arms, span).
+`unified_clothes.py` then:
+
+- cuts away the green mannequin connected to the head or a hand (neck, open collar, wrists);
+- with `--undersuit R,G,B`, paints mannequin left between armor pieces (armpits, elbows, a robe's
+  slit) as an under-garment, since the game hides the skin there and a cut would be a hole;
+- weights the garment from the body's skin: nearest skin, except that beyond the shoulder and
+  outside the torso's outline only the arm is consulted, so wide sleeves follow the arm;
+- with `--skirt K`, hangs a long skirt partly from the hips so it does not split like trousers;
+- adds a lining: the hidden skin drawn in 3 mm, decimated, and coloured per vertex like the
+  nearest cloth, so a gap under a pauldron, inside a collar or at a tear never shows a hollow figure;
+- adds a `Skin_neckline` patch of the body's chest and neck exactly where mannequin showed in the
+  collar, which the runtime tints to the character's skin.
+
+Free ComfyUI's memory (`POST /free`) before the edit step: with other models loaded it returned
+noise. Very wide hanging sleeves do not rig well; ask for sleeves that do not hang. Refit after a
+body rebuild (`fit_clothes.sh`).

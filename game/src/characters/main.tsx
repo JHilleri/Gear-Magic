@@ -1,8 +1,8 @@
 import { render } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import type { ComponentChildren } from 'preact';
-import type { Appearance, Equipment, Gender, ItemId } from '../core/types';
-import { BEARDS, EYE_COLORS, FACES, HAIR_COLORS, NAME_MAX, SKIN_TONES, fitAppearance, hairStylesFor, rollAppearance } from '../data/appearance';
+import type { Appearance, BodyShape, Equipment, Gender, ItemId, ShapeKey } from '../core/types';
+import { BEARDS, EYE_COLORS, FACES, HAIR_COLORS, NAME_MAX, SHAPE_PRESETS, SHAPE_SLIDERS, SKIN_TONES, cleanShape, fitAppearance, hairStylesFor, rollAppearance } from '../data/appearance';
 import { ITEMS } from '../data/items';
 import { assetBase } from '../render/assets';
 import { CHARACTER_STORAGE_KEY, INITIAL_CHARACTER, LOADOUTS, parseCharacterDraft, withEquipment, type CharacterDraft } from './state';
@@ -16,12 +16,13 @@ interface StudioDebug {
   setState(value: unknown): void;
   focus(view: 'full' | 'face' | 'back'): void;
   play(clip: string): void;
+  setBare(bare: boolean): void;
 }
 declare global { interface Window { __characterStudio?: StudioDebug } }
 
 const CLIPS: Record<string, string> = { idle: 'Idle', walk: 'Walk', attack_melee: 'Melee', attack_ranged: 'Archery', cast: 'Cast', work: 'Work', hit: 'Hit', death: 'Death' };
 const ARMORS: { id: ItemId | null; name: string; note: string; glyph: string }[] = [
-  { id: null, name: 'Base body', note: 'No armor attachments', glyph: '◇' },
+  { id: null, name: 'Everyday clothes', note: 'Linen shirt, wool trousers', glyph: '◇' },
   { id: 'tunic', name: 'Padded tunic', note: 'Quilted cloth', glyph: '◈' },
   { id: 'leather', name: 'Leather armor', note: 'Hardened hide', glyph: '⬡' },
   { id: 'plate', name: 'Plate armor', note: 'Forged steel', glyph: '♜' },
@@ -55,6 +56,8 @@ function App() {
   const [paused, setPaused] = useState(false);
   const [turntable, setTurntable] = useState(false);
   const [view, setView] = useState<'full' | 'face' | 'back'>('full');
+  // Model check only: not part of the character, never saved or exported.
+  const [bare, setBare] = useState(false);
   const canvas = useRef<HTMLCanvasElement>(null);
   const input = useRef<HTMLInputElement>(null);
   const viewer = useRef<CharacterViewer | null>(null);
@@ -65,12 +68,12 @@ function App() {
   useEffect(() => {
     let alive = true;
     createCharacterViewer(canvas.current!, latest.current, (fraction) => { if (alive) setProgress(fraction); }, (value) => { if (alive) setStats(value); })
-      .then((v) => { if (!alive) { v.dispose(); return; } viewer.current = v; v.setCharacter(latest.current); setReady(true); })
+      .then((v) => { if (!alive) { v.dispose(); return; } viewer.current = v; v.setCharacter(latest.current, false); setReady(true); })
       .catch((e: unknown) => { if (alive) setError(`The 3D preview could not start. ${e instanceof Error ? e.message : 'Please reload the page.'}`); });
     return () => { alive = false; viewer.current?.dispose(); viewer.current = null; };
   }, []);
 
-  useEffect(() => { viewer.current?.setCharacter(draft); }, [draft.gender, draft.look, draft.equipment]);
+  useEffect(() => { viewer.current?.setCharacter(draft, bare); }, [draft.gender, draft.look, draft.equipment, bare]);
   useEffect(() => { viewer.current?.play(clip); }, [clip]);
   useEffect(() => { viewer.current?.setPaused(paused); }, [paused]);
   useEffect(() => { viewer.current?.setTurntable(turntable); }, [turntable]);
@@ -83,11 +86,19 @@ function App() {
       setState(value) { setDraft(parseCharacterDraft(value)); },
       focus(mode) { setView(mode); viewer.current?.focus(mode); },
       play(name) { setClip(name); viewer.current?.play(name); },
+      setBare(value) { setBare(value); },
     };
     return () => { delete window.__characterStudio; };
   }, []);
 
   const setLook = (patch: Partial<Appearance>) => setDraft((d) => ({ ...d, look: { ...d.look, ...patch } }));
+  const setShape = (shape: BodyShape) => setDraft((d) => {
+    const { shape: _old, ...rest } = d.look;
+    const clean = cleanShape(shape);
+    return { ...d, look: clean ? { ...rest, shape: clean } : rest };
+  });
+  const shapeValue = (key: ShapeKey) => draft.look.shape?.[key] ?? 0;
+  const currentShape = JSON.stringify(cleanShape(draft.look.shape) ?? {});
   const setGender = (gender: Gender) => setDraft((d) => ({ ...d, gender, look: fitAppearance(gender, d.look) }));
   const equip = (slot: keyof Equipment, item: ItemId | null) => setDraft((d) => withEquipment(d, slot, item));
   const focus = (mode: 'full' | 'face' | 'back') => { setView(mode); viewer.current?.focus(mode); };
@@ -136,6 +147,11 @@ function App() {
           <Swatches label="Hair color" colors={HAIR_COLORS} value={draft.look.hairColor} onChange={(hairColor) => setLook({ hairColor })} />
           {draft.gender === 'male' && <label class="select-label"><span>Facial hair</span><select aria-label="Facial hair" value={draft.look.beard} onChange={(e) => setLook({ beard: e.currentTarget.value as Appearance['beard'] })}>{BEARDS.map((b) => <option value={b.id}>{b.name}</option>)}</select></label>}
         </Section>
+        <Section title="Body" eyebrow="Proportions">
+          <div class="loadouts shape-presets">{SHAPE_PRESETS.map((p) => { const on = JSON.stringify(cleanShape(p.shape[draft.gender]) ?? {}) === currentShape; return <button type="button" key={p.id} class={on ? 'selected' : ''} aria-pressed={on} onClick={() => setShape(p.shape[draft.gender])}>{p.name}</button>; })}</div>
+          {SHAPE_SLIDERS.map((s) => <label class="shape-slider" key={s.id}><span class="field-label"><span>{s.name}</span><span>{shapeValue(s.id) === 0 ? 'Sculpted' : `${shapeValue(s.id) > 0 ? s.high : s.low} ${Math.round(Math.abs(shapeValue(s.id)) * 100)}%`}</span></span>
+            <input type="range" min={-1} max={1} step={0.05} value={shapeValue(s.id)} aria-label={`${s.name}: ${s.low} to ${s.high}`} onInput={(e) => setShape({ ...draft.look.shape, [s.id]: Number(e.currentTarget.value) })} onDblClick={() => setShape({ ...draft.look.shape, [s.id]: 0 })} /></label>)}
+        </Section>
         <button type="button" class="random-button" onClick={() => setDraft({ ...draft, look: rollAppearance(draft.gender, Math.random) })}><span>⤨</span> Randomize appearance</button>
       </aside>
 
@@ -152,6 +168,7 @@ function App() {
         <div class="panel-heading"><span class="eyebrow">02 / EQUIPMENT</span><h2>Dress for adventure.</h2></div>
         <Section title="Armor" eyebrow="Fitted for both bodies">
           <div class="armor-list">{ARMORS.map((a) => <button type="button" class={`armor-card ${draft.equipment.body === a.id ? 'selected' : ''}`} aria-pressed={draft.equipment.body === a.id} onClick={() => equip('body', a.id)}><span class="armor-icon">{a.id ? <img src={`${assetBase()}icons/${ITEMS[a.id].icon}`} alt="" /> : a.glyph}</span><span><strong>{a.name}</strong><small>{a.note}</small></span><span class="selection-dot">{draft.equipment.body === a.id ? '◆' : '◇'}</span></button>)}</div>
+          <label class="bare-toggle"><input type="checkbox" checked={bare} disabled={draft.equipment.body !== null} onChange={(e) => setBare(e.currentTarget.checked)} /><span>Bare body <small>model check, with Everyday clothes selected</small></span></label>
         </Section>
         <Section title="Arms & relics">
           <label class="select-label"><span>Main hand</span><select aria-label="Main hand" value={draft.equipment.main ?? ''} onChange={(e) => equip('main', (e.currentTarget.value || null) as ItemId | null)}><option value="">Unarmed</option>{Object.values(ITEMS).filter((it) => it.slot === 'main').map((it) => <option value={it.id}>{it.name}{it.twoHanded ? ' · 2H' : ''}</option>)}</select></label>

@@ -48,7 +48,7 @@ export type PresetId =
 /** Visual body variant of a unit model (chosen from the body item). */
 export type BodyVariant = 'commoner' | 'light' | 'heavy' | 'robe' | 'leader';
 export type Gender = 'male' | 'female';
-export type HairStyle = 'short' | 'crop' | 'swept' | 'tail' | 'curly' | 'bald' | 'long' | 'braid' | 'bun' | 'bob' | 'ponytail' | 'pixie';
+export type HairStyle = 'short' | 'crop' | 'swept' | 'tail' | 'curly' | 'bald' | 'long' | 'wavy' | 'braid' | 'bun' | 'bob' | 'ponytail' | 'pixie';
 export type BeardStyle = 'none' | 'short' | 'full' | 'moustache' | 'goatee' | 'long';
 export type HairColor = 'black' | 'darkbrown' | 'brown' | 'auburn' | 'ginger' | 'blonde' | 'platinum' | 'grey';
 export type EyeColor = 'brown' | 'hazel' | 'amber' | 'green' | 'blue' | 'grey';
@@ -60,7 +60,13 @@ export interface Appearance {
   face: number;
   /** Omitted in older saves: retain the skin painted on the original model. */
   skin?: SkinTone;
+  /** Body proportions (data/appearance.ts SHAPE_SLIDERS). Omitted: the model as sculpted. */
+  shape?: BodyShape;
 }
+/** One proportion slider of a body. */
+export type ShapeKey = 'height' | 'legs' | 'shins' | 'torso' | 'arms' | 'shoulders' | 'chest' | 'waist' | 'hips' | 'build' | 'head';
+/** Slider values in [-1, 1]; an absent key is 0, the sculpted model. */
+export type BodyShape = Partial<Record<ShapeKey, number>>;
 /** Neutral monster kinds and summons (non-humanoid or special models). */
 export type MonsterKind = 'wolf' | 'golem' | 'spider' | 'elemental';
 export type AttackKind = 'melee' | 'ranged' | 'magic';

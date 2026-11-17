@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import type { Appearance, Gender, ItemId } from '../core/types';
 import { eyeColorDef, hairColorDef, skinToneDef } from '../data/appearance';
 import type { AssetLibrary, AssetManifest, UnifiedBodyMeta } from './types';
+import { applyBodyShape } from './body-shape';
 
 type UnitEntry = AssetManifest['units'][string];
 type Adopt = (piece: THREE.Object3D) => void;
@@ -152,6 +153,8 @@ function eachMaterial(model: THREE.Object3D, visit: (material: THREE.MeshStandar
 export function dressUnifiedCharacter(
   assets: AssetLibrary, model: THREE.Object3D, entry: UnitEntry, gender: Gender, look: Appearance,
   bodyItem: ItemId | null | undefined, adopt: Adopt,
+  /** Leave an unarmored body undressed (the Forge's model check). Everywhere else it wears everyday clothes. */
+  bare = false,
 ): string[] {
   const meta = entry.unified;
   const skin = bodySkin(model);
@@ -165,7 +168,8 @@ export function dressUnifiedCharacter(
   states.set(model, state);
   const missing: string[] = [];
   const g = gender === 'female' ? 'f' : 'm';
-  const armorId = bodyItem && ['tunic', 'leather', 'plate', 'robe'].includes(bodyItem) ? bodyItem as 'tunic' | 'leather' | 'plate' | 'robe' : null;
+  const armorId: 'commoner' | 'tunic' | 'leather' | 'plate' | 'robe' | null = bodyItem && ['tunic', 'leather', 'plate', 'robe'].includes(bodyItem)
+    ? bodyItem as 'tunic' | 'leather' | 'plate' | 'robe' : bare ? null : 'commoner';
   let fittedArmor = false;
   if (armorId) {
     const key = `armor_${g}_${armorId}`;
@@ -180,6 +184,8 @@ export function dressUnifiedCharacter(
       state.attachments.push(...attached.meshes);
     }
   }
+  // Proportions change the rig under every layer: after armor is bound, before hair and eyes are placed.
+  applyBodyShape(model, look.shape);
   const covered = new Set(fittedArmor && armorId
     ? meta.coveredRegions?.[armorId] ?? ['torso', 'upperarm', 'forearm', 'legs', 'feet'] : []);
   const target = new THREE.Color(skinToneDef(look.skin)?.color ?? '#b58d75');

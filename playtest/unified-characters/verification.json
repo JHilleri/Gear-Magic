@@ -1,12 +1,12 @@
 {
-  "url": "http://127.0.0.1:5197/characters.html",
-  "timestamp": "2026-11-16T21:22:19.940Z",
-  "checks": 86,
+  "url": "http://127.0.0.1:5180/characters.html",
+  "timestamp": "2026-11-17T17:15:09.176Z",
+  "checks": 87,
   "cases": [
     {
       "name": "male-commoner",
       "body": "human_m_base",
-      "triangles": 63928
+      "triangles": 82703
     },
     {
       "name": "male-commoner-walk-fit"
@@ -14,7 +14,7 @@
     {
       "name": "male-padded",
       "body": "human_m_base",
-      "triangles": 81212
+      "triangles": 82929
     },
     {
       "name": "male-padded-walk-fit"
@@ -22,7 +22,7 @@
     {
       "name": "male-light",
       "body": "human_m_base",
-      "triangles": 82608
+      "triangles": 83100
     },
     {
       "name": "male-light-walk-fit"
@@ -30,7 +30,7 @@
     {
       "name": "male-heavy",
       "body": "human_m_base",
-      "triangles": 83836
+      "triangles": 83189
     },
     {
       "name": "male-heavy-walk-fit"
@@ -38,7 +38,7 @@
     {
       "name": "male-robe",
       "body": "human_m_base",
-      "triangles": 80528
+      "triangles": 83374
     },
     {
       "name": "male-robe-walk-fit"
@@ -46,82 +46,82 @@
     {
       "name": "male-face-1",
       "body": "human_m_base",
-      "triangles": 83836
+      "triangles": 83189
     },
     {
       "name": "male-face-2",
       "body": "human_m_base",
-      "triangles": 83836
+      "triangles": 83189
     },
     {
       "name": "male-face-3",
       "body": "human_m_base",
-      "triangles": 83836
+      "triangles": 83189
     },
     {
       "name": "male-hair-short",
       "body": "human_m_base",
-      "triangles": 81256
+      "triangles": 80609
     },
     {
       "name": "male-hair-crop",
       "body": "human_m_base",
-      "triangles": 81256
+      "triangles": 80609
     },
     {
       "name": "male-hair-swept",
       "body": "human_m_base",
-      "triangles": 83836
+      "triangles": 83189
     },
     {
       "name": "male-hair-tail",
       "body": "human_m_base",
-      "triangles": 82636
+      "triangles": 81989
     },
     {
       "name": "male-hair-curly",
       "body": "human_m_base",
-      "triangles": 81436
+      "triangles": 80789
     },
     {
       "name": "male-hair-bald",
       "body": "human_m_base",
-      "triangles": 76348
+      "triangles": 75701
     },
     {
       "name": "beard-none",
       "body": "human_m_base",
-      "triangles": 77988
+      "triangles": 77341
     },
     {
       "name": "beard-short",
       "body": "human_m_base",
-      "triangles": 83836
+      "triangles": 83189
     },
     {
       "name": "beard-full",
       "body": "human_m_base",
-      "triangles": 83734
+      "triangles": 83087
     },
     {
       "name": "beard-moustache",
       "body": "human_m_base",
-      "triangles": 78426
+      "triangles": 77779
     },
     {
       "name": "beard-goatee",
       "body": "human_m_base",
-      "triangles": 79946
+      "triangles": 79299
     },
     {
       "name": "beard-long",
       "body": "human_m_base",
-      "triangles": 83764
+      "triangles": 83117
     },
     {
       "name": "female-commoner",
       "body": "human_f_base",
-      "triangles": 49796
+      "triangles": 68535
     },
     {
       "name": "female-commoner-walk-fit"
@@ -129,7 +129,7 @@
     {
       "name": "female-padded",
       "body": "human_f_base",
-      "triangles": 67074
+      "triangles": 68713
     },
     {
       "name": "female-padded-walk-fit"
@@ -137,7 +137,7 @@
     {
       "name": "female-light",
       "body": "human_f_base",
-      "triangles": 68470
+      "triangles": 68611
     },
     {
       "name": "female-light-walk-fit"
@@ -145,7 +145,7 @@
     {
       "name": "female-heavy",
       "body": "human_f_base",
-      "triangles": 69698
+      "triangles": 69070
     },
     {
       "name": "female-heavy-walk-fit"
@@ -153,7 +153,7 @@
     {
       "name": "female-robe",
       "body": "human_f_base",
-      "triangles": 66390
+      "triangles": 68613
     },
     {
       "name": "female-robe-walk-fit"
@@ -161,197 +161,202 @@
     {
       "name": "female-face-1",
       "body": "human_f_base",
-      "triangles": 69698
+      "triangles": 69070
     },
     {
       "name": "female-face-2",
       "body": "human_f_base",
-      "triangles": 69698
+      "triangles": 69070
     },
     {
       "name": "female-face-3",
       "body": "human_f_base",
-      "triangles": 69698
+      "triangles": 69070
     },
     {
       "name": "female-hair-curly",
       "body": "human_f_base",
-      "triangles": 67982
+      "triangles": 67354
     },
     {
       "name": "female-hair-bald",
       "body": "human_f_base",
-      "triangles": 62894
+      "triangles": 62266
     },
     {
       "name": "female-hair-long",
       "body": "human_f_base",
-      "triangles": 70814
+      "triangles": 70186
+    },
+    {
+      "name": "female-hair-wavy",
+      "body": "human_f_base",
+      "triangles": 70464
     },
     {
       "name": "female-hair-braid",
       "body": "human_f_base",
-      "triangles": 69698
+      "triangles": 69070
     },
     {
       "name": "female-hair-bun",
       "body": "human_f_base",
-      "triangles": 68210
+      "triangles": 67582
     },
     {
       "name": "female-hair-bob",
       "body": "human_f_base",
-      "triangles": 70814
+      "triangles": 70186
     },
     {
       "name": "female-hair-ponytail",
       "body": "human_f_base",
-      "triangles": 69182
+      "triangles": 68554
     },
     {
       "name": "female-hair-pixie",
       "body": "human_f_base",
-      "triangles": 68126
+      "triangles": 67498
     },
     {
       "name": "skin-porcelain",
       "body": "human_f_base",
-      "triangles": 42372
+      "triangles": 61111
     },
     {
       "name": "skin-fair",
       "body": "human_f_base",
-      "triangles": 42372
+      "triangles": 61111
     },
     {
       "name": "skin-warm",
       "body": "human_f_base",
-      "triangles": 42372
+      "triangles": 61111
     },
     {
       "name": "skin-olive",
       "body": "human_f_base",
-      "triangles": 42372
+      "triangles": 61111
     },
     {
       "name": "skin-brown",
       "body": "human_f_base",
-      "triangles": 42372
+      "triangles": 61111
     },
     {
       "name": "skin-deep",
       "body": "human_f_base",
-      "triangles": 42372
+      "triangles": 61111
     },
     {
       "name": "hair-color-black",
       "body": "human_f_base",
-      "triangles": 69698
+      "triangles": 69070
     },
     {
       "name": "hair-color-darkbrown",
       "body": "human_f_base",
-      "triangles": 69698
+      "triangles": 69070
     },
     {
       "name": "hair-color-brown",
       "body": "human_f_base",
-      "triangles": 69698
+      "triangles": 69070
     },
     {
       "name": "hair-color-auburn",
       "body": "human_f_base",
-      "triangles": 69698
+      "triangles": 69070
     },
     {
       "name": "hair-color-ginger",
       "body": "human_f_base",
-      "triangles": 69698
+      "triangles": 69070
     },
     {
       "name": "hair-color-blonde",
       "body": "human_f_base",
-      "triangles": 69698
+      "triangles": 69070
     },
     {
       "name": "hair-color-platinum",
       "body": "human_f_base",
-      "triangles": 69698
+      "triangles": 69070
     },
     {
       "name": "hair-color-grey",
       "body": "human_f_base",
-      "triangles": 69698
+      "triangles": 69070
     },
     {
       "name": "eyes-brown",
       "body": "human_f_base",
-      "triangles": 69698
+      "triangles": 69070
     },
     {
       "name": "eyes-hazel",
       "body": "human_f_base",
-      "triangles": 69698
+      "triangles": 69070
     },
     {
       "name": "eyes-amber",
       "body": "human_f_base",
-      "triangles": 69698
+      "triangles": 69070
     },
     {
       "name": "eyes-green",
       "body": "human_f_base",
-      "triangles": 69698
+      "triangles": 69070
     },
     {
       "name": "eyes-blue",
       "body": "human_f_base",
-      "triangles": 69698
+      "triangles": 69070
     },
     {
       "name": "eyes-grey",
       "body": "human_f_base",
-      "triangles": 69698
+      "triangles": 69070
     },
     {
       "name": "weapon-tools",
       "body": "human_f_base",
-      "triangles": 69698
+      "triangles": 69070
     },
     {
       "name": "weapon-sword",
       "body": "human_f_base",
-      "triangles": 69698
+      "triangles": 69070
     },
     {
       "name": "weapon-axe",
       "body": "human_f_base",
-      "triangles": 67198
+      "triangles": 66570
     },
     {
       "name": "weapon-spear",
       "body": "human_f_base",
-      "triangles": 67198
+      "triangles": 66570
     },
     {
       "name": "weapon-bow",
       "body": "human_f_base",
-      "triangles": 67198
+      "triangles": 66570
     },
     {
       "name": "weapon-staff",
       "body": "human_f_base",
-      "triangles": 67198
+      "triangles": 66570
     },
     {
       "name": "weapon-wand",
       "body": "human_f_base",
-      "triangles": 69698
+      "triangles": 69070
     },
     {
       "name": "final",
       "body": "human_f_base",
-      "triangles": 69698
+      "triangles": 69070
     },
     {
       "name": "animation-idle"
@@ -380,7 +385,7 @@
     {
       "name": "before-load",
       "body": "human_f_base",
-      "triangles": 69698
+      "triangles": 69070
     },
     {
       "name": "UI save/load roundtrip"
@@ -391,7 +396,7 @@
     {
       "name": "final-preview",
       "body": "human_f_base",
-      "triangles": 69698
+      "triangles": 69070
     }
   ],
   "errors": []

@@ -1,0 +1,22 @@
+[
+ {
+  "id": "hair_wavy1",
+  "cat": "src_hair",
+  "alpha": true,
+  "seed": 327,
+  "w": 1024,
+  "h": 1024,
+  "prompt": "Stylized fantasy strategy game 3D asset, hand-painted textures: a smooth featureless bright pure green mannequin head with no face, no eyes, no nose, no mouth, wearing a wig of very long voluminous women's hair with a deep side part, swept up and back off the forehead with lift at the roots, falling in loose soft waves past the shoulders and down the back, a few wavy locks framing one side of the face, the hair is pale platinum blonde, front view at eye level, symmetrical, head only, centered with generous empty margins, on a plain flat light grey background, soft even studio lighting, clean 3D render",
+  "negative": "text, watermark, logo, cropped, cut off, multiple objects, scenery, landscape, ground plane, shadow, frame, border, face, eyes, lips, eyebrows, skin, shoulders, body, clothes, hat, ribbon, jewelry"
+ },
+ {
+  "id": "hair_wavy2",
+  "cat": "src_hair",
+  "alpha": true,
+  "seed": 345,
+  "w": 1024,
+  "h": 1024,
+  "prompt": "Stylized fantasy strategy game 3D asset, hand-painted textures: a smooth featureless bright pure green mannequin head with no face, no eyes, no nose, no mouth, wearing a wig of very long voluminous women's hair with a deep side part, swept up and back off the forehead with lift at the roots, falling in loose soft waves past the shoulders and down the back, a few wavy locks framing one side of the face, the hair is pale platinum blonde, front view at eye level, symmetrical, head only, centered with generous empty margins, on a plain flat light grey background, soft even studio lighting, clean 3D render",
+  "negative": "text, watermark, logo, cropped, cut off, multiple objects, scenery, landscape, ground plane, shadow, frame, border, face, eyes, lips, eyebrows, skin, shoulders, body, clothes, hat, ribbon, jewelry"
+ }
+]

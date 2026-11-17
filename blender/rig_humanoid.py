@@ -2,6 +2,7 @@
 
     blender -b -P rig_humanoid.py -- in.glb out.glb [--preview out.png] [--tris 9000] [--tex 1024]
                                      [--quality 82] [--voxel 0.008] [--items DIR] [--no-anim]
+                                     [--crotch Z]
 
 Pipeline: import + join -> drop floaters -> detect up axis / facing -> normalise (height 1, feet
 on z=0, centred, front = Blender -Y = glTF +Z) -> T-pose landmark analysis by mesh slicing ->
@@ -41,7 +42,7 @@ def parse_args():
     if len(a) < 2:
         raise SystemExit(__doc__)
     opt = {"in": a[0], "out": a[1], "preview": None, "tris": 9000, "tex": 1024, "quality": 82,
-           "voxel": 0.008, "items": None, "anim": True}
+           "voxel": 0.008, "items": None, "anim": True, "crotch": None}
     i = 2
     while i < len(a):
         k = a[i]
@@ -50,6 +51,7 @@ def parse_args():
         elif k == "--tex": opt["tex"] = int(a[i + 1]); i += 2
         elif k == "--quality": opt["quality"] = int(a[i + 1]); i += 2
         elif k == "--voxel": opt["voxel"] = float(a[i + 1]); i += 2
+        elif k == "--crotch": opt["crotch"] = float(a[i + 1]); i += 2
         elif k == "--items": opt["items"] = a[i + 1]; i += 2
         elif k == "--no-anim": opt["anim"] = False; i += 1
         else: raise SystemExit(f"unknown option {k}")
@@ -175,7 +177,7 @@ def _gap_split(xs, bin_w=0.006):
     return best
 
 
-def find_landmarks(v):
+def find_landmarks(v, crotch=None):
     L = Landmarks()
     z = v[:, 2]
     # ---- arms: tips, thickness and centre line come from the pure-arm region (half to 4/5 of the
@@ -337,6 +339,9 @@ def find_landmarks(v):
             if ok:
                 zc = float(zz)
                 break
+    if crotch is not None:
+        # touching thighs leave no clean merge point for the scan: trust the caller
+        zc = float(crotch)
     L["robe"] = zc is None or zc < 0.25
     if L.robe:
         zc = 0.45
@@ -750,7 +755,7 @@ def main():
     orient_facing(body)
     normalize(body)
     v = C.surface_points(body, 240000)
-    L = find_landmarks(v)
+    L = find_landmarks(v, opt["crotch"])
     J = build_joints(L)
     C.log("landmarks:", json.dumps({k: (round(x, 3) if isinstance(x, float) else x) for k, x in L.items()
                                     if not isinstance(x, dict)}, default=str))

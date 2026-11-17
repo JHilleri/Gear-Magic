@@ -8,38 +8,38 @@
     "eyes": [
      {
       "center": [
-       -0.019898,
-       0.931305,
-       0.055835
+       -0.016552,
+       0.941684,
+       0.044045
       ],
-      "radius": 0.011915,
-      "irisRadius": 0.003125,
+      "radius": 0.009102,
+      "irisRadius": 0.002653,
       "aperture": [
-       0.007268,
-       0.002383
+       0.006169,
+       0.002023
       ]
      },
      {
       "center": [
-       0.019421,
-       0.931305,
-       0.055746
+       0.016823,
+       0.941684,
+       0.042846
       ],
-      "radius": 0.011915,
-      "irisRadius": 0.003125,
+      "radius": 0.010114,
+      "irisRadius": 0.002653,
       "aperture": [
-       0.007268,
-       0.002383
+       0.006169,
+       0.002023
       ]
      }
     ],
     "hairPrefix": "unified_f_"
    },
    "head": {
-    "x": -0.00024,
+    "x": 0.00014,
     "y": 0.99999,
-    "z": -0.04145,
-    "depth": 0.11915
+    "z": -0.04095,
+    "depth": 0.10114
    }
   },
   "human_f_commoner": {
@@ -513,6 +513,9 @@
   }
  },
  "items": {
+  "armor_f_commoner": {
+   "file": "models/items/armor_f_commoner.glb"
+  },
   "armor_f_leather": {
    "file": "models/items/armor_f_leather.glb"
   },
@@ -524,6 +527,9 @@
   },
   "armor_f_tunic": {
    "file": "models/items/armor_f_tunic.glb"
+  },
+  "armor_m_commoner": {
+   "file": "models/items/armor_m_commoner.glb"
   },
   "armor_m_leather": {
    "file": "models/items/armor_m_leather.glb"
@@ -783,6 +789,9 @@
   },
   "unified_f_tail": {
    "file": "models/hair/unified_f_tail.glb"
+  },
+  "unified_f_wavy": {
+   "file": "models/hair/unified_f_wavy.glb"
   },
   "unified_m_beard_full": {
    "file": "models/hair/unified_m_beard_full.glb"

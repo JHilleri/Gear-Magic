@@ -6,7 +6,7 @@ Usage:
 
 Manifest format (JSON list):
     [{"id": "castle", "cat": "buildings", "prompt": "...", "negative": "...",
-      "w": 1024, "h": 1024, "seed": 1, "alpha": true}]
+      "w": 1024, "h": 1024, "seed": 1, "alpha": true, "refs": ["outputs/x/ref.png"]}]
 
 Outputs land in art/outputs/<cat>/<id>.png (and <id>_alpha.png when alpha=true).
 The job is skipped when its outputs already exist (resumable) unless --force.
@@ -25,6 +25,7 @@ import urllib.request
 
 COMFY = os.environ.get("COMFY_LOCAL_URL", "http://127.0.0.1:8188")
 COMFY_OUT = "/home/jeanh/ComfyUI-Shared/output"
+COMFY_IN = "/home/jeanh/ComfyUI-Shared/input"
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 UNET = "qwen_image_2.1_int8_convrot.safetensors"
@@ -51,6 +52,13 @@ def graph(job):
         "8": {"class_type": "VAEDecode", "inputs": {"samples": ["7", 0], "vae": ["4", 0]}},
         "9": {"class_type": "SaveImage", "inputs": {"images": ["8", 0], "filename_prefix": prefix}},
     }
+    # Reference images ("refs": paths relative to art/): the model edits or restyles them.
+    for n, ref in enumerate(job.get("refs", []), 1):
+        name = f"magic4x_ref_{job['id']}_{n}{os.path.splitext(ref)[1]}"
+        shutil.copyfile(os.path.join(ROOT, ref), os.path.join(COMFY_IN, name))
+        g[f"r{n}"] = {"class_type": "LoadImage", "inputs": {"image": name}}
+        g["5"]["inputs"][f"images.image_{n}"] = [f"r{n}", 0]
+        g["5"]["inputs"]["vae"] = ["4", 0]
     if job.get("alpha"):
         g["10"] = {"class_type": "LoadBackgroundRemovalModel", "inputs": {"bg_removal_name": "birefnet.safetensors"}}
         g["11"] = {"class_type": "RemoveBackground", "inputs": {"bg_removal_model": ["10", 0], "image": ["8", 0]}}

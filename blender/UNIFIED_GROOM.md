@@ -44,3 +44,27 @@ Each style uses fewer than 8,000 triangles. These are layered mesh-card grooms,
 with restrained secondary motion. They are not per-strand physics or salon-grade
 hair simulation. Face/jaw morphs that substantially alter the scalp or beard
 surface need corresponding groom morphs or a refit.
+
+## Generated wigs
+
+`unified_f_wavy` is not built from cards. It is a sculpted wig from image-to-3D, fitted to the
+body by `unified_hair_piece.py`:
+
+```bash
+cd art
+python3 tools/gen.py manifests/hair_wavy.json            # blonde wig on a green mannequin (Qwen Image)
+python3 tools/i2m.py src_hair --only hair_wavy1           # TRELLIS.2, about 8 minutes
+cd ..
+blender -b -t 2 --factory-startup -P blender/fit_hair.py -- art/outputs/3d/hair/hair_wavy1.glb \
+  art/outputs/unified/qwen/hair_wavy_headframe.glb --kind hair --maps <processed heads dir> \
+  --zmin -2.7 --tris 9000 --tex 1024 --low-x 0.68
+blender -b -t 2 --factory-startup -P blender/unified_hair_piece.py -- \
+  --piece art/outputs/unified/qwen/hair_wavy_headframe.glb --style wavy \
+  --body game/public/assets/models/units/human_f_base.glb --gender f --out game/public/assets/models/hair
+```
+
+`fit_hair.py` keys out the mannequin and greys the texture (the game tints it). The piece script
+maps the head frame onto this body's skull, seats the wig on the scalp, cuts side locks where they
+meet the shoulders and slides what hangs behind the neck clear of the back. The piece is rigid on
+the head bone (no swing groups) and must be refitted after a body rebuild; `unified_groom.py`
+does not regenerate it. A new style also needs an entry in `HAIR_STYLES` and the `HairStyle` type.

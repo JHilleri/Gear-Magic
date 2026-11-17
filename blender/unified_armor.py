@@ -27,7 +27,7 @@ def args():
     p.add_argument('--body', required=True)
     p.add_argument('--gender', choices=['m', 'f'], required=True)
     p.add_argument('--out', required=True)
-    p.add_argument('--styles', default='tunic,leather,plate,robe')
+    p.add_argument('--styles', default='tunic,leather,plate,robe')  # fallback tailor; the shipped outfits are generated (unified_clothes.py, fit_clothes.sh). 'commoner' also exists here
     p.add_argument('--preview', help='Render the final outfit to this PNG (one style per run).')
     return p.parse_args(C.script_args())
 
@@ -98,7 +98,12 @@ def materials(style):
                      grain('burnished hide',(.215,.105,.046),seed=28))
     steel = mat('Armor_forged_steel', (.27,.32,.37), .75, .38)
     seam = mat('Armor_waxed_linen_stitch', (.47,.34,.18), 0, .89)
-    return dict(brass=brass, dark=dark, linen=linen, blue=blue, leather=leather,
+    # Everyday clothes (style 'commoner'): undyed linen shirt, olive wool trousers.
+    cream = mat('Armor_undyed_linen', (.72,.65,.47), 0, .93,
+                grain('woven cream',(.87,.83,.72), textile=True))
+    olive = mat('Armor_olive_wool', (.12,.13,.045), 0, .92,
+                grain('woven olive',(.38,.40,.23), textile=True))
+    return dict(cream=cream, olive=olive, brass=brass, dark=dark, linen=linen, blue=blue, leather=leather,
                 reinforced=reinforced, steel=steel, seam=seam)
 
 
@@ -198,7 +203,7 @@ def shell(body, arm, style, mats):
         p+=n*.002
     obj.data.update()
     obj.data.materials.clear()
-    obj.data.materials.append(mats['dark'])
+    obj.data.materials.append(mats['olive' if style=='commoner' else 'dark'])
     for polygon in obj.data.polygons:
         polygon.material_index=0
         polygon.use_smooth=True
@@ -246,7 +251,7 @@ def neck_facing(body,arm,style,mats):
     bmesh.ops.delete(bm,geom=[f for f in bm.faces if f.index not in keep],context='FACES')
     bm.to_mesh(obj.data);bm.free();obj.data.update()
     obj.data.materials.clear()
-    obj.data.materials.append(mats['leather' if style=='leather' else 'steel' if style=='plate' else 'blue'])
+    obj.data.materials.append(mats['leather' if style=='leather' else 'steel' if style=='plate' else 'cream' if style=='commoner' else 'blue'])
     for p in obj.data.polygons:p.material_index=0;p.use_smooth=True
     for layer in list(obj.data.color_attributes):obj.data.color_attributes.remove(layer)
     C._select_only([obj]);C.recalc_normals(obj);C.shade(obj,'smooth')
@@ -359,8 +364,9 @@ class Tailor:
 
 def tailored(body,arm,style,mats):
     t=Tailor(body,arm)
-    fabric=mats['leather' if style=='leather' else 'steel' if style=='plate' else 'blue']
-    edging=mats['brass'] if style=='plate' else mats['dark']
+    plain=style=='commoner'
+    fabric=mats['leather' if style=='leather' else 'steel' if style=='plate' else 'cream' if plain else 'blue']
+    edging=mats['brass'] if style=='plate' else mats['seam'] if plain else mats['dark']
     torso=t.loft('Tailored jacket panels',t.sections,fabric,n=48)
     collar_start=(len(t.sections)-1)*48
     for j,vertex in enumerate(torso.data.vertices[collar_start:]):
@@ -399,7 +405,7 @@ def tailored(body,arm,style,mats):
             for row in [guard[0],guard[-1]]:t.ring('Vambrace rolled edge '+side,row,.0015,mats['brass'],axis='x')
         # A short articulated shoulder cap overlaps both sleeve and torso, so
         # animation cannot expose the coarse undergarment's region boundary.
-        if style!='plate':
+        if style!='plate' and not plain:
             verts=[];faces=[];n=24
             for k,ax in enumerate([.126,.148,.170,.192,.207]):
                 row=min(sleeve,key=lambda r:abs(abs(r[0])-ax));_,cy,cz,ry,rz=row
@@ -426,13 +432,13 @@ def tailored(body,arm,style,mats):
                 extra=.012 if garment=='boot' else .006
                 rows.append((z,float(cx),float(cy),float((hi[0]-lo[0])/2+extra),float((hi[1]-lo[1])/2+extra)))
             boot=garment=='boot'
-            garment_mat=mats['steel'] if boot and style=='plate' else mats['leather' if boot and style=='leather' else 'dark']
+            garment_mat=mats['steel'] if boot and style=='plate' else mats['leather' if boot and style in ('leather','commoner') else 'olive' if plain else 'dark']
             t.loft(garment.capitalize()+' '+side,rows,garment_mat,n=28)
             if boot:
-                t.ring('Folded boot cuff '+side,rows[0],.003,edging)
+                t.ring('Folded boot cuff '+side,rows[0],.003,mats['leather'] if plain else edging)
                 t.ring('Boot ankle seam '+side,rows[-2],.0015,mats['dark'])
                 # Broad leather reinforcing strip, with small antique brass studs.
-                for z in [.13,.24]:
+                for z in ([] if plain else [.13,.24]):
                     row=min(rows,key=lambda r:abs(r[0]-z))
                     _,cx,cy,rx,ry=row
                     stud=box('Boot brass fastening '+side,(cx,cy-ry-.002,z),(.011,.003,.004),mats['brass'],arm,'shin.'+side,.0007)
@@ -444,7 +450,7 @@ def tailored(body,arm,style,mats):
         _,ax,ay,arx,ary=ankle
         foot_rows=[(-.004,cx,cy,rx*.96,ry*.98),(.006,cx,cy,rx,ry),(.025,cx,cy,rx*.98,ry*.96),
                    (.043,cx,cy+.008,rx*.90,ry*.82),(.064,ax,ay,arx,ary),(.085,ax,ay,arx,ary)]
-        foot=t.loft('Closed rounded boot foot '+side,foot_rows,mats['leather' if style=='leather' else 'dark'],n=32)
+        foot=t.loft('Closed rounded boot foot '+side,foot_rows,mats['leather' if style in ('leather','commoner') else 'dark'],n=32)
         # A closed sole, rather than the generated foot's sculpted bare toes.
         sole_points=[tuple(v.co) for v in foot.data.vertices[:32]]
         sole=mesh('Closed boot sole '+side,sole_points,[tuple(reversed(range(32)))],mats['dark'],arm,'foot.'+side)
@@ -453,13 +459,15 @@ def tailored(body,arm,style,mats):
     # straight hems are intentionally independent of the anatomical waist mesh.
     if style!='robe':
         base=min(t.sections,key=lambda row:abs(row[0]-.52));_,cx,cy,rx,ry=base
-        for panel in range(10):
-            center=math.tau*panel/10;verts=[];faces=[];n=6;rows=5
+        # Everyday shirt: two long tails, front and back, slit at the hips.
+        count,n,span=(2,18,math.pi*.97) if plain else (10,6,math.tau/10*1.06)
+        for panel in range(count):
+            center=(math.pi*panel-math.pi/2) if plain else math.tau*panel/10;verts=[];faces=[];rows=5
             for k in range(rows):
                 f=k/(rows-1);z=.543-.13*f
                 for j in range(n):
-                    angle=center+(j/(n-1)-.5)*math.tau/10*1.06
-                    flare=.012+.022*f;c,s=math.cos(angle),math.sin(angle)
+                    angle=center+(j/(n-1)-.5)*span
+                    flare=(.014+.030*f) if plain else .012+.022*f;c,s=math.cos(angle),math.sin(angle)
                     verts.append((cx+(rx+flare)*c,cy+(ry+flare)*s,z+.003*abs(j/(n-1)-.5)*f))
             for k in range(rows-1):
                 for j in range(n-1):
@@ -475,12 +483,22 @@ def tailored(body,arm,style,mats):
 def details(body,arm,style,mats,t):
     beltrow=min(t.sections,key=lambda row:abs(row[0]-.555))
     z,cx,cy,rx,ry=beltrow;rx+=.005;ry+=.005
-    t.loft('Wide waist girdle',[(z-.017,cx,cy,rx,ry),(z+.017,cx,cy,rx,ry)],mats['dark'],n=48)
-    for height in [-.017,.017]:t.ring('Belt rolled edge',(z+height,cx,cy,rx,ry),.0015,mats['leather'],bone='hips')
+    plain=style=='commoner';half=.010 if plain else .017
+    t.loft('Wide waist girdle',[(z-half,cx,cy,rx,ry),(z+half,cx,cy,rx,ry)],mats['leather' if plain else 'dark'],n=48)
+    for height in [-half,half]:t.ring('Belt rolled edge',(z+height,cx,cy,rx,ry),.0015,mats['leather'],bone='hips')
     front=cy-ry-.002
-    for offset in [-.012,.012]:box('Buckle upright',(cx+offset,front-.001,z),(.003,.006,.027),mats['brass'],arm)
-    for offset in [-.012,.012]:box('Buckle crossbar',(cx,front-.001,z+offset),(.026,.006,.003),mats['brass'],arm)
+    for offset in [-.012,.012]:box('Buckle upright',(cx+offset,front-.001,z),(.003,.006,half+.010),mats['brass'],arm)
+    for offset in [-half+.005,half-.005]:box('Buckle crossbar',(cx,front-.001,z+offset),(.026,.006,.003),mats['brass'],arm)
     box('Buckle tongue',(cx+.002,front-.004,z),(.019,.003,.0025),mats['brass'],arm)
+    if plain:
+        # A laced placket at the throat instead of panels and fastenings.
+        for i in range(4):
+            zz=.772+.011*i
+            for sign in [-1,1]:
+                obj=t.trim('Shirt lacing',[t.front(sign*.007,zz,.0035),t.front(-sign*.007,zz+.011,.0035)],.0009,mats['dark'])
+        t.trim('Shirt placket edge',[t.front(.0095,.772+.003*i,.003) for i in range(18)],.0009,mats['seam'])
+        t.trim('Shirt placket edge',[t.front(-.0095,.772+.003*i,.003) for i in range(18)],.0009,mats['seam'])
+        return t
     for sign in [-1,1]:
         pts=[t.front(sign*(.055-.010*i/15),.575+.225*i/15,.003) for i in range(16)]
         t.trim('Jacket panel piping',pts,.0013,mats['dark'] if style=='leather' else mats['brass'] if style=='plate' else mats['blue'])

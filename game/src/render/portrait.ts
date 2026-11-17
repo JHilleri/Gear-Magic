@@ -142,7 +142,7 @@ export function createPortraitRenderer(renderer: THREE.WebGLRenderer, assets: As
     const key = firstAvailable(keys, (k) => !!assets.skinned(k));
     if (!key) return null;
     const l = u.look;
-    const id = `${key}|${u.equipment?.body ?? ''}|${l.hair}|${l.hairColor}|${l.eyes}|${l.beard}|${l.face}|${l.skin ?? ''}|${opts.large ? 2 : 1}|${Math.round(opts.yaw ?? 0)}`;
+    const id = `${key}|${u.equipment?.body ?? ''}|${l.hair}|${l.hairColor}|${l.eyes}|${l.beard}|${l.face}|${l.skin ?? ''}|${l.shape ? JSON.stringify(l.shape) : ''}|${opts.large ? 2 : 1}|${Math.round(opts.yaw ?? 0)}`;
     let url = cache.get(id);
     if (url === undefined) {
       url = render(key, u, opts);

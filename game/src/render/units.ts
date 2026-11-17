@@ -564,7 +564,7 @@ export const createUnitLayer: CreateUnitLayer = (ctx: RenderContext, fx: FxLayer
     // the body item, not only the body variant: the padded tunic has its own model (unitBodyKeys)
     const l = u.look;
     return [u.race, u.monster ?? '', u.faction, u.monster ? '' : safeBody(u), e.body, e.main, e.off, e.trinket, e.mount, u.isLeader ? 1 : 0,
-      u.gender ?? '', l ? `${l.hair},${l.hairColor},${l.eyes},${l.beard},${l.face},${l.skin ?? ''}` : ''].join('|');
+      u.gender ?? '', l ? `${l.hair},${l.hairColor},${l.eyes},${l.beard},${l.face},${l.skin ?? ''},${l.shape ? JSON.stringify(l.shape) : ''}` : ''].join('|');
   }
 
   function statusOf(u: Unit, state: GameState | null): StatusData {

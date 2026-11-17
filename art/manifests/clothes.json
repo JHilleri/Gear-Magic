@@ -1,0 +1,132 @@
+[
+ {
+  "id": "commoner_f3",
+  "cat": "src_clothes",
+  "alpha": true,
+  "seed": 7303,
+  "w": 1024,
+  "h": 1024,
+  "prompt": "Dress this green mannequin. Keep exactly the same T-pose, the same body proportions, the same framing and the same front view. The mannequin now wears everyday medieval commoner clothes: a loose cream undyed linen tunic with long sleeves to the wrists, a small laced V slit at the collar, the tunic hangs over the hips to the upper thighs with short side slits, a brown leather belt with a brass buckle at the waist, olive green wool trousers, and tall brown leather boots with a folded cuff below the knee. The head, neck and hands stay bare smooth bright green mannequin with no face and no hair. Stylized fantasy strategy game 3D character model, hand-painted textures, plain flat light grey background, soft even studio lighting, clean 3D render",
+  "negative": "",
+  "refs": [
+   "outputs/unified/clothes/mannequin_f.png"
+  ]
+ },
+ {
+  "id": "commoner_m1",
+  "cat": "src_clothes",
+  "alpha": true,
+  "seed": 7404,
+  "w": 1024,
+  "h": 1024,
+  "prompt": "Dress this green mannequin. Keep exactly the same T-pose, the same body proportions, the same framing and the same front view. The mannequin now wears everyday medieval commoner clothes: a loose cream undyed linen tunic with long sleeves to the wrists, a small laced V slit at the collar, the tunic hangs over the hips to the upper thighs with short side slits, a brown leather belt with a brass buckle at the waist, olive green wool trousers, and tall brown leather boots with a folded cuff below the knee. The head, neck and hands stay bare smooth bright green mannequin with no face and no hair. Stylized fantasy strategy game 3D character model, hand-painted textures, plain flat light grey background, soft even studio lighting, clean 3D render",
+  "negative": "",
+  "refs": [
+   "outputs/unified/clothes/mannequin_m.png"
+  ]
+ },
+ {
+  "id": "tunic_f1",
+  "cat": "src_clothes",
+  "alpha": true,
+  "seed": 8137,
+  "w": 1024,
+  "h": 1024,
+  "prompt": "Dress this green mannequin. Keep exactly the same T-pose, the same body proportions, the same framing and the same front view. The mannequin now wears a fitted thick quilted padded gambeson in faded royal blue with cream trim and stitched diamond quilting, long sleeves to the wrists, a standing collar, a skirt of the gambeson to mid-thigh, a brown leather belt with a brass buckle, tan linen trousers and brown leather boots to below the knee. The head, neck and hands stay bare smooth bright green mannequin with no face and no hair; no helmet, no hood, no gloves. No bare skin anywhere else: arms and legs are fully covered. Stylized fantasy strategy game 3D character model, hand-painted textures, plain flat light grey background, soft even studio lighting, clean 3D render",
+  "negative": "",
+  "refs": [
+   "outputs/unified/clothes/mannequin_f.png"
+  ]
+ },
+ {
+  "id": "tunic_m1",
+  "cat": "src_clothes",
+  "alpha": true,
+  "seed": 8174,
+  "w": 1024,
+  "h": 1024,
+  "prompt": "Dress this green mannequin. Keep exactly the same T-pose, the same body proportions, the same framing and the same front view. The mannequin now wears a thick quilted padded gambeson in faded royal blue with cream trim and stitched diamond quilting, long sleeves to the wrists, a standing collar, a skirt of the gambeson to mid-thigh, a brown leather belt with a brass buckle, tan linen trousers and brown leather boots to below the knee. The head, neck and hands stay bare smooth bright green mannequin with no face and no hair; no helmet, no hood, no gloves. No bare skin anywhere else: arms and legs are fully covered. Stylized fantasy strategy game 3D character model, hand-painted textures, plain flat light grey background, soft even studio lighting, clean 3D render",
+  "negative": "",
+  "refs": [
+   "outputs/unified/clothes/mannequin_m.png"
+  ]
+ },
+ {
+  "id": "leather_f1",
+  "cat": "src_clothes",
+  "alpha": true,
+  "seed": 8211,
+  "w": 1024,
+  "h": 1024,
+  "prompt": "Dress this green mannequin. Keep exactly the same T-pose, the same body proportions, the same framing and the same front view. The mannequin now wears fitted brown hardened leather armor: a laced leather cuirass jacket with long leather sleeves, layered leather shoulder guards, a wide belt with a brass buckle, a short skirt of overlapping leather panels over the hips, dark brown close-fitting leggings and tall brown leather boots reaching above the knee. The head, neck and hands stay bare smooth bright green mannequin with no face and no hair; no helmet, no hood, no gloves. No bare skin anywhere else: arms and legs are fully covered. Stylized fantasy strategy game 3D character model, hand-painted textures, plain flat light grey background, soft even studio lighting, clean 3D render",
+  "negative": "",
+  "refs": [
+   "outputs/unified/clothes/mannequin_f.png"
+  ]
+ },
+ {
+  "id": "leather_m1",
+  "cat": "src_clothes",
+  "alpha": true,
+  "seed": 8248,
+  "w": 1024,
+  "h": 1024,
+  "prompt": "Dress this green mannequin. Keep exactly the same T-pose, the same body proportions, the same framing and the same front view. The mannequin now wears brown hardened leather armor: a studded leather cuirass jacket with long leather sleeves and bracers, layered leather shoulder guards, a wide belt with a brass buckle, a short skirt of overlapping leather panels over the hips, dark brown trousers and tall brown leather boots to the knee. The head, neck and hands stay bare smooth bright green mannequin with no face and no hair; no helmet, no hood, no gloves. No bare skin anywhere else: arms and legs are fully covered. Stylized fantasy strategy game 3D character model, hand-painted textures, plain flat light grey background, soft even studio lighting, clean 3D render",
+  "negative": "",
+  "refs": [
+   "outputs/unified/clothes/mannequin_m.png"
+  ]
+ },
+ {
+  "id": "plate_f1",
+  "cat": "src_clothes",
+  "alpha": true,
+  "seed": 8285,
+  "w": 1024,
+  "h": 1024,
+  "prompt": "Dress this green mannequin. Keep exactly the same T-pose, the same body proportions, the same framing and the same front view. The mannequin now wears polished full steel plate armor shaped for a woman: breastplate, gorget at the base of the neck, rounded pauldrons, steel arm plates down to the wrists, a royal blue tabard trimmed with gold hanging from a leather belt, steel tassets, steel leg plates, greaves and steel sabatons. The head, neck and hands stay bare smooth bright green mannequin with no face and no hair; no helmet, no hood, no gloves. No bare skin anywhere else: arms and legs are fully covered. Stylized fantasy strategy game 3D character model, hand-painted textures, plain flat light grey background, soft even studio lighting, clean 3D render",
+  "negative": "",
+  "refs": [
+   "outputs/unified/clothes/mannequin_f.png"
+  ]
+ },
+ {
+  "id": "plate_m1",
+  "cat": "src_clothes",
+  "alpha": true,
+  "seed": 8322,
+  "w": 1024,
+  "h": 1024,
+  "prompt": "Dress this green mannequin. Keep exactly the same T-pose, the same body proportions, the same framing and the same front view. The mannequin now wears polished full steel plate armor: breastplate, gorget at the base of the neck, large rounded pauldrons, steel arm plates down to the wrists, a royal blue tabard trimmed with gold hanging from a leather belt, steel tassets, steel leg plates, greaves and steel sabatons. The head, neck and hands stay bare smooth bright green mannequin with no face and no hair; no helmet, no hood, no gloves. No bare skin anywhere else: arms and legs are fully covered. Stylized fantasy strategy game 3D character model, hand-painted textures, plain flat light grey background, soft even studio lighting, clean 3D render",
+  "negative": "",
+  "refs": [
+   "outputs/unified/clothes/mannequin_m.png"
+  ]
+ },
+ {
+  "id": "robe_f2",
+  "cat": "src_clothes",
+  "alpha": true,
+  "seed": 8364,
+  "w": 1024,
+  "h": 1024,
+  "prompt": "Dress this green mannequin. Keep exactly the same T-pose, the same body proportions, the same framing and the same front view. The mannequin now wears flowing royal blue mage robes with gold embroidered trim: long sleeves to the wrists that are only slightly flared at the cuff and do not hang down, a closed collar, a wide brown leather belt with small pouches, and a long closed robe skirt reaching the ankles, closed at the front with brown leather shoes showing beneath. The head, neck and hands stay bare smooth bright green mannequin with no face and no hair; no helmet, no hood, no gloves. No bare skin anywhere else: arms and legs are fully covered. Stylized fantasy strategy game 3D character model, hand-painted textures, plain flat light grey background, soft even studio lighting, clean 3D render",
+  "negative": "",
+  "refs": [
+   "outputs/unified/clothes/mannequin_f.png"
+  ]
+ },
+ {
+  "id": "robe_m1",
+  "cat": "src_clothes",
+  "alpha": true,
+  "seed": 8396,
+  "w": 1024,
+  "h": 1024,
+  "prompt": "Dress this green mannequin. Keep exactly the same T-pose, the same body proportions, the same framing and the same front view. The mannequin now wears flowing royal blue mage robes with gold embroidered trim: long wide sleeves to the wrists, a closed collar, a wide brown leather belt with small pouches, and a long robe skirt reaching the ankles with brown leather shoes showing beneath. The head, neck and hands stay bare smooth bright green mannequin with no face and no hair; no helmet, no hood, no gloves. No bare skin anywhere else: arms and legs are fully covered. Stylized fantasy strategy game 3D character model, hand-painted textures, plain flat light grey background, soft even studio lighting, clean 3D render",
+  "negative": "",
+  "refs": [
+   "outputs/unified/clothes/mannequin_m.png"
+  ]
+ }
+]

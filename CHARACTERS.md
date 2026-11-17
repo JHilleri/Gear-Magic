@@ -10,7 +10,11 @@ uses `http://127.0.0.1:5197/characters.html`.
   20-bone rig, face-shape morphs and animation clips. There is no runtime head/neck splice.
 - Skin material regions permit coverage underneath equipment. The mesh shares positions and smooth
   normals across those region borders. Bare skin uses one tint response, including the neck.
-- Four outfits per body are separate skinned attachments: padded tunic, leather, plate and robe.
+- Five outfits per body are separate skinned attachments: everyday clothes (linen shirt, olive
+  trousers, boots), padded tunic, leather, plate and robe. A body with no armor item wears the
+  everyday clothes everywhere in the game; only the Forge's "Bare body" toggle shows it undressed.
+  All five are generated meshes (blender/UNIFIED_ARMOR.md, "Generated outfits"), made by dressing a
+  render of the body itself and fitted with `blender/fit_clothes.sh`.
   They rebind to the base skeleton by bone name and retain the exact inverse bind matrices.
   Equipping armor never selects a different body or head. Missing armor is reported and leaves
   the base visible rather than hiding it.
@@ -24,6 +28,13 @@ uses `http://127.0.0.1:5197/characters.html`.
   See [blender/UNIFIED_GROOM.md](blender/UNIFIED_GROOM.md).
 - Three face shapes, bald/hair/beard options, eight hair colors, six eye colors and six skin tones
   are available in the Forge. Weapons, shields, rings and amulets remain visible attachments.
+
+- Eleven body-proportion sliders (height, legs, lower legs, torso, arms, shoulders, chest, waist, hips, limbs,
+  head) with five presets are in the Forge; the in-game Appearance dialog offers the presets. They
+  are stored as `look.shape` (values -1 to 1, absent = as sculpted) and new units roll a mild
+  variation. `game/src/render/body-shape.ts` applies them to the rig, not to meshes: each bone's
+  inverse bind matrix gains a scale about the bone's head, and child bones ride on offset nodes,
+  so the body, fitted armor, hair, eyes and sockets all follow and animation clips are untouched.
 
 `game/src/render/unified-character.ts` owns shared assembly for the Forge, map and portraits.
 `character.ts` loads character assets and creates instances. Instances own their materials,
@@ -77,6 +88,30 @@ For a raw reconstruction whose proportions look compressed, `blender/body_propor
 a separate unrigged study with independent leg/torso factors before fitting any equipment. The
 provided comparison uses `--legs 1.14 --torso 1.05`, keeping the head and feet dimensions before
 normalizing height. This study is not substituted into the shipped body without a new rig/refit.
+
+### Female body (Qwen reference)
+
+`human_f_base` is built from a Qwen-Image T-pose reference and an image-to-3D mesh whose limbs
+were round but whose lengths came out short (about 1.3x too wide for its height), standing on
+its toes, with ~680 tiny overlapping patches on the surface. `blender/body_refit.py` corrects
+that before rigging: it removes and refills the patches, slims the body column against its
+height, scales the arms uniformly so they stay round, lengthens the legs (the lower leg by 22%), relaxes the
+chest tips and rotates the feet flat.
+
+```bash
+Q=art/outputs/unified/qwen   # female-source.glb = the raw generated mesh
+blender -b -t 2 --factory-startup -P blender/body_refit.py -- $Q/female-source.glb $Q/female-refit.glb \
+  --width 1.36 --depth 1.30 --crotch 0.50:0.52 --soften-chest --flat-feet --shin 0.05:0.265:1.22 --forehead 0.94:0.86
+blender -b -t 2 --factory-startup -P blender/rig_humanoid.py -- $Q/female-refit.glb $Q/female-rigged.glb \
+  --tris 30000 --tex 2048 --quality 92 --voxel 0.006 --crotch 0.517
+blender -b -t 2 --factory-startup -P blender/unified_body.py -- --input $Q/female-rigged.glb --gender f \
+  --face-relax 0
+```
+
+Then `unified_armor.py`, `unified_groom.py` and `build_manifest.py` as above. `--crotch` on the
+rigger is needed because touching thighs defeat its leg-merge scan; `--forehead` lowers a skull
+that came out too tall above the brows; `--face-relax 0` keeps this source's already smooth face.
+Afterwards refit the generated wig (`unified_hair_piece.py`, blender/UNIFIED_GROOM.md).
 
 ## Verification
 

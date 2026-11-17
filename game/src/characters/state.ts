@@ -1,5 +1,5 @@
 import type { Appearance, Equipment, Gender, ItemId } from '../core/types';
-import { appearanceError, NAME_MAX } from '../data/appearance';
+import { appearanceError, cleanShape, NAME_MAX } from '../data/appearance';
 import { ITEMS } from '../data/items';
 
 export interface CharacterDraft {
@@ -49,7 +49,7 @@ export function parseCharacterDraft(value: unknown): CharacterDraft {
   if (equipment.main && ITEMS[equipment.main].twoHanded && equipment.off) throw new Error('A two-handed weapon cannot be combined with a shield.');
   return {
     version: 1, name: v.name.trim(), gender: v.gender,
-    look: { hair: look.hair, hairColor: look.hairColor, eyes: look.eyes, beard: look.beard, face: look.face, ...(look.skin ? { skin: look.skin } : {}) },
+    look: { hair: look.hair, hairColor: look.hairColor, eyes: look.eyes, beard: look.beard, face: look.face, ...(look.skin ? { skin: look.skin } : {}), ...(cleanShape(look.shape) ? { shape: cleanShape(look.shape) } : {}) },
     equipment,
   };
 }

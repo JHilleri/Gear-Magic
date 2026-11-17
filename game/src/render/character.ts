@@ -21,6 +21,8 @@ export interface CharacterSpec {
   /** Alias for callers using the simulation's field name. */
   look?: Appearance;
   equipment: Unit['equipment'];
+  /** No everyday clothes on an unarmored body: the bare model, for checking it in the Forge. */
+  bare?: boolean;
 }
 export interface CharacterInstance {
   root: THREE.Group;
@@ -169,7 +171,7 @@ export function createCharacter(assets: AssetLibrary, spec: CharacterSpec): Char
   };
   const bodyMaterials = own(model);
   if (isUnifiedBody(entry)) {
-    missing.push(...dressUnifiedCharacter(assets, model, entry, spec.gender, look, bodyItem, (piece) => { own(piece); }));
+    missing.push(...dressUnifiedCharacter(assets, model, entry, spec.gender, look, bodyItem, (piece) => { own(piece); }, spec.bare));
   } else {
     const faceKey = headModelKey(spec.gender, look);
     for (const [section, key] of [['heads', faceKey], ...hairPieceKeys(look).map((key) => ['hair', key])] as ['heads' | 'hair', string][]) {

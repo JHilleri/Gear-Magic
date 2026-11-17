@@ -77,7 +77,7 @@ for (const gender of ['m', 'f']) {
   }
   const binds = values(j.skins[0].inverseBindMatrices);
   const byName = new Map(j.skins[0].joints.map((node, i) => [j.nodes[node].name, binds[i]]));
-  for (const style of ['tunic', 'leather', 'plate', 'robe']) {
+  for (const style of ['commoner', 'tunic', 'leather', 'plate', 'robe']) {
     const armor = await glb(`items/armor_${gender}_${style}.glb`);
     assert.equal(armor.json.skins.length, 1, `${gender}/${style}: skinned armor layer`);
     assert(!armor.json.animations?.length, `${gender}/${style}: follows body animation`);
@@ -91,7 +91,7 @@ for (const gender of ['m', 'f']) {
   }
   const sourceHash = createHash('sha256').update(await readFile(resolve(root, `units/${name}.glb`))).digest('hex');
   const grooms = (await readdir(resolve(root, 'hair'))).filter((file) => file.startsWith(`unified_${gender}_`) && file.endsWith('.meta.json'));
-  assert.equal(grooms.length, gender === 'm' ? 16 : 11, `${name}: complete fitted groom set`);
+  assert.equal(grooms.length, gender === 'm' ? 16 : 12, `${name}: complete fitted groom set`);
   for (const file of grooms) {
     const groom = JSON.parse(await readFile(resolve(root, 'hair', file), 'utf8'));
     assert.equal(groom.sourceSha256, sourceHash, `${file}: groom fitted to a stale body`);

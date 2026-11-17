@@ -6,6 +6,7 @@ import { CHARACTER_STORAGE_KEY, parseCharacterDraft } from '../../characters/sta
 import type { Appearance, BodyVariant, Gender, Unit } from '../../core/types';
 import {
   BEARDS, EYE_COLORS, FACES, HAIR_COLORS, NAME_MAX, SKIN_TONES, describeAppearance, fitAppearance, hairStylesFor, rollAppearance,
+  SHAPE_PRESETS, cleanShape,
 } from '../../data/appearance';
 import { FACTIONS } from '../../data/factions';
 import { bodyVariant, canCustomize } from '../../sim/units';
@@ -181,6 +182,15 @@ export function CustomizeModal() {
                 <button type="button" key={c.id} class={cls('cz-swatch cz-eye', d.look.eyes === c.id && 'on')} style={{ '--c': c.color } as Record<string, string>}
                   aria-label={c.name} onClick={() => setLook({ eyes: c.id })} {...tip(c.name)} />
               ))}
+            </div>
+          </Row>
+          <Row label="Body" note="sliders in the Forge">
+            <div class="cz-chips">
+              {SHAPE_PRESETS.map((p) => {
+                const shape = cleanShape(p.shape[d.gender]);
+                return <button type="button" key={p.id} class={cls('cz-chip', JSON.stringify(shape ?? {}) === JSON.stringify(cleanShape(d.look.shape) ?? {}) && 'on')}
+                  onClick={() => { const { shape: _old, ...rest } = d.look; set({ look: shape ? { ...rest, shape } : rest }); }}>{p.name}</button>;
+              })}
             </div>
           </Row>
           <Row label="Beard" note={d.gender === 'female' ? 'men only' : undefined}>

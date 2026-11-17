@@ -14,7 +14,7 @@ import { ELITES } from '../data/elites';
 import { SPELLS } from '../data/spells';
 import { tileIndex } from '../core/hex';
 import { Rng, rand } from '../core/rng';
-import { NAME_MAX, appearanceError, hasAppearance, rollAppearance, rollGender } from '../data/appearance';
+import { NAME_MAX, appearanceError, cleanShape, hasAppearance, rollAppearance, rollGender } from '../data/appearance';
 import { buildingAt, isOperational, newId } from './state';
 import { itemUnlocked } from './research';
 
@@ -101,6 +101,7 @@ export function customize(u: Unit, c: Customization): GameEvent[] {
   if (c.look) u.look = {
     hair: c.look.hair, hairColor: c.look.hairColor, eyes: c.look.eyes, beard: c.look.beard, face: c.look.face,
     ...(c.look.skin === undefined ? {} : { skin: c.look.skin }),
+    ...(cleanShape(c.look.shape) ? { shape: cleanShape(c.look.shape) } : {}),
   };
   if (c.name !== undefined) u.name = c.name.trim();
   return [];

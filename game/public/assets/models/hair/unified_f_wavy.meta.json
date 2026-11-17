@@ -1,0 +1,40 @@
+{
+ "sourceBody": "human_f_base.glb",
+ "sourceSha256": "cee3aa504ebcb097ed2d18b58bbfd732b691051048084ada1609ec64133b6a7a",
+ "space": "model-bind",
+ "head": {
+  "x": 0.00013540126383304596,
+  "y": 0.9999896287918091,
+  "z": -0.0409536249935627,
+  "depth": 0.10113701969385147
+ },
+ "style": "wavy",
+ "triangles": 8198,
+ "boundsBlender": [
+  [
+   -0.071977,
+   0.074029
+  ],
+  [
+   -0.07645,
+   0.092002
+  ],
+  [
+   0.79559,
+   1.005126
+  ]
+ ],
+ "dynamicNodes": [],
+ "generated": {
+  "piece": "hair_wavy_headframe.glb",
+  "scale": 1.0,
+  "up": 0.0,
+  "forward": 0.0,
+  "moved": 778,
+  "slid": 1394
+ },
+ "scalpClearance": {
+  "min": 0.000108,
+  "max": 0.019998
+ }
+}

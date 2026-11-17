@@ -52,13 +52,13 @@ def skin_region(p):
     return 'torso'
 
 
-def eye_apertures(obj, head, gender):
+def eye_apertures(obj, head, gender, drop=None):
     """Cut actual almond openings and fit globe centres behind the intact face surface."""
     depth = head['depth']
     top = head['y']
     cx = head['x']
     # Source front renders show the eyes at roughly .60 skull depths under the crown.
-    eye_z = top - depth * (.60 if gender == 'm' else .58)
+    eye_z = top - depth * (drop if drop is not None else .60 if gender == 'm' else .58)
     half_spacing = depth * .165
     width, height = depth * .061, depth * .020
     radius = depth * .10
@@ -103,7 +103,16 @@ def eye_apertures(obj, head, gender):
         # reconstructed socket can be several millimetres deeper at one corner.
         rim=[v for v in bm.verts if v.is_boundary and abs(v.co.y-y)<.018 and abs(v.co.x-x)<width*1.05 and abs(v.co.z-z)<height*1.05]
         globe_z=z+depth*.0035
-        center_y=max((v.co.y+math.sqrt(max(0,radius*radius-(v.co.x-x)**2-(v.co.z-globe_z)**2)) for v in rim),default=y+radius)+.00025
+        behind=lambda verts,r:max((v.co.y+math.sqrt(max(0,r*r-(v.co.x-x)**2-(v.co.z-globe_z)**2)) for v in verts),default=y+r)
+        # The globe must also stay under the skin around the opening. Where the cheek or brow is
+        # flatter than a full-size globe, the white would show through below the eye: use a
+        # smaller globe there, never one pushed far behind the lids.
+        for scale in (.10,.09,.08,.07,.06,.05):
+            radius=depth*scale
+            skin=[v for v in bm.verts if not v.is_boundary and abs(v.co.y-y)<.03 and (v.co.x-x)**2+(v.co.z-globe_z)**2<radius*radius]
+            center_y=behind(rim,radius)
+            if behind(skin,radius)-center_y<.0004:break
+        center_y=max(center_y,behind(skin,radius))+.00025
         eyes.append({'center':[round(x,6),round(globe_z,6),round(-center_y,6)],
                      'radius':round(radius,6),'irisRadius':round(width*.43,6),
                      'aperture':[round(width,6),round(height,6)]})
@@ -112,7 +121,7 @@ def eye_apertures(obj, head, gender):
     return eyes
 
 
-def refine_face(obj, head):
+def refine_face(obj, head, passes=12):
     """Relax reconstruction noise locally, keeping the scalp, neck and equipment fit fixed."""
     bm=bmesh.new();bm.from_mesh(obj.data)
     front=head['depth']*.40-head['z']
@@ -122,7 +131,7 @@ def refine_face(obj, head):
     # Preserve the central nose/lip profile while softening planar cheek and brow noise.
     central=[v for v in verts if abs(v.co.x-head['x'])<.012 and v.co.z<head['y']-head['depth']*.55]
     soft=[v for v in verts if v not in central]
-    for _ in range(12):
+    for _ in range(passes):
         bmesh.ops.smooth_vert(bm,verts=soft,factor=.37,use_axis_x=True,use_axis_y=True,use_axis_z=True)
         bmesh.ops.smooth_vert(bm,verts=central,factor=.12,use_axis_x=True,use_axis_y=True,use_axis_z=True)
     bmesh.ops.recalc_face_normals(bm,faces=list(bm.faces))
@@ -213,6 +222,8 @@ def main():
     parser.add_argument('--input',required=True)
     parser.add_argument('--gender',choices=['m','f'],required=True)
     parser.add_argument('--out')
+    parser.add_argument('--eye-drop',type=float,help='eye line, in skull depths under the crown (default .60 m / .58 f)')
+    parser.add_argument('--face-relax',type=int,default=12,help='face smoothing passes; lower for an already smooth source')
     a=parser.parse_args(sys.argv[sys.argv.index('--')+1:])
     src=Path(a.input).resolve()
     dst=Path(a.out or ROOT/f'game/public/assets/models/units/human_{a.gender}_base.glb').resolve()
@@ -240,8 +251,8 @@ def main():
     collar=[v for v in bm.verts if .845<v.co.z<.884 and abs(v.co.x)<.075]
     for _ in range(4):bmesh.ops.smooth_vert(bm,verts=collar,factor=.45,use_axis_x=True,use_axis_y=True,use_axis_z=True)
     bm.to_mesh(obj.data);bm.free()
-    refine_face(obj,head)
-    eyes=eye_apertures(obj,head,a.gender)
+    refine_face(obj,head,a.face_relax)
+    eyes=eye_apertures(obj,head,a.gender,a.eye_drop)
     prepare_skin(obj,head)
     C.shade(obj, 'smooth')
     face_morphs(obj,head)

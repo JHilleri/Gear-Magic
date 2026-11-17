@@ -6,7 +6,8 @@ import type { CharacterDraft } from './state';
 
 export interface ViewerStats { bodyKey: string; meshes: number; triangles: number; missing: string[]; clips: string[] }
 export interface CharacterViewer {
-  setCharacter(draft: CharacterDraft): void;
+  /** `bare` shows an unarmored body without its everyday clothes. */
+  setCharacter(draft: CharacterDraft, bare?: boolean): void;
   play(name: string): void;
   setPaused(paused: boolean): void;
   setTurntable(enabled: boolean): void;
@@ -121,8 +122,8 @@ export async function createCharacterViewer(
   frame = requestAnimationFrame(animate);
 
   return {
-    setCharacter(draft) {
-      const next = createCharacter(assets, { gender: draft.gender, appearance: draft.look, equipment: draft.equipment });
+    setCharacter(draft, bare = false) {
+      const next = createCharacter(assets, { gender: draft.gender, appearance: draft.look, equipment: draft.equipment, bare });
       character.root.removeFromParent();
       character.dispose();
       character = next;
